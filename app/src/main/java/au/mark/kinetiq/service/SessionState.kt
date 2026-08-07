@@ -1,0 +1,69 @@
+package au.mark.kinetiq.service
+
+import au.mark.kinetiq.data.model.GeneratedSession
+import au.mark.kinetiq.data.repo.CompletedBlock
+import kotlinx.serialization.Serializable
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/** Live state of the running workout, observed by the player UI and the widget. */
+data class PlayerState(
+    val session: GeneratedSession,
+    val sessionName: String,
+    val stepIndex: Int = 0,
+    val stepRemainingMs: Long = 0,
+    val totalElapsedActiveMs: Long = 0,
+    val paused: Boolean = false,
+    val finished: Boolean = false,
+    val caloriesSoFar: Double = 0.0,
+    val startedAtEpochMs: Long = 0,
+    val weightKg: Double = 80.0,
+) {
+    val currentStep get() = session.plan.steps.getOrNull(stepIndex)
+    val nextStep get() = session.plan.steps.getOrNull(stepIndex + 1)
+    val totalSteps get() = session.plan.steps.size
+}
+
+/** Result of a finished session, displayed by the Summary screen. */
+data class CompletedSummary(
+    val historyId: Long,
+    val name: String,
+    val startedAtEpochMs: Long,
+    val endedAtEpochMs: Long,
+    val totalActiveSec: Int,
+    val calories: Double,
+    val blocks: List<CompletedBlock>,
+    val healthConnectWritten: Boolean,
+    val healthConnectError: String? = null,
+    val session: GeneratedSession,
+)
+
+@Singleton
+class SessionStateHolder @Inject constructor() {
+    private val _state = MutableStateFlow<PlayerState?>(null)
+    val state: StateFlow<PlayerState?> = _state.asStateFlow()
+
+    private val _lastCompleted = MutableStateFlow<CompletedSummary?>(null)
+    val lastCompleted: StateFlow<CompletedSummary?> = _lastCompleted.asStateFlow()
+
+    fun update(state: PlayerState?) { _state.value = state }
+    fun completed(summary: CompletedSummary) { _lastCompleted.value = summary }
+    fun clearCompleted() { _lastCompleted.value = null }
+}
+
+/** Snapshot persisted to disk every few seconds so a killed process can restore the session. */
+@Serializable
+data class SessionSnapshot(
+    val session: GeneratedSession,
+    val sessionName: String,
+    val stepIndex: Int,
+    val stepRemainingMs: Long,
+    val totalElapsedActiveMs: Long,
+    val caloriesSoFar: Double,
+    val startedAtEpochMs: Long,
+    val weightKg: Double,
+    val savedAtEpochMs: Long,
+)

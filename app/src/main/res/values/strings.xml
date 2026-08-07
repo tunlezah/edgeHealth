@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Working app name — kept in this single resource so it is trivially renameable. -->
+    <string name="app_name">Kinetiq</string>
+
+    <string name="notification_channel_session">Workout session</string>
+    <string name="notification_channel_session_desc">Live timer and controls for the running workout</string>
+    <string name="notification_channel_reminders">Workout reminders</string>
+    <string name="notification_channel_reminders_desc">Scheduled reminders to work out</string>
+
+    <string name="notif_action_pause">Pause</string>
+    <string name="notif_action_resume">Resume</string>
+    <string name="notif_action_skip">Skip</string>
+    <string name="notif_action_stop">Stop</string>
+
+    <string name="reminder_title">Time to move</string>
+    <string name="reminder_text">Your scheduled workout is ready. One tap to start.</string>
+
+    <string name="widget_repeat_last">Repeat last workout</string>
+    <string name="widget_streak">%1$d day streak</string>
+    <string name="widget_no_workout">Start your first workout</string>
+
+    <string name="disclaimer_title">Before you start</string>
+    <string name="disclaimer_body">Kinetiq provides general fitness guidance only — it is not medical advice. Consult a health professional before starting a new exercise program, especially if you have existing injuries or medical conditions. Stop exercising if you feel pain, dizziness or shortness of breath.</string>
+    <string name="disclaimer_workout_reminder">General fitness guidance, not medical advice. Stop if you feel pain.</string>
+</resources>
