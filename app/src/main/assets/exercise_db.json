@@ -1,0 +1,1163 @@
+{
+  "schemaVersion": 1,
+  "exercises": [
+    {
+      "id": "floor_squat", "name": "Bodyweight squat", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "ACSM Position Stand: Progression models in resistance training for healthy adults", "authors": "American College of Sports Medicine (Ratamess NA et al.)", "year": 2009, "journal": "Medicine & Science in Sports & Exercise 41(3):687-708", "doiOrPmid": "10.1249/MSS.0b013e3181915670", "finding": "Progressive resistance work, including bodyweight loading for novices, builds lower-body strength; squats are a foundational multi-joint pattern."},
+        {"title": "World Health Organization 2020 guidelines on physical activity and sedentary behaviour", "authors": "Bull FC, Al-Ansari SS, Biddle S, et al.", "year": 2020, "journal": "British Journal of Sports Medicine 54(24):1451-1462", "doiOrPmid": "10.1136/bjsports-2020-102955", "finding": "Muscle-strengthening activity for all major muscle groups on 2+ days per week is a core recommendation for adults."}
+      ],
+      "summary": "The foundational lower-body strength move: sit the hips back and down, then drive back up through the whole foot.",
+      "voiceName": "Bodyweight squat",
+      "voiceHowTo": "Stand with feet shoulder width apart, toes turned out slightly. Send your hips back and down like sitting into a chair, keeping your chest up and heels heavy. Drive back up through your whole foot and squeeze your glutes at the top.",
+      "voiceFormCues": ["Chest up, heels heavy.", "Knees track over your toes.", "Sit back into the hips."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 3.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH", "CARDIO"], "contraindications": ["KNEE"],
+      "animationId": "fl_squat"
+    },
+    {
+      "id": "floor_pushup", "name": "Push-up", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "The effects of a calisthenics training intervention on posture, strength and body composition", "authors": "Thomas E, Bianco A, Mancuso EP, Patti A, Tabacchi G, Paoli A, Messina G, Palma A", "year": 2017, "journal": "Isokinetics and Exercise Science 25(3):215-222", "doiOrPmid": "10.3233/IES-170001", "finding": "Eight weeks of equipment-free calisthenics improved strength (including push-up performance), posture and body composition in untrained men."},
+        {"title": "ACSM Position Stand: Progression models in resistance training for healthy adults", "authors": "American College of Sports Medicine (Ratamess NA et al.)", "year": 2009, "journal": "Medicine & Science in Sports & Exercise 41(3):687-708", "doiOrPmid": "10.1249/MSS.0b013e3181915670", "finding": "Multi-joint pressing with progressive overload builds upper-body pushing strength."}
+      ],
+      "summary": "Upper-body pressing staple for chest, shoulders and triceps, with the trunk working as a moving plank.",
+      "voiceName": "Push-up",
+      "voiceHowTo": "Start in a straight-arm plank with hands under your shoulders and body in one line. Lower your chest toward the floor with elbows about forty five degrees from your ribs. Press the floor away until your arms are straight. Drop to your knees any time to keep the line strong.",
+      "voiceFormCues": ["Body in one straight line.", "Elbows forty five degrees, not flared.", "Press the floor away."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 3.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH", "CORE"], "contraindications": ["WRIST", "SHOULDER"],
+      "animationId": "fl_pushup"
+    },
+    {
+      "id": "floor_lunge", "name": "Forward lunge (alternating)", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "ACSM Position Stand: Progression models in resistance training for healthy adults", "authors": "American College of Sports Medicine (Ratamess NA et al.)", "year": 2009, "journal": "Medicine & Science in Sports & Exercise 41(3):687-708", "doiOrPmid": "10.1249/MSS.0b013e3181915670", "finding": "Unilateral multi-joint lower-body work builds strength and balance with bodyweight loading appropriate for novices."}
+      ],
+      "summary": "Single-leg strength and balance: step forward, lower under control, push back to standing, alternate sides.",
+      "voiceName": "Alternating lunges",
+      "voiceHowTo": "Step one foot forward and lower until both knees are near ninety degrees. Keep your torso tall and front heel heavy. Push through the front foot to step back together, then swap legs.",
+      "voiceFormCues": ["Torso tall.", "Front knee over the ankle.", "Lower under control."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 3.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH", "BALANCE"], "contraindications": ["KNEE"],
+      "animationId": "fl_lunge"
+    },
+    {
+      "id": "floor_reverse_lunge", "name": "Reverse lunge (alternating)", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "ACSM Position Stand: Progression models in resistance training for healthy adults", "authors": "American College of Sports Medicine (Ratamess NA et al.)", "year": 2009, "journal": "Medicine & Science in Sports & Exercise 41(3):687-708", "doiOrPmid": "10.1249/MSS.0b013e3181915670", "finding": "Unilateral lower-body patterns with bodyweight are effective strength stimuli; stepping backward reduces forward knee travel."}
+      ],
+      "summary": "A knee-friendlier lunge variation: step backward instead of forward, keeping the front shin more vertical.",
+      "voiceName": "Reverse lunges",
+      "voiceHowTo": "From standing, step one foot straight back and bend both knees until the back knee hovers near the floor. Keep your weight in the front heel and torso upright. Drive through the front foot to return, then swap sides.",
+      "voiceFormCues": ["Weight in the front heel.", "Back knee hovers, never slams.", "Stay tall through the chest."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 3.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH", "BALANCE"], "contraindications": ["KNEE"],
+      "animationId": "fl_lunge"
+    },
+    {
+      "id": "floor_plank", "name": "Forearm plank", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "The effects of a calisthenics training intervention on posture, strength and body composition", "authors": "Thomas E, Bianco A, Mancuso EP, Patti A, Tabacchi G, Paoli A, Messina G, Palma A", "year": 2017, "journal": "Isokinetics and Exercise Science 25(3):215-222", "doiOrPmid": "10.3233/IES-170001", "finding": "Calisthenics programs including isometric trunk work improved posture and strength in untrained adults."}
+      ],
+      "summary": "Isometric trunk endurance: hold a straight line from head to heels on forearms and toes.",
+      "voiceName": "Forearm plank",
+      "voiceHowTo": "Set your elbows under your shoulders and step the feet back until your body is one straight line. Brace your belly like you are about to be poked, and squeeze your glutes. Breathe steadily and do not let the hips sag or pike.",
+      "voiceFormCues": ["Squeeze glutes, brace belly.", "One straight line, hips level.", "Keep breathing."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 120,
+      "met": 2.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["CORE"], "contraindications": ["SHOULDER"],
+      "animationId": "fl_plank"
+    },
+    {
+      "id": "floor_side_plank", "name": "Side plank", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "The effects of a calisthenics training intervention on posture, strength and body composition", "authors": "Thomas E, Bianco A, Mancuso EP, Patti A, Tabacchi G, Paoli A, Messina G, Palma A", "year": 2017, "journal": "Isokinetics and Exercise Science 25(3):215-222", "doiOrPmid": "10.3233/IES-170001", "finding": "Isometric trunk holds are standard calisthenics elements shown to improve trunk strength and posture."}
+      ],
+      "summary": "Lateral trunk endurance: a straight-body hold on one forearm, hips lifted and stacked.",
+      "voiceName": "Side plank",
+      "voiceHowTo": "Lie on one side, elbow under your shoulder, feet stacked or staggered. Lift your hips until your body forms a straight line. Hold with your top hand on your hip or reaching to the ceiling, then switch sides halfway.",
+      "voiceFormCues": ["Hips high and stacked.", "Push the floor away from the shoulder.", "Swap sides at the beep."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 90,
+      "met": 2.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["CORE", "BALANCE"], "contraindications": ["SHOULDER", "WRIST"],
+      "animationId": "fl_side_plank"
+    },
+    {
+      "id": "floor_glute_bridge", "name": "Glute bridge", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "ACSM Position Stand: Progression models in resistance training for healthy adults", "authors": "American College of Sports Medicine (Ratamess NA et al.)", "year": 2009, "journal": "Medicine & Science in Sports & Exercise 41(3):687-708", "doiOrPmid": "10.1249/MSS.0b013e3181915670", "finding": "Hip-extension work is a recommended component of balanced resistance programs; the bridge is the standard low-load entry point."}
+      ],
+      "summary": "Hip-extension strength for glutes and hamstrings, gentle on knees and lower back.",
+      "voiceName": "Glute bridge",
+      "voiceHowTo": "Lie on your back with knees bent and feet flat, close to your hips. Press through your heels and lift the hips until your body lines up from shoulders to knees. Squeeze the glutes at the top, then lower with control.",
+      "voiceFormCues": ["Drive through the heels.", "Squeeze at the top.", "Ribs down, no arching."],
+      "defaultWorkSec": 40, "defaultRestSec": 15, "minSec": 20, "maxSec": 90,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "CORE"], "contraindications": [],
+      "animationId": "fl_bridge"
+    },
+    {
+      "id": "floor_burpee", "name": "Burpee", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Effect of exercise intervention dosage on reducing visceral adipose tissue: a systematic review and network meta-analysis", "authors": "Chang YH, Yang HY, Shun SC", "year": 2021, "journal": "International Journal of Obesity 45(5):982-997", "doiOrPmid": "10.1038/s41366-021-00767-9", "finding": "HIIT produced the largest visceral fat reductions (SMD -0.39) and is effective even in sessions under 30 minutes."},
+        {"title": "Effect of High-Intensity Interval Training on Total, Abdominal and Visceral Fat Mass: A Meta-Analysis", "authors": "Maillard F, Pereira B, Boisseau N", "year": 2018, "journal": "Sports Medicine 48(2):269-288", "doiOrPmid": "10.1007/s40279-017-0807-y", "finding": "HIIT significantly reduces total, abdominal and visceral fat mass; whole-body weight-bearing intervals were most effective."}
+      ],
+      "summary": "Whole-body conditioning move: squat, kick to plank, return and jump. A HIIT staple with real visceral-fat evidence behind interval training.",
+      "voiceName": "Burpees",
+      "voiceHowTo": "Squat down and place your hands on the floor. Step or jump your feet back to a strong plank, then step or jump them back in. Stand and finish with a small jump, arms overhead. Move at a pace you can sustain for the whole interval.",
+      "voiceFormCues": ["Strong plank, no sagging hips.", "Land soft, knees bent.", "Steady rhythm beats speed."],
+      "defaultWorkSec": 30, "defaultRestSec": 25, "minSec": 15, "maxSec": 60,
+      "met": 7.5, "intensity": "VERY_HIGH", "impact": "HIGH",
+      "targets": ["VISCERAL_FAT", "CARDIO", "STRENGTH"], "contraindications": ["KNEE", "WRIST", "LOWER_BACK"],
+      "animationId": "fl_burpee"
+    },
+    {
+      "id": "floor_mountain_climber", "name": "Mountain climbers", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Effect of exercise intervention dosage on reducing visceral adipose tissue: a systematic review and network meta-analysis", "authors": "Chang YH, Yang HY, Shun SC", "year": 2021, "journal": "International Journal of Obesity 45(5):982-997", "doiOrPmid": "10.1038/s41366-021-00767-9", "finding": "High-intensity interval work reduces visceral adipose tissue; mountain climbers are a standard HIIT movement."}
+      ],
+      "summary": "Plank-based cardio drive: knees run toward the chest while the trunk holds steady.",
+      "voiceName": "Mountain climbers",
+      "voiceHowTo": "Start in a straight-arm plank with hands under shoulders. Drive one knee toward your chest, then switch legs in a running rhythm. Keep your hips low and shoulders over your wrists the whole time.",
+      "voiceFormCues": ["Hips stay low.", "Shoulders over wrists.", "Light quick feet."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 60,
+      "met": 8.0, "intensity": "HIGH", "impact": "MODERATE",
+      "targets": ["VISCERAL_FAT", "CARDIO", "CORE"], "contraindications": ["WRIST", "SHOULDER"],
+      "animationId": "fl_mountain"
+    },
+    {
+      "id": "floor_jumping_jack", "name": "Jumping jacks", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "2024 Adult Compendium of Physical Activities: A third update of the energy costs of human activities", "authors": "Herrmann SD, Willis EA, Ainsworth BE, et al.", "year": 2024, "journal": "Journal of Sport and Health Science 13(1):6-12", "doiOrPmid": "10.1016/j.jshs.2023.10.010", "finding": "Vigorous calisthenics such as jumping jacks are catalogued at 7.5 METs — genuinely vigorous aerobic work."},
+        {"title": "World Health Organization 2020 guidelines on physical activity and sedentary behaviour", "authors": "Bull FC, Al-Ansari SS, Biddle S, et al.", "year": 2020, "journal": "British Journal of Sports Medicine 54(24):1451-1462", "doiOrPmid": "10.1136/bjsports-2020-102955", "finding": "Vigorous-intensity aerobic activity counts double toward the weekly activity target."}
+      ],
+      "summary": "Classic whole-body vigorous cardio: jump feet wide while sweeping arms overhead, and back.",
+      "voiceName": "Jumping jacks",
+      "voiceHowTo": "Stand tall with arms by your sides. Jump the feet wide while sweeping your arms overhead, then jump back together as the arms come down. Land softly on the balls of your feet with a steady rhythm.",
+      "voiceFormCues": ["Land soft.", "Full arm sweep.", "Steady spring rhythm."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 7.5, "intensity": "HIGH", "impact": "HIGH",
+      "targets": ["VISCERAL_FAT", "CARDIO"], "contraindications": ["KNEE", "ANKLE"],
+      "animationId": "fl_jack"
+    },
+    {
+      "id": "floor_high_knees", "name": "High knees", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Effect of exercise intervention dosage on reducing visceral adipose tissue: a systematic review and network meta-analysis", "authors": "Chang YH, Yang HY, Shun SC", "year": 2021, "journal": "International Journal of Obesity 45(5):982-997", "doiOrPmid": "10.1038/s41366-021-00767-9", "finding": "Vigorous aerobic intervals are among the most effective exercise modes for visceral fat reduction."}
+      ],
+      "summary": "Running on the spot with knees driving to hip height — vigorous, equipment-free cardio.",
+      "voiceName": "High knees",
+      "voiceHowTo": "Run on the spot, driving each knee up toward hip height. Stay tall, land on the balls of your feet, and pump your arms like sprinting. Scale the height and speed to your fitness.",
+      "voiceFormCues": ["Knees to hip height.", "Tall chest, quick feet.", "Pump the arms."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 60,
+      "met": 8.0, "intensity": "HIGH", "impact": "HIGH",
+      "targets": ["VISCERAL_FAT", "CARDIO"], "contraindications": ["KNEE", "ANKLE"],
+      "animationId": "fl_highknees"
+    },
+    {
+      "id": "floor_squat_jump", "name": "Squat jump", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Effect of High-Intensity Interval Training on Total, Abdominal and Visceral Fat Mass: A Meta-Analysis", "authors": "Maillard F, Pereira B, Boisseau N", "year": 2018, "journal": "Sports Medicine 48(2):269-288", "doiOrPmid": "10.1007/s40279-017-0807-y", "finding": "Weight-bearing high-intensity intervals were the most effective HIIT mode for visceral fat loss."}
+      ],
+      "summary": "Explosive lower-body power: a full squat straight into a vertical jump with a soft landing.",
+      "voiceName": "Squat jumps",
+      "voiceHowTo": "Sit into a full squat, then drive up explosively and leave the ground. Land softly through the balls of your feet into the next squat. Rest a beat between reps if your landings get heavy.",
+      "voiceFormCues": ["Explode up, land like a cat.", "Chest up out of the bottom.", "Quality over count."],
+      "defaultWorkSec": 25, "defaultRestSec": 25, "minSec": 15, "maxSec": 45,
+      "met": 8.8, "intensity": "VERY_HIGH", "impact": "HIGH",
+      "targets": ["VISCERAL_FAT", "CARDIO", "STRENGTH"], "contraindications": ["KNEE", "ANKLE"],
+      "animationId": "fl_squatjump"
+    },
+    {
+      "id": "floor_skater", "name": "Skater hops", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "2024 Adult Compendium of Physical Activities: A third update of the energy costs of human activities", "authors": "Herrmann SD, Willis EA, Ainsworth BE, et al.", "year": 2024, "journal": "Journal of Sport and Health Science 13(1):6-12", "doiOrPmid": "10.1016/j.jshs.2023.10.010", "finding": "Lateral bounding drills sit in the vigorous calisthenics band (~7 METs) — substantial aerobic demand with balance challenge."}
+      ],
+      "summary": "Side-to-side bounds landing on one leg — cardio plus lateral hip strength and balance.",
+      "voiceName": "Skater hops",
+      "voiceHowTo": "Bound sideways from one foot to the other, swinging your arms across your body. Land softly on the outside leg with the knee bent, letting the trailing leg sweep behind. Keep your chest up and find a smooth skating rhythm.",
+      "voiceFormCues": ["Stick each landing.", "Push sideways, not up.", "Soft bent knee."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 60,
+      "met": 7.0, "intensity": "HIGH", "impact": "HIGH",
+      "targets": ["CARDIO", "BALANCE"], "contraindications": ["KNEE", "ANKLE", "HIP"],
+      "animationId": "fl_skater"
+    },
+    {
+      "id": "floor_bird_dog", "name": "Bird dog", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "The Effectiveness of Pilates Exercise in People with Chronic Low Back Pain: A Systematic Review", "authors": "Wells C, Kolt GS, Marshall P, Hill B, Bialocerkowski A", "year": 2014, "journal": "PLoS One 9(7):e100402", "doiOrPmid": "10.1371/journal.pone.0100402", "finding": "Trunk-stability exercise programs reduce chronic low back pain; the bird dog is a standard quadruped stability drill in such programs."}
+      ],
+      "summary": "Quadruped trunk stability: opposite arm and leg reach while the spine stays quiet.",
+      "voiceName": "Bird dog",
+      "voiceHowTo": "Start on hands and knees, wrists under shoulders and knees under hips. Reach one arm forward and the opposite leg back until both are level with your trunk. Pause, return with control, then switch sides without letting the hips rock.",
+      "voiceFormCues": ["Hips stay square.", "Reach long, not high.", "Slow and controlled."],
+      "defaultWorkSec": 40, "defaultRestSec": 15, "minSec": 20, "maxSec": 90,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CORE", "BALANCE"], "contraindications": ["WRIST", "KNEE"],
+      "animationId": "fl_birddog"
+    },
+    {
+      "id": "floor_dead_bug", "name": "Dead bug", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "The Effectiveness of Pilates Exercise in People with Chronic Low Back Pain: A Systematic Review", "authors": "Wells C, Kolt GS, Marshall P, Hill B, Bialocerkowski A", "year": 2014, "journal": "PLoS One 9(7):e100402", "doiOrPmid": "10.1371/journal.pone.0100402", "finding": "Low-load trunk-control exercise is effective for back health; the dead bug trains anterior core control with the spine supported."}
+      ],
+      "summary": "Supine core control: lower opposite arm and leg while the lower back stays glued to the mat.",
+      "voiceName": "Dead bug",
+      "voiceHowTo": "Lie on your back with arms to the ceiling and knees over hips at ninety degrees. Press your lower back into the mat, then lower one arm overhead and the opposite leg toward the floor. Return and switch sides, moving only as far as your back stays flat.",
+      "voiceFormCues": ["Lower back glued down.", "Move slow, breathe out as you lower.", "Opposite arm and leg."],
+      "defaultWorkSec": 40, "defaultRestSec": 15, "minSec": 20, "maxSec": 90,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CORE"], "contraindications": [],
+      "animationId": "fl_deadbug"
+    },
+    {
+      "id": "floor_superman", "name": "Superman hold", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "ACSM Position Stand: Progression models in resistance training for healthy adults", "authors": "American College of Sports Medicine (Ratamess NA et al.)", "year": 2009, "journal": "Medicine & Science in Sports & Exercise 41(3):687-708", "doiOrPmid": "10.1249/MSS.0b013e3181915670", "finding": "Balanced programs include posterior-chain and spinal-erector work; prone extensions are the standard bodyweight option."}
+      ],
+      "summary": "Prone back-extension hold for spinal erectors and glutes.",
+      "voiceName": "Superman",
+      "voiceHowTo": "Lie face down with arms extended overhead. Lift your chest, arms and legs a few centimetres off the floor and hold, gazing down to keep the neck long. Lower with control and repeat, or hold steadily for the interval.",
+      "voiceFormCues": ["Lift from the back, not the neck.", "Legs long and reaching.", "Small lift is enough."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 60,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "CORE"], "contraindications": ["LOWER_BACK"],
+      "animationId": "fl_superman"
+    },
+    {
+      "id": "floor_wall_sit", "name": "Wall sit", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "ACSM Position Stand: Progression models in resistance training for healthy adults", "authors": "American College of Sports Medicine (Ratamess NA et al.)", "year": 2009, "journal": "Medicine & Science in Sports & Exercise 41(3):687-708", "doiOrPmid": "10.1249/MSS.0b013e3181915670", "finding": "Isometric holds develop muscular endurance; the wall sit is the classic bodyweight quadriceps isometric."}
+      ],
+      "summary": "Isometric quad endurance: back flat on the wall, thighs parallel to the floor, and hold.",
+      "voiceName": "Wall sit",
+      "voiceHowTo": "Slide your back down a wall until your thighs are parallel to the floor and knees over ankles. Press your whole back into the wall and keep weight through your heels. Hold and breathe — hands off the thighs.",
+      "voiceFormCues": ["Thighs parallel, knees over ankles.", "Back flat on the wall.", "Keep breathing."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 120,
+      "met": 3.3, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH"], "contraindications": ["KNEE"],
+      "animationId": "fl_wallsit"
+    },
+    {
+      "id": "floor_inchworm", "name": "Inchworm walkout", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "The effects of a calisthenics training intervention on posture, strength and body composition", "authors": "Thomas E, Bianco A, Mancuso EP, Patti A, Tabacchi G, Paoli A, Messina G, Palma A", "year": 2017, "journal": "Isokinetics and Exercise Science 25(3):215-222", "doiOrPmid": "10.3233/IES-170001", "finding": "Dynamic whole-body calisthenics movements improved strength and posture over eight weeks in untrained men."}
+      ],
+      "summary": "Fold, walk the hands out to a plank, walk back and stand — mobility plus core in one flow.",
+      "voiceName": "Inchworms",
+      "voiceHowTo": "Fold forward and put your hands on the floor, bending knees as needed. Walk the hands out to a strong plank, pause, then walk them back and roll up to standing. Keep the core braced the whole way out and back.",
+      "voiceFormCues": ["Brace as you walk out.", "Soft knees on the fold.", "Smooth, unhurried steps."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 3.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["CORE", "MOBILITY"], "contraindications": ["WRIST", "LOWER_BACK"],
+      "animationId": "fl_inchworm"
+    },
+    {
+      "id": "floor_bear_crawl", "name": "Bear crawl", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "The effects of a calisthenics training intervention on posture, strength and body composition", "authors": "Thomas E, Bianco A, Mancuso EP, Patti A, Tabacchi G, Paoli A, Messina G, Palma A", "year": 2017, "journal": "Isokinetics and Exercise Science 25(3):215-222", "doiOrPmid": "10.3233/IES-170001", "finding": "Whole-body crawling patterns fit the calisthenics model shown to improve strength and body composition."}
+      ],
+      "summary": "Crawling with knees hovering: shoulders, core and hips all working while you move on the spot.",
+      "voiceName": "Bear crawl",
+      "voiceHowTo": "Start on hands and knees, then hover the knees a few centimetres off the floor. Step the opposite hand and foot forward together, then the other pair — small controlled steps forward and back. Keep hips low and back flat like a table.",
+      "voiceFormCues": ["Knees hover low.", "Opposite hand and foot together.", "Back flat like a table."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 60,
+      "met": 4.3, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH", "CORE"], "contraindications": ["WRIST", "KNEE", "SHOULDER"],
+      "animationId": "fl_bearcrawl"
+    },
+    {
+      "id": "floor_crunch", "name": "Crunch", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "LIMITED",
+      "popularityNote": "Hugely popular as a 'belly fat burner', but controlled trials show abdominal exercise does not reduce abdominal fat — spot reduction is a myth. Crunches still train the rectus abdominis; just do not expect fat loss from them.",
+      "references": [
+        {"title": "The effect of abdominal exercise on abdominal fat", "authors": "Vispute SS, Smith JD, LeCheminant JD, Hurley KS", "year": 2011, "journal": "Journal of Strength and Conditioning Research 25(9):2559-2564", "doiOrPmid": "PMID 21804427", "finding": "Six weeks of daily abdominal exercise produced no reduction in abdominal fat or girth versus control, despite improved endurance."}
+      ],
+      "summary": "Classic abdominal curl. Trains the abs; does not burn belly fat (see the evidence note).",
+      "voiceName": "Crunches",
+      "voiceHowTo": "Lie on your back, knees bent, hands lightly behind your head. Curl your ribs toward your hips until the shoulder blades leave the mat, then lower slowly. Keep your chin off your chest and never yank the neck.",
+      "voiceFormCues": ["Curl the ribs, not the neck.", "Slow down the lowering.", "Exhale as you curl."],
+      "defaultWorkSec": 30, "defaultRestSec": 15, "minSec": 15, "maxSec": 60,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CORE"], "contraindications": ["NECK", "LOWER_BACK"],
+      "animationId": "fl_crunch"
+    },
+    {
+      "id": "floor_russian_twist", "name": "Russian twist", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "LIMITED",
+      "popularityNote": "A social-media favourite for 'obliques and love handles'. Rotational endurance is real, but localized fat loss is not — regional training does not strip fat from the trained area.",
+      "references": [
+        {"title": "Regional fat changes induced by localized muscle endurance resistance training", "authors": "Ramirez-Campillo R, Andrade DC, Campos-Jara C, Henriquez-Olguin C, Alvarez-Lepin C, Izquierdo M", "year": 2013, "journal": "Journal of Strength and Conditioning Research 27(8):2219-2224", "doiOrPmid": "10.1519/JSC.0b013e31827e8681", "finding": "Twelve weeks of high-volume localized training reduced fat everywhere except the trained region — direct evidence against spot reduction."}
+      ],
+      "summary": "Seated trunk rotations. Fine oblique endurance work; no effect on waistline fat (see note).",
+      "voiceName": "Russian twists",
+      "voiceHowTo": "Sit with knees bent and lean back until your abs switch on, spine long. Rotate your chest and hands to one side, then the other, letting your gaze follow your hands. Keep the movement in the trunk rather than just swinging the arms.",
+      "voiceFormCues": ["Rotate from the ribs.", "Spine long, chest proud.", "Slow controlled turns."],
+      "defaultWorkSec": 30, "defaultRestSec": 15, "minSec": 15, "maxSec": 60,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CORE"], "contraindications": ["LOWER_BACK", "NECK"],
+      "animationId": "fl_russian"
+    },
+    {
+      "id": "floor_march", "name": "March in place", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE", "warmupCooldown": true,
+      "references": [
+        {"title": "World Health Organization 2020 guidelines on physical activity and sedentary behaviour", "authors": "Bull FC, Al-Ansari SS, Biddle S, et al.", "year": 2020, "journal": "British Journal of Sports Medicine 54(24):1451-1462", "doiOrPmid": "10.1136/bjsports-2020-102955", "finding": "Light-to-moderate aerobic movement counts toward activity targets and is the standard way to raise heart rate gradually before harder work."}
+      ],
+      "summary": "Gentle pulse-raiser to start a session: rhythmic marching with a relaxed arm swing.",
+      "voiceName": "March in place",
+      "voiceHowTo": "March on the spot with a comfortable knee lift and easy arm swing. Grow the knee height and pace gradually as your body warms. Breathe easily — this should feel light.",
+      "voiceFormCues": ["Relaxed shoulders.", "Grow the pace gently.", "Land softly."],
+      "defaultWorkSec": 60, "defaultRestSec": 0, "minSec": 30, "maxSec": 180,
+      "met": 3.5, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CARDIO", "MOBILITY"], "contraindications": [],
+      "animationId": "fl_march"
+    },
+    {
+      "id": "floor_arm_circles", "name": "Arm circles and reaches", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE", "warmupCooldown": true,
+      "references": [
+        {"title": "ACSM Position Stand: Progression models in resistance training for healthy adults", "authors": "American College of Sports Medicine (Ratamess NA et al.)", "year": 2009, "journal": "Medicine & Science in Sports & Exercise 41(3):687-708", "doiOrPmid": "10.1249/MSS.0b013e3181915670", "finding": "Dynamic range-of-motion work is the recommended pre-training preparation for the involved joints."}
+      ],
+      "summary": "Shoulder warm-up: big slow circles and overhead reaches to wake up the upper body.",
+      "voiceName": "Arm circles",
+      "voiceHowTo": "Sweep both arms in big slow circles, forward for a while and then backward. Add tall overhead reaches, growing the range as the shoulders loosen. Keep the neck relaxed throughout.",
+      "voiceFormCues": ["Big slow circles.", "Reach tall.", "Neck stays soft."],
+      "defaultWorkSec": 45, "defaultRestSec": 0, "minSec": 30, "maxSec": 120,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["MOBILITY"], "contraindications": ["SHOULDER"],
+      "animationId": "fl_armcircles"
+    },
+    {
+      "id": "floor_cat_cow", "name": "Cat-cow", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE", "warmupCooldown": true,
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Spinal mobility and flexibility work shows strong evidence for improving flexibility in healthy adults."}
+      ],
+      "summary": "Gentle spinal waves between arched and rounded positions — the standard back mobiliser.",
+      "voiceName": "Cat cow",
+      "voiceHowTo": "On hands and knees, inhale as you drop the belly and lift your gaze — that is cow. Exhale as you round the spine to the ceiling and tuck the chin — that is cat. Flow slowly between the two with your breath.",
+      "voiceFormCues": ["Move with the breath.", "Whole spine, not just the neck.", "Slow waves."],
+      "defaultWorkSec": 45, "defaultRestSec": 0, "minSec": 30, "maxSec": 120,
+      "met": 2.3, "intensity": "LOW", "impact": "LOW",
+      "targets": ["MOBILITY"], "contraindications": ["WRIST"],
+      "animationId": "fl_catcow"
+    },
+    {
+      "id": "floor_hamstring_stretch", "name": "Seated hamstring stretch", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE", "warmupCooldown": true,
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Regular flexibility training reliably improves range of motion in healthy adults."}
+      ],
+      "summary": "Cool-down staple: long spine reach over a straight leg to lengthen the hamstrings.",
+      "voiceName": "Hamstring stretch",
+      "voiceHowTo": "Sit tall with one leg long and the other foot tucked to your thigh. Hinge forward from the hips over the straight leg until you feel a comfortable stretch behind the thigh. Hold and breathe, then swap legs halfway.",
+      "voiceFormCues": ["Hinge from the hips.", "Comfortable stretch, never pain.", "Swap sides at the beep."],
+      "defaultWorkSec": 45, "defaultRestSec": 0, "minSec": 30, "maxSec": 120,
+      "met": 2.3, "intensity": "LOW", "impact": "LOW",
+      "targets": ["MOBILITY"], "contraindications": ["LOWER_BACK"],
+      "animationId": "fl_hamstretch"
+    },
+    {
+      "id": "floor_quad_stretch", "name": "Standing quad stretch", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE", "warmupCooldown": true,
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Static stretching after training maintains and improves joint range of motion."}
+      ],
+      "summary": "Balance on one leg and draw the other heel to your glutes to release the front of the thigh.",
+      "voiceName": "Quad stretch",
+      "voiceHowTo": "Stand tall, catch one ankle behind you and draw the heel toward your glutes. Keep the knees close together and hips pushed slightly forward. Hold onto a wall if balance is shaky, and swap legs halfway.",
+      "voiceFormCues": ["Knees together.", "Hips forward.", "Use the wall for balance."],
+      "defaultWorkSec": 45, "defaultRestSec": 0, "minSec": 30, "maxSec": 120,
+      "met": 2.3, "intensity": "LOW", "impact": "LOW",
+      "targets": ["MOBILITY", "BALANCE"], "contraindications": ["KNEE"],
+      "animationId": "fl_quadstretch"
+    },
+    {
+      "id": "floor_child_pose", "name": "Child's pose", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE", "warmupCooldown": true,
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Gentle sustained stretching is an evidence-supported way to wind down and maintain flexibility."}
+      ],
+      "summary": "Resting fold: hips to heels, arms long, slow breathing to finish the session.",
+      "voiceName": "Child's pose",
+      "voiceHowTo": "Kneel, sit your hips back toward your heels and walk your hands forward until your forehead rests down. Let the back broaden and breathe slowly into your ribs. Stay heavy and relaxed.",
+      "voiceFormCues": ["Hips sink to heels.", "Long slow breaths.", "Let go of the shoulders."],
+      "defaultWorkSec": 60, "defaultRestSec": 0, "minSec": 30, "maxSec": 180,
+      "met": 2.3, "intensity": "LOW", "impact": "LOW",
+      "targets": ["MOBILITY"], "contraindications": ["KNEE", "HIP"],
+      "animationId": "fl_child"
+    },
+
+    {
+      "id": "ref_footwork_heels", "name": "Footwork — heels", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Pilates shows strong evidence for flexibility and dynamic balance and moderate evidence for muscular endurance — footwork is the method's foundational leg-endurance series."}
+      ],
+      "summary": "The reformer's foundation: rhythmic leg presses with heels on the bar, hips quiet.",
+      "voiceName": "Footwork, heels on the bar",
+      "voiceHowTo": "Lie on the carriage with heels hip-width on the foot bar and toes flexed back. Press the carriage out until your legs are long without locking the knees, then bend to return with control. Keep your pelvis heavy and still the whole time.",
+      "voiceFormCues": ["Press and resist back in.", "Pelvis stays quiet.", "Knees soft at the top."],
+      "defaultWorkSec": 50, "defaultRestSec": 15, "minSec": 30, "maxSec": 120,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "CORE"], "contraindications": [],
+      "machine": {"reformer": {"springs": "MEDIUM_2", "bodyPosition": "lying supine on the carriage, heels on the foot bar"}},
+      "animationId": "rf_footwork"
+    },
+    {
+      "id": "ref_footwork_toes", "name": "Footwork — toes", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Pilates leg-press patterns build muscular endurance; the toes variation adds calf and ankle work."}
+      ],
+      "summary": "Footwork with the balls of the feet on the bar — same press, extra calf and ankle work.",
+      "voiceName": "Footwork, toes on the bar",
+      "voiceHowTo": "Place the balls of your feet on the bar with heels lifted and level. Press the carriage out long, keeping the heels still, then bend back in with control. Imagine your kneecaps tracking straight along rails.",
+      "voiceFormCues": ["Heels stay level.", "Track the knees straight.", "Smooth in both directions."],
+      "defaultWorkSec": 50, "defaultRestSec": 15, "minSec": 30, "maxSec": 120,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "BALANCE"], "contraindications": ["ANKLE"],
+      "machine": {"reformer": {"springs": "MEDIUM_2", "bodyPosition": "lying supine on the carriage, balls of the feet on the bar"}},
+      "animationId": "rf_footwork"
+    },
+    {
+      "id": "ref_pelvic_curl", "name": "Pelvic curl", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Pilates for low back pain", "authors": "Yamato TP, Maher CG, Saragiotto BT, Hancock MJ, Ostelo RWJG, Cabral CMN, Menezes Costa LC, Costa LOP", "year": 2015, "journal": "Cochrane Database of Systematic Reviews 2015(7):CD010265", "doiOrPmid": "10.1002/14651858.CD010265.pub2", "finding": "Pilates is probably more effective than minimal intervention for chronic low back pain; segmental bridging patterns are core to those programs."},
+        {"title": "The Effectiveness of Pilates Exercise in People with Chronic Low Back Pain: A Systematic Review", "authors": "Wells C, Kolt GS, Marshall P, Hill B, Bialocerkowski A", "year": 2014, "journal": "PLoS One 9(7):e100402", "doiOrPmid": "10.1371/journal.pone.0100402", "finding": "Pilates programs significantly reduced chronic low back pain versus comparators in randomized trials."}
+      ],
+      "summary": "Segmental bridge on the carriage: roll the spine up and down one vertebra at a time.",
+      "voiceName": "Pelvic curl",
+      "voiceHowTo": "Lie on the carriage with feet on the bar, knees bent. Exhale and roll your hips up one vertebra at a time until you form a line from shoulders to knees. Inhale at the top, then melt the spine back down from the chest to the tailbone.",
+      "voiceFormCues": ["One vertebra at a time.", "Ribs stay soft.", "Squeeze glutes at the top."],
+      "defaultWorkSec": 50, "defaultRestSec": 15, "minSec": 30, "maxSec": 120,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CORE", "MOBILITY"], "contraindications": ["NECK"],
+      "machine": {"reformer": {"springs": "MEDIUM_2", "bodyPosition": "lying supine on the carriage, feet on the bar, knees bent"}},
+      "animationId": "rf_pelviccurl"
+    },
+    {
+      "id": "ref_hundred", "name": "The hundred", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Moderate evidence that Pilates improves muscular endurance — the hundred is the method's signature endurance drill."}
+      ],
+      "summary": "Pilates' signature endurance drill: curled head and shoulders, legs in tabletop, arms pumping with the breath.",
+      "voiceName": "The hundred",
+      "voiceHowTo": "Lie back, curl your head and shoulders up and float the legs to tabletop. Reach your arms long by your hips and pump them briskly, breathing in for five pumps and out for five. Keep the lower back anchored the whole time.",
+      "voiceFormCues": ["Pump from the shoulders.", "In for five, out for five.", "Lower back anchored."],
+      "defaultWorkSec": 45, "defaultRestSec": 20, "minSec": 25, "maxSec": 100,
+      "met": 3.0, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["CORE"], "contraindications": ["NECK"],
+      "machine": {"reformer": {"springs": "MEDIUM_1", "bodyPosition": "lying supine on the carriage, head and shoulders curled, legs in tabletop"}},
+      "animationId": "rf_hundred"
+    },
+    {
+      "id": "ref_leg_circles", "name": "Leg circles in straps", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Strong evidence for flexibility gains from Pilates practice; supine leg circles mobilise the hips under light load."}
+      ],
+      "summary": "Hip mobility under light spring load: smooth controlled circles with legs in the straps.",
+      "voiceName": "Leg circles",
+      "voiceHowTo": "Lying on your back with feet in the straps, reach both legs to the ceiling. Draw slow circles the size of a dinner plate, keeping the pelvis perfectly still. Circle one way, then reverse at the halfway beep.",
+      "voiceFormCues": ["Pelvis carved in stone.", "Circles slow and even.", "Reverse at halfway."],
+      "defaultWorkSec": 50, "defaultRestSec": 15, "minSec": 30, "maxSec": 120,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["MOBILITY", "CORE"], "contraindications": ["HIP"],
+      "machine": {"reformer": {"springs": "LIGHT_1", "bodyPosition": "lying supine on the carriage, feet in the straps"}},
+      "animationId": "rf_legcircles"
+    },
+    {
+      "id": "ref_frog", "name": "Frog", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Pilates strap work under light load builds hip mobility and inner-thigh control with the spine supported."}
+      ],
+      "summary": "In the straps: heels together, knees wide, press long and resist the return — inner thighs and hip control.",
+      "voiceName": "Frog",
+      "voiceHowTo": "With feet in the straps, bring heels together and let the knees open wide. Press both legs out long on a low diagonal, then bend back in resisting the springs. Keep the tailbone heavy on the carriage throughout.",
+      "voiceFormCues": ["Heels glued together.", "Resist the springs home.", "Tailbone stays heavy."],
+      "defaultWorkSec": 50, "defaultRestSec": 15, "minSec": 30, "maxSec": 120,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "MOBILITY"], "contraindications": ["HIP", "KNEE"],
+      "machine": {"reformer": {"springs": "LIGHT_1", "bodyPosition": "lying supine on the carriage, feet in the straps, heels together knees wide"}},
+      "animationId": "rf_frog"
+    },
+    {
+      "id": "ref_elephant", "name": "Elephant", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Pilates improves flexibility and trunk endurance; the elephant combines a hamstring stretch with abdominal control."}
+      ],
+      "summary": "Standing pike on the carriage: flat back, straight legs, small carriage pushes from the abdominals and hamstrings.",
+      "voiceName": "Elephant",
+      "voiceHowTo": "Stand on the carriage with hands on the foot bar, heels down and hips high in a pike. Keeping arms and legs long, press the carriage back a hand-width using your abdominals, then draw it home. Small moves, big control.",
+      "voiceFormCues": ["Heels heavy, hips high.", "Small push, strong return.", "Draw in with the abs."],
+      "defaultWorkSec": 45, "defaultRestSec": 15, "minSec": 25, "maxSec": 100,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CORE", "MOBILITY"], "contraindications": ["WRIST", "LOWER_BACK"],
+      "machine": {"reformer": {"springs": "MEDIUM_1", "bodyPosition": "standing on the carriage in a pike, hands on the foot bar"}},
+      "animationId": "rf_elephant"
+    },
+    {
+      "id": "ref_knee_stretches", "name": "Knee stretches", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Moderate evidence for muscular endurance from Pilates; knee stretches are a classic abdominal-endurance drill with rhythm."}
+      ],
+      "summary": "Kneeling on the carriage, hands on the bar: rhythmic knee drives powered by the abdominals.",
+      "voiceName": "Knee stretches",
+      "voiceHowTo": "Kneel on the carriage with hands on the bar and hips over the knees, back gently rounded. Press the carriage back with your knees, then snap it home using your abdominals rather than momentum. Keep your shoulders quiet over the hands.",
+      "voiceFormCues": ["Abs pull the carriage home.", "Shoulders stay quiet.", "Crisp rhythm."],
+      "defaultWorkSec": 45, "defaultRestSec": 15, "minSec": 25, "maxSec": 100,
+      "met": 3.0, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["CORE", "STRENGTH"], "contraindications": ["KNEE", "WRIST"],
+      "machine": {"reformer": {"springs": "MEDIUM_1", "bodyPosition": "kneeling on the carriage, hands on the foot bar"}},
+      "animationId": "rf_kneestretch"
+    },
+    {
+      "id": "ref_long_stretch", "name": "Long stretch", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "The Effectiveness of Pilates Exercise in People with Chronic Low Back Pain: A Systematic Review", "authors": "Wells C, Kolt GS, Marshall P, Hill B, Bialocerkowski A", "year": 2014, "journal": "PLoS One 9(7):e100402", "doiOrPmid": "10.1371/journal.pone.0100402", "finding": "Trunk-stability training under load is central to effective Pilates programs; the long stretch is a moving plank demanding continuous trunk control."}
+      ],
+      "summary": "A moving plank: hands on the bar, feet against the shoulder rests, slide the whole line out and back.",
+      "voiceName": "Long stretch",
+      "voiceHowTo": "Take a plank on the reformer with hands on the bar and feet against the shoulder rests. Keeping the body in one rigid line, press the carriage back through your shoulders, then return without the hips sagging. Think of sliding a plank of wood.",
+      "voiceFormCues": ["One rigid line.", "Move from the shoulders.", "No sag on the return."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 3.0, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["CORE", "STRENGTH"], "contraindications": ["WRIST", "SHOULDER", "LOWER_BACK"],
+      "machine": {"reformer": {"springs": "MEDIUM_1", "bodyPosition": "plank on the reformer, hands on the bar, feet at the shoulder rests"}},
+      "animationId": "rf_longstretch"
+    },
+    {
+      "id": "ref_up_stretch", "name": "Up stretch (pike)", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Pilates flow work develops trunk endurance and shoulder control; the up-stretch moves between pike and plank under spring load."}
+      ],
+      "summary": "Flowing between a high pike and a long plank, moving the carriage with control.",
+      "voiceName": "Up stretch",
+      "voiceHowTo": "Start in a high pike with feet against the shoulder rests and hands on the bar. Lengthen your hips forward toward a plank as the carriage glides out, then lift the hips to pike as it returns. Keep the movement silky and continuous.",
+      "voiceFormCues": ["Silky continuous flow.", "Press the bar away.", "Hips lead the return."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 3.0, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["CORE", "STRENGTH", "MOBILITY"], "contraindications": ["WRIST", "SHOULDER"],
+      "machine": {"reformer": {"springs": "MEDIUM_1", "bodyPosition": "pike on the reformer, hands on the bar, feet at the shoulder rests"}},
+      "animationId": "rf_pike"
+    },
+    {
+      "id": "ref_chest_expansion", "name": "Chest expansion", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Pilates improves posture-related muscular endurance; chest expansion targets the upper back and shoulder stabilisers."}
+      ],
+      "summary": "Kneeling tall, pull the straps to your hips and open the chest — posture and upper-back work.",
+      "voiceName": "Chest expansion",
+      "voiceHowTo": "Kneel tall on the carriage holding a strap in each hand, arms reaching forward. Pull both arms straight back beside your hips as the chest broadens, hold while you turn your head each way, then return slowly. Grow taller with every pull.",
+      "voiceFormCues": ["Grow tall as you pull.", "Collarbones wide.", "Slow release."],
+      "defaultWorkSec": 45, "defaultRestSec": 15, "minSec": 25, "maxSec": 100,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "MOBILITY"], "contraindications": ["SHOULDER"],
+      "machine": {"reformer": {"springs": "LIGHT_1", "bodyPosition": "kneeling tall on the carriage, facing the straps"}},
+      "animationId": "rf_chestexp"
+    },
+    {
+      "id": "ref_rowing_back", "name": "Rowing from the chest", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Seated Pilates rowing sequences build upper-back endurance and trunk control under light spring load."}
+      ],
+      "summary": "Seated rowing with the straps: elbows drive back, trunk tall and unmoving.",
+      "voiceName": "Rowing",
+      "voiceHowTo": "Sit tall on the carriage facing the straps with legs crossed or long. Draw the elbows back low past your ribs, squeezing between the shoulder blades. Return with control, keeping your trunk perfectly upright throughout.",
+      "voiceFormCues": ["Elbows skim the ribs.", "Squeeze the shoulder blades.", "Trunk tall and still."],
+      "defaultWorkSec": 45, "defaultRestSec": 15, "minSec": 25, "maxSec": 100,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH"], "contraindications": ["SHOULDER", "LOWER_BACK"],
+      "machine": {"reformer": {"springs": "LIGHT_1", "bodyPosition": "seated tall on the carriage, facing the straps"}},
+      "animationId": "rf_rowing"
+    },
+    {
+      "id": "ref_lunge_stretch", "name": "Reformer lunge and hip stretch", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Strong evidence for flexibility improvements; the reformer lunge loads the hip-flexor stretch with gentle spring assistance."}
+      ],
+      "summary": "One foot down, one knee on the sliding carriage: a deep, supported hip-flexor opener.",
+      "voiceName": "Reformer lunge",
+      "voiceHowTo": "Place one foot on the floor platform and the other knee on the carriage. Let the carriage glide back until you feel a deep stretch through the front of the trailing hip. Stay tall, breathe, and swap sides at the halfway cue.",
+      "voiceFormCues": ["Sink, don't force.", "Hips square to the bar.", "Swap sides at halfway."],
+      "defaultWorkSec": 50, "defaultRestSec": 15, "minSec": 30, "maxSec": 120,
+      "met": 2.5, "intensity": "LOW", "impact": "LOW",
+      "targets": ["MOBILITY", "BALANCE"], "contraindications": ["KNEE", "HIP"],
+      "machine": {"reformer": {"springs": "MEDIUM_1", "bodyPosition": "kneeling lunge, front foot on the platform, rear knee on the carriage"}},
+      "animationId": "rf_lunge"
+    },
+    {
+      "id": "ref_mermaid", "name": "Mermaid", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Strong evidence for flexibility gains; the mermaid is the method's signature lateral-flexion stretch."}
+      ],
+      "summary": "Side-seated reach over the head as the carriage glides — a deep side-body stretch.",
+      "voiceName": "Mermaid",
+      "voiceHowTo": "Sit sideways on the carriage with legs folded, one hand on the bar. Reach the free arm up and over your head as the carriage glides out, opening the whole side body. Use an inhale to lengthen, an exhale to return, then swap sides halfway.",
+      "voiceFormCues": ["Reach up before over.", "Both hips stay heavy.", "Breathe into the side ribs."],
+      "defaultWorkSec": 50, "defaultRestSec": 15, "minSec": 30, "maxSec": 120,
+      "met": 2.5, "intensity": "LOW", "impact": "LOW",
+      "targets": ["MOBILITY"], "contraindications": ["LOWER_BACK"],
+      "machine": {"reformer": {"springs": "LIGHT_1", "bodyPosition": "seated sideways on the carriage, legs folded, one hand on the bar"}},
+      "animationId": "rf_mermaid"
+    },
+    {
+      "id": "ref_feet_in_straps", "name": "Feet in straps — press and lower", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Pilates for low back pain", "authors": "Yamato TP, Maher CG, Saragiotto BT, Hancock MJ, Ostelo RWJG, Cabral CMN, Menezes Costa LC, Costa LOP", "year": 2015, "journal": "Cochrane Database of Systematic Reviews 2015(7):CD010265", "doiOrPmid": "10.1002/14651858.CD010265.pub2", "finding": "Supported hip and hamstring work features in Pilates programs with probable benefit for chronic low back pain."}
+      ],
+      "summary": "Supine hamstring and hip work: legs press long and lower toward the bar against the springs.",
+      "voiceName": "Feet in straps",
+      "voiceHowTo": "Lying on your back with feet in the straps, press both legs long toward the ceiling. Lower the legs toward the foot bar only as far as your lower back stays anchored, then float them back up. Move with slow, even breath.",
+      "voiceFormCues": ["Back stays anchored.", "Legs long and reaching.", "Slow floats, no drops."],
+      "defaultWorkSec": 50, "defaultRestSec": 15, "minSec": 30, "maxSec": 120,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "MOBILITY", "CORE"], "contraindications": ["HIP", "LOWER_BACK"],
+      "machine": {"reformer": {"springs": "MEDIUM_1", "bodyPosition": "lying supine on the carriage, feet in the straps"}},
+      "animationId": "rf_straps"
+    },
+    {
+      "id": "ref_pulling_straps", "name": "Pulling straps (supine)", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Strap pulling patterns train shoulder and upper-back endurance with the trunk stabilised."}
+      ],
+      "summary": "Lying down, sweep straight arms from the ceiling to your hips against the springs — lats and posture muscles.",
+      "voiceName": "Pulling straps",
+      "voiceHowTo": "Lie on your back holding a strap in each hand, arms reaching to the ceiling. Sweep both straight arms down to your sides until the hands hover by your hips, then return slowly. Keep the ribs heavy and the neck relaxed.",
+      "voiceFormCues": ["Straight strong arms.", "Ribs stay heavy.", "Resist the way back up."],
+      "defaultWorkSec": 45, "defaultRestSec": 15, "minSec": 25, "maxSec": 100,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH"], "contraindications": ["SHOULDER"],
+      "machine": {"reformer": {"springs": "LIGHT_1", "bodyPosition": "lying supine on the carriage, one strap in each hand"}},
+      "animationId": "rf_pullstraps"
+    },
+    {
+      "id": "ref_side_splits", "name": "Side splits (standing)", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "LIMITED",
+      "popularityNote": "A studio favourite that looks spectacular on social media. Inner-thigh strength and balance demands are real, but there is no direct trial evidence for this exercise, and the moving carriage adds a slip risk — keep the range conservative.",
+      "references": [
+        {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "General Pilates evidence supports flexibility and balance outcomes, but individual advanced exercises like standing side splits lack direct study."}
+      ],
+      "summary": "Standing astride the carriage and platform, slide out and draw in — adductors and balance. Advanced; limited direct evidence.",
+      "voiceName": "Side splits",
+      "voiceHowTo": "Stand with one foot on the platform and the other on the carriage, toes forward. Let the carriage slide out to a comfortable straddle, then draw it home by squeezing the inner thighs. Keep your hips tall and hands reaching forward for balance.",
+      "voiceFormCues": ["Small range first.", "Inner thighs pull home.", "Stand tall, no tipping."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 3.0, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH", "BALANCE"], "contraindications": ["HIP", "KNEE"],
+      "machine": {"reformer": {"springs": "LIGHT_1", "bodyPosition": "standing astride, one foot on the platform and one on the carriage"}},
+      "animationId": "rf_sidesplit"
+    },
+
+    {
+      "id": "spin_warmup_flat", "name": "Warm-up flat", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG", "warmupCooldown": true,
+      "references": [
+        {"title": "Health Benefits of Indoor Cycling: A Systematic Review", "authors": "Chavarrias M, Carlos-Vivas J, Collado-Mateo D, Perez-Gomez J", "year": 2019, "journal": "Medicina (Kaunas) 55(8):452", "doiOrPmid": "10.3390/medicina55080452", "finding": "Reviewed indoor cycling programs consistently open with 5-10 minutes of light-resistance riding to raise heart rate gradually."}
+      ],
+      "summary": "Easy seated spinning to wake the legs up. Remember the GR7 flywheel is fixed — keep the legs moving and slow down gradually.",
+      "voiceName": "Warm-up, easy seated flat",
+      "voiceHowTo": "Settle into the saddle with a light gear and spin at a comfortable eighty to ninety r p m. Relax your grip, soft elbows, eyes forward. Let the heart rate drift up gently — this bike has a fixed flywheel, so always keep the legs turning and slow down gradually.",
+      "voiceFormCues": ["Soft elbows, relaxed grip.", "Smooth circles with the feet.", "Let the effort build slowly."],
+      "defaultWorkSec": 240, "defaultRestSec": 0, "minSec": 120, "maxSec": 600,
+      "met": 4.0, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CARDIO"], "contraindications": [],
+      "machine": {"spin": {"resistanceLow": 0.27, "cadenceRpmLow": 80, "cadenceRpmHigh": 90, "position": "seated flat"}},
+      "animationId": "sp_seated_flat"
+    },
+    {
+      "id": "spin_recovery_soft", "name": "Recovery spin", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Exercise Intensity During Indoor Cycling (Intensidad de ejercicio en ciclismo indoor)", "authors": "Barbado C, Foster C, Vicente-Campos D, Lopez-Chicharro J", "year": 2017, "journal": "Revista Internacional de Medicina y Ciencias de la Actividad Fisica y del Deporte 17(67)", "doiOrPmid": "10.15366/rimcafd2017.67.004", "finding": "Indoor cycling classes routinely run above 90% HRmax; deliberate recovery segments are needed to keep sessions at sustainable intensity."}
+      ],
+      "summary": "Light-gear spinning between efforts — the deliberate recovery most classes skip.",
+      "voiceName": "Recovery, soft pedal",
+      "voiceHowTo": "Back the resistance right off and settle into an easy seated spin. Let your breathing come down and shake out one arm at a time. Stay smooth — recovery now buys quality in the next effort.",
+      "voiceFormCues": ["Breathe down.", "Loose shoulders.", "Easy circles."],
+      "defaultWorkSec": 60, "defaultRestSec": 0, "minSec": 10, "maxSec": 240,
+      "met": 4.0, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CARDIO"], "contraindications": [],
+      "machine": {"spin": {"resistanceLow": 0.27, "cadenceRpmLow": 80, "cadenceRpmHigh": 90, "position": "seated flat"}},
+      "animationId": "sp_seated_flat"
+    },
+    {
+      "id": "spin_seated_flat_steady", "name": "Seated flat — steady state", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "The Effect of Exercise on Visceral Adipose Tissue in Overweight Adults: A Systematic Review and Meta-Analysis", "authors": "Vissers D, Hens W, Taeymans J, Baeyens JP, Poortmans J, Van Gaal L", "year": 2013, "journal": "PLoS One 8(2):e56415", "doiOrPmid": "10.1371/journal.pone.0056415", "finding": "Moderate-to-high intensity aerobic training has the highest potential to reduce visceral adipose tissue, even without dieting."},
+        {"title": "Health Benefits of Indoor Cycling: A Systematic Review", "authors": "Chavarrias M, Carlos-Vivas J, Collado-Mateo D, Perez-Gomez J", "year": 2019, "journal": "Medicina (Kaunas) 55(8):452", "doiOrPmid": "10.3390/medicina55080452", "finding": "Indoor cycling improves VO2max by around 8-10% and lowers blood pressure across reviewed trials."}
+      ],
+      "summary": "The bread-and-butter aerobic block: moderate gear, conversational-but-working pace.",
+      "voiceName": "Seated flat, steady effort",
+      "voiceHowTo": "Ride seated with a moderate gear at eighty five to ninety five r p m. You should be able to speak in short sentences but not sing. Keep the upper body quiet and let the legs do the talking.",
+      "voiceFormCues": ["Short sentences pace.", "Quiet upper body.", "Even pressure all the way round."],
+      "defaultWorkSec": 180, "defaultRestSec": 0, "minSec": 60, "maxSec": 600,
+      "met": 6.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["VISCERAL_FAT", "CARDIO"], "contraindications": [],
+      "machine": {"spin": {"resistanceLow": 0.45, "cadenceRpmLow": 85, "cadenceRpmHigh": 95, "position": "seated flat"}},
+      "animationId": "sp_seated_flat"
+    },
+    {
+      "id": "spin_fast_flat", "name": "Fast flat — leg speed", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Health Benefits of Indoor Cycling: A Systematic Review", "authors": "Chavarrias M, Carlos-Vivas J, Collado-Mateo D, Perez-Gomez J", "year": 2019, "journal": "Medicina (Kaunas) 55(8):452", "doiOrPmid": "10.3390/medicina55080452", "finding": "Higher-cadence aerobic work is a standard component of the indoor cycling programs shown to improve fitness."}
+      ],
+      "summary": "Cadence surge on a moderate gear — leg speed without going anaerobic. Keep resistance on; never spin against nothing.",
+      "voiceName": "Fast flat",
+      "voiceHowTo": "Hold your moderate gear and lift the cadence toward one hundred r p m. Stay planted in the saddle with hips still — if you start bouncing, add a touch of resistance. Smooth fast circles.",
+      "voiceFormCues": ["No bouncing in the saddle.", "Keep resistance on.", "Fast but smooth."],
+      "defaultWorkSec": 60, "defaultRestSec": 0, "minSec": 20, "maxSec": 180,
+      "met": 8.0, "intensity": "HIGH", "impact": "LOW",
+      "targets": ["VISCERAL_FAT", "CARDIO"], "contraindications": [],
+      "machine": {"spin": {"resistanceLow": 0.45, "cadenceRpmLow": 95, "cadenceRpmHigh": 105, "position": "seated flat"}},
+      "animationId": "sp_seated_flat"
+    },
+    {
+      "id": "spin_seated_climb", "name": "Seated climb", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "The Effect of Exercise on Visceral Adipose Tissue in Overweight Adults: A Systematic Review and Meta-Analysis", "authors": "Vissers D, Hens W, Taeymans J, Baeyens JP, Poortmans J, Van Gaal L", "year": 2013, "journal": "PLoS One 8(2):e56415", "doiOrPmid": "10.1371/journal.pone.0056415", "finding": "Moderate-to-high intensity aerobic work is the most effective exercise mode for visceral fat."}
+      ],
+      "summary": "Heavier gear, slower legs: the seated hill that builds leg strength and aerobic power together.",
+      "voiceName": "Seated climb",
+      "voiceHowTo": "Add resistance until the legs slow to sixty to eighty r p m — the road is tilting up. Slide slightly back in the saddle and drive through the whole pedal stroke. Keep your breathing deep and rhythmic.",
+      "voiceFormCues": ["Drive the full circle.", "Sit back, chest open.", "Strong steady breath."],
+      "defaultWorkSec": 180, "defaultRestSec": 0, "minSec": 60, "maxSec": 480,
+      "met": 8.0, "intensity": "HIGH", "impact": "LOW",
+      "targets": ["VISCERAL_FAT", "CARDIO", "STRENGTH"], "contraindications": [],
+      "machine": {"spin": {"resistanceLow": 0.64, "resistanceHigh": 0.73, "cadenceRpmLow": 60, "cadenceRpmHigh": 80, "position": "seated climb"}},
+      "animationId": "sp_seated_climb"
+    },
+    {
+      "id": "spin_seated_climb_heavy", "name": "Heavy seated climb", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Effect of exercise intervention dosage on reducing visceral adipose tissue: a systematic review and network meta-analysis", "authors": "Chang YH, Yang HY, Shun SC", "year": 2021, "journal": "International Journal of Obesity 45(5):982-997", "doiOrPmid": "10.1038/s41366-021-00767-9", "finding": "Higher-intensity aerobic work drives visceral fat loss; heavy climb segments push intensity while staying low impact."}
+      ],
+      "summary": "Near the top of the gear range: a grinding seated climb for strength-endurance.",
+      "voiceName": "Heavy climb",
+      "voiceHowTo": "Take the gear up again — this is the steep pitch. Keep the cadence at sixty to seventy r p m, hips anchored, and pull through the bottom of the stroke. If the legs stall, ease one level off.",
+      "voiceFormCues": ["Anchor the hips.", "Pull through the bottom.", "Ease off one level if you stall."],
+      "defaultWorkSec": 120, "defaultRestSec": 0, "minSec": 45, "maxSec": 300,
+      "met": 8.8, "intensity": "HIGH", "impact": "LOW",
+      "targets": ["VISCERAL_FAT", "CARDIO", "STRENGTH"], "contraindications": ["KNEE"],
+      "machine": {"spin": {"resistanceLow": 0.82, "resistanceHigh": 0.91, "cadenceRpmLow": 60, "cadenceRpmHigh": 70, "position": "seated climb"}},
+      "animationId": "sp_seated_climb"
+    },
+    {
+      "id": "spin_standing_climb", "name": "Standing climb", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Health Benefits of Indoor Cycling: A Systematic Review", "authors": "Chavarrias M, Carlos-Vivas J, Collado-Mateo D, Perez-Gomez J", "year": 2019, "journal": "Medicina (Kaunas) 55(8):452", "doiOrPmid": "10.3390/medicina55080452", "finding": "Mixed seated/standing indoor cycling programs improved fitness and body composition markers across trials."}
+      ],
+      "summary": "Out of the saddle on a heavy gear. Safety first: add resistance BEFORE you stand — the flywheel must support you.",
+      "voiceName": "Standing climb",
+      "voiceHowTo": "Add solid resistance first, then rise out of the saddle with hands wide on the bars. Keep your weight centred over the pedals and let the bike rock gently beneath you. Legs turn at sixty to seventy five r p m — powerful, unhurried strokes.",
+      "voiceFormCues": ["Resistance before you stand.", "Weight over the pedals.", "Powerful unhurried strokes."],
+      "defaultWorkSec": 120, "defaultRestSec": 0, "minSec": 30, "maxSec": 300,
+      "met": 8.5, "intensity": "HIGH", "impact": "MODERATE",
+      "targets": ["VISCERAL_FAT", "CARDIO", "STRENGTH"], "contraindications": ["KNEE"],
+      "machine": {"spin": {"resistanceLow": 0.73, "resistanceHigh": 0.82, "cadenceRpmLow": 60, "cadenceRpmHigh": 75, "position": "standing climb"}},
+      "animationId": "sp_standing_climb"
+    },
+    {
+      "id": "spin_standing_run", "name": "Standing run", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "2024 Adult Compendium of Physical Activities: A third update of the energy costs of human activities", "authors": "Herrmann SD, Willis EA, Ainsworth BE, et al.", "year": 2024, "journal": "Journal of Sport and Health Science 13(1):6-12", "doiOrPmid": "10.1016/j.jshs.2023.10.010", "finding": "Spin-class style riding is catalogued at 9.0 METs — vigorous aerobic work."}
+      ],
+      "summary": "Running out of the saddle on a moderate gear — vigorous and rhythmic, hips over the pedals.",
+      "voiceName": "Standing run",
+      "voiceHowTo": "With a moderate gear, stand tall and run the pedals at around eighty to ninety r p m. Hips stay over the pedals, hands light on the bars. Find a bounce-free running rhythm you could hold for a song.",
+      "voiceFormCues": ["Hips over the pedals.", "Light hands.", "Bounce-free rhythm."],
+      "defaultWorkSec": 90, "defaultRestSec": 0, "minSec": 30, "maxSec": 240,
+      "met": 9.0, "intensity": "HIGH", "impact": "MODERATE",
+      "targets": ["VISCERAL_FAT", "CARDIO"], "contraindications": ["KNEE"],
+      "machine": {"spin": {"resistanceLow": 0.55, "cadenceRpmLow": 80, "cadenceRpmHigh": 90, "position": "standing run"}},
+      "animationId": "sp_standing_run"
+    },
+    {
+      "id": "spin_jumps", "name": "Jumps", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Health Benefits of Indoor Cycling: A Systematic Review", "authors": "Chavarrias M, Carlos-Vivas J, Collado-Mateo D, Perez-Gomez J", "year": 2019, "journal": "Medicina (Kaunas) 55(8):452", "doiOrPmid": "10.3390/medicina55080452", "finding": "Position transitions are a standard element of the indoor cycling classes shown to improve fitness; jumps train smooth seated-to-standing control."}
+      ],
+      "summary": "Controlled transitions: four counts standing, four counts seated, on a supportive gear.",
+      "voiceName": "Jumps",
+      "voiceHowTo": "On a moderate-to-heavy gear, rise smoothly out of the saddle for four counts, then lower back with control for four. The legs keep turning evenly the whole time. Be comfortable with seated and standing riding before you play with jumps.",
+      "voiceFormCues": ["Up two three four, down two three four.", "No plopping into the saddle.", "Cadence never stutters."],
+      "defaultWorkSec": 60, "defaultRestSec": 0, "minSec": 30, "maxSec": 180,
+      "met": 8.8, "intensity": "HIGH", "impact": "MODERATE",
+      "targets": ["CARDIO", "STRENGTH"], "contraindications": ["KNEE"],
+      "machine": {"spin": {"resistanceLow": 0.55, "resistanceHigh": 0.64, "cadenceRpmLow": 80, "cadenceRpmHigh": 100, "position": "jumps, seated to standing"}},
+      "animationId": "sp_jumps"
+    },
+    {
+      "id": "spin_sprint", "name": "Sprint (30 seconds max)", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "The effects of high-intensity interval training vs. moderate-intensity continuous training on body composition in overweight and obese adults", "authors": "Wewege M, van den Berg R, Ward RE, Keech A", "year": 2017, "journal": "Obesity Reviews 18(6):635-646", "doiOrPmid": "10.1111/obr.12532", "finding": "Sprint-style interval training matches continuous training for fat loss in about 40% less time."},
+        {"title": "Aerobic high-intensity intervals improve VO2max more than moderate training", "authors": "Helgerud J, Hoydal K, Wang E, et al.", "year": 2007, "journal": "Medicine & Science in Sports & Exercise 39(4):665-671", "doiOrPmid": "PMID 17414804", "finding": "High-intensity intervals produce superior aerobic fitness gains compared with work-matched moderate training."}
+      ],
+      "summary": "All-out effort in a high gear, capped at 30 seconds. Real resistance on — never sprint against a light flywheel.",
+      "voiceName": "Sprint",
+      "voiceHowTo": "Add gear so the flywheel has real bite, then go — an all-out effort at one hundred to one hundred ten r p m. Stay in control: strong core, still hips. Thirty seconds is the ceiling; empty the tank.",
+      "voiceFormCues": ["Real resistance on.", "Hips still, core strong.", "All out — recovery is coming."],
+      "defaultWorkSec": 30, "defaultRestSec": 0, "minSec": 15, "maxSec": 30,
+      "met": 10.3, "intensity": "VERY_HIGH", "impact": "LOW",
+      "targets": ["VISCERAL_FAT", "CARDIO"], "contraindications": [],
+      "machine": {"spin": {"resistanceLow": 0.55, "resistanceHigh": 0.64, "cadenceRpmLow": 100, "cadenceRpmHigh": 110, "position": "seated sprint"}},
+      "animationId": "sp_sprint"
+    },
+    {
+      "id": "spin_tabata_sprint", "name": "Tabata sprint (20 seconds)", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Effects of moderate-intensity endurance and high-intensity intermittent training on anaerobic capacity and VO2max", "authors": "Tabata I, Nishimura K, Kouzaki M, Hirai Y, Ogita F, Miyachi M, Yamamoto K", "year": 1996, "journal": "Medicine & Science in Sports & Exercise 28(10):1327-1330", "doiOrPmid": "PMID 8897392", "finding": "The original 20s:10s protocol improved both VO2max and anaerobic capacity in six weeks."},
+        {"title": "The Effect of Low-Volume High-Intensity Interval Training on Body Composition and Cardiorespiratory Fitness", "authors": "Sultana RN, Sabag A, Keating SE, Johnson NA", "year": 2019, "journal": "Sports Medicine 49(11):1687-1721", "doiOrPmid": "10.1007/s40279-019-01167-w", "finding": "Honest caveat: very-low-volume HIIT improves fitness but is not a shortcut for fat mass reduction on its own."}
+      ],
+      "summary": "The classic 20-on/10-off sprint. Superb for fitness; pair with bigger weekly volume for fat loss (see references).",
+      "voiceName": "Tabata sprint",
+      "voiceHowTo": "Twenty seconds as hard as you can turn the gear, then ten seconds soft — that is one round. Keep the resistance meaningful so the flywheel never runs away from you. Hold your form even when it burns.",
+      "voiceFormCues": ["Meaningful gear.", "Form holds even when it burns.", "Ten seconds soft is coming."],
+      "defaultWorkSec": 20, "defaultRestSec": 10, "minSec": 15, "maxSec": 30,
+      "met": 10.3, "intensity": "VERY_HIGH", "impact": "LOW",
+      "targets": ["VISCERAL_FAT", "CARDIO"], "contraindications": [],
+      "machine": {"spin": {"resistanceLow": 0.55, "cadenceRpmLow": 100, "cadenceRpmHigh": 110, "position": "seated sprint"}},
+      "animationId": "sp_sprint"
+    },
+    {
+      "id": "spin_cooldown_easy", "name": "Cool-down spin", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG", "warmupCooldown": true,
+      "references": [
+        {"title": "Health Benefits of Indoor Cycling: A Systematic Review", "authors": "Chavarrias M, Carlos-Vivas J, Collado-Mateo D, Perez-Gomez J", "year": 2019, "journal": "Medicina (Kaunas) 55(8):452", "doiOrPmid": "10.3390/medicina55080452", "finding": "Reviewed class formats close with progressive cool-downs of easy spinning followed by stretching."}
+      ],
+      "summary": "Wind the gear and legs down gradually — remember the fixed flywheel keeps the pedals turning.",
+      "voiceName": "Cool-down, easy spin",
+      "voiceHowTo": "Take the resistance down low and let the legs slow gradually — never stop the pedals dead on this fixed flywheel. Breathe long and slow, letting the heart rate step down. Finish with the lever pressed to brake, then stretch off the bike.",
+      "voiceFormCues": ["Slow the legs gradually.", "Long slow breaths.", "Brake lever to finish."],
+      "defaultWorkSec": 180, "defaultRestSec": 0, "minSec": 90, "maxSec": 480,
+      "met": 3.5, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CARDIO", "MOBILITY"], "contraindications": [],
+      "machine": {"spin": {"resistanceLow": 0.18, "cadenceRpmLow": 75, "cadenceRpmHigh": 85, "position": "seated flat"}},
+      "animationId": "sp_seated_flat"
+    },
+
+    {
+      "id": "ell_warmup_easy", "name": "Warm-up glide", "category": "ELLIPTICAL", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG", "warmupCooldown": true,
+      "references": [
+        {"title": "Comparison of energy expenditure on a treadmill vs. an elliptical device at a self-selected exercise intensity", "authors": "Brown GA, Cook CM, Krueger RD, Heelan KA", "year": 2010, "journal": "Journal of Strength and Conditioning Research 24(6):1643-1649", "doiOrPmid": "10.1519/JSC.0b013e3181cb2854", "finding": "Elliptical training matches treadmill energy expenditure at matched effort — a low-impact way to warm into cardio work."}
+      ],
+      "summary": "Easy strides to grease the pattern and raise the pulse gently.",
+      "voiceName": "Warm-up glide",
+      "voiceHowTo": "Start with a light level and long easy strides, hands resting on the moving handles. Let your heart rate climb gently over the first minutes. Stand tall — no slouching over the console.",
+      "voiceFormCues": ["Tall posture.", "Long easy strides.", "Let it build gently."],
+      "defaultWorkSec": 240, "defaultRestSec": 0, "minSec": 120, "maxSec": 600,
+      "met": 4.0, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CARDIO"], "contraindications": [],
+      "machine": {"elliptical": {"resistanceLow": 0.25, "direction": "FORWARD", "arms": "light hold on the moving handles"}},
+      "animationId": "el_forward"
+    },
+    {
+      "id": "ell_steady_forward", "name": "Steady forward stride", "category": "ELLIPTICAL", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "The Effect of Exercise on Visceral Adipose Tissue in Overweight Adults: A Systematic Review and Meta-Analysis", "authors": "Vissers D, Hens W, Taeymans J, Baeyens JP, Poortmans J, Van Gaal L", "year": 2013, "journal": "PLoS One 8(2):e56415", "doiOrPmid": "10.1371/journal.pone.0056415", "finding": "Moderate-intensity aerobic training reduces visceral fat — the steady elliptical block is the app's low-impact MICT workhorse."},
+        {"title": "Comparison of energy expenditure on a treadmill vs. an elliptical device at a self-selected exercise intensity", "authors": "Brown GA, Cook CM, Krueger RD, Heelan KA", "year": 2010, "journal": "Journal of Strength and Conditioning Research 24(6):1643-1649", "doiOrPmid": "10.1519/JSC.0b013e3181cb2854", "finding": "At matched effort the elliptical burns the same energy as a treadmill; note heart rate reads about 19 bpm higher, so go by feel."}
+      ],
+      "summary": "The moderate continuous block: mid resistance, purposeful stride, short-sentences effort.",
+      "voiceName": "Steady stride",
+      "voiceHowTo": "Bring the level up to the middle of the range and stride with purpose, driving through the handles. Aim for an effort where short sentences are possible but singing is not. Shoulders back, whole foot on the pedal.",
+      "voiceFormCues": ["Drive through the handles.", "Short sentences effort.", "Whole foot planted."],
+      "defaultWorkSec": 240, "defaultRestSec": 0, "minSec": 60, "maxSec": 600,
+      "met": 5.0, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["VISCERAL_FAT", "CARDIO"], "contraindications": [],
+      "machine": {"elliptical": {"resistanceLow": 0.5, "direction": "FORWARD", "arms": "drive through the handles"}},
+      "animationId": "el_forward"
+    },
+    {
+      "id": "ell_hiit_push", "name": "HIIT push", "category": "ELLIPTICAL", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Effect of exercise intervention dosage on reducing visceral adipose tissue: a systematic review and network meta-analysis", "authors": "Chang YH, Yang HY, Shun SC", "year": 2021, "journal": "International Journal of Obesity 45(5):982-997", "doiOrPmid": "10.1038/s41366-021-00767-9", "finding": "HIIT produced the largest visceral fat reductions of any exercise mode (SMD -0.39)."},
+        {"title": "A systematic review and meta-analysis of interval training versus moderate-intensity continuous training on body adiposity", "authors": "Keating SE, Johnson NA, Mielke GI, Coombes JS", "year": 2017, "journal": "Obesity Reviews 18(8):943-964", "doiOrPmid": "10.1111/obr.12536", "finding": "Interval training is a time-efficient equivalent to continuous training for reducing body adiposity."}
+      ],
+      "summary": "Hard interval: high resistance and fast stride together. RPE 8 out of 10 — one-word answers only.",
+      "voiceName": "Hard push",
+      "voiceHowTo": "Punch the resistance up and drive — fast stride, hard pull and push through the handles. This is an eight out of ten effort where one-word answers are all you have. Hold your posture tall right to the end of the interval.",
+      "voiceFormCues": ["Eight out of ten.", "Fast feet, strong arms.", "Posture holds to the end."],
+      "defaultWorkSec": 45, "defaultRestSec": 0, "minSec": 20, "maxSec": 120,
+      "met": 9.0, "intensity": "VERY_HIGH", "impact": "LOW",
+      "targets": ["VISCERAL_FAT", "CARDIO"], "contraindications": [],
+      "machine": {"elliptical": {"resistanceLow": 0.75, "direction": "FORWARD", "arms": "drive hard through the handles"}},
+      "animationId": "el_forward_fast"
+    },
+    {
+      "id": "ell_recovery_easy", "name": "Easy recovery", "category": "ELLIPTICAL", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "A systematic review and meta-analysis of interval training versus moderate-intensity continuous training on body adiposity", "authors": "Keating SE, Johnson NA, Mielke GI, Coombes JS", "year": 2017, "journal": "Obesity Reviews 18(8):943-964", "doiOrPmid": "10.1111/obr.12536", "finding": "Effective interval protocols alternate hard efforts with genuine low-intensity recovery periods."}
+      ],
+      "summary": "Drop resistance and stride rate until you can catch your breath — RPE 3 to 4.",
+      "voiceName": "Easy recovery",
+      "voiceHowTo": "Bring the level right down and soften the stride until your breath comes back. Light grip, loose shoulders. When you can speak easily again, you are ready for the next push.",
+      "voiceFormCues": ["Catch your breath.", "Light grip.", "Loose easy strides."],
+      "defaultWorkSec": 75, "defaultRestSec": 0, "minSec": 10, "maxSec": 240,
+      "met": 4.0, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CARDIO"], "contraindications": [],
+      "machine": {"elliptical": {"resistanceLow": 0.25, "direction": "FORWARD", "arms": "light grip, catch your breath"}},
+      "animationId": "el_forward"
+    },
+    {
+      "id": "ell_reverse_stride", "name": "Reverse stride", "category": "ELLIPTICAL", "kind": "INTERVAL_SEGMENT", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Comparison of energy expenditure on a treadmill vs. an elliptical device at a self-selected exercise intensity", "authors": "Brown GA, Cook CM, Krueger RD, Heelan KA", "year": 2010, "journal": "Journal of Strength and Conditioning Research 24(6):1643-1649", "doiOrPmid": "10.1519/JSC.0b013e3181cb2854", "finding": "Elliptical work delivers treadmill-level energy expenditure at low impact; direction changes vary the stimulus. EMG data show backward striding mainly raises quad (rectus femoris) activity."}
+      ],
+      "summary": "Pedal backwards for a quad-emphasis change of stimulus. Hands on the static rail for balance.",
+      "voiceName": "Reverse stride",
+      "voiceHowTo": "Slow down, then smoothly reverse the pedal direction. Sit slightly back into your hips and feel the front of the thighs take over. Keep your hands on the static rail until the backward rhythm feels stable.",
+      "voiceFormCues": ["Quads do the work.", "Hands on the static rail.", "Smooth controlled rhythm."],
+      "defaultWorkSec": 120, "defaultRestSec": 0, "minSec": 45, "maxSec": 300,
+      "met": 5.0, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["CARDIO", "STRENGTH"], "contraindications": ["KNEE"],
+      "machine": {"elliptical": {"resistanceLow": 0.44, "direction": "REVERSE", "arms": "hands on the static rail for balance"}},
+      "animationId": "el_reverse"
+    },
+    {
+      "id": "ell_legs_only", "name": "Legs only — no handles", "category": "ELLIPTICAL", "kind": "INTERVAL_SEGMENT", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Comparison of energy expenditure on a treadmill vs. an elliptical device at a self-selected exercise intensity", "authors": "Brown GA, Cook CM, Krueger RD, Heelan KA", "year": 2010, "journal": "Journal of Strength and Conditioning Research 24(6):1643-1649", "doiOrPmid": "10.1519/JSC.0b013e3181cb2854", "finding": "Elliptical training is an effective treadmill alternative; removing the arm drive shifts the workload to the legs and balance system (coaching convention — direct EMG evidence is limited)."}
+      ],
+      "summary": "Let go of the moving handles: legs and core carry the whole stride.",
+      "voiceName": "Legs only",
+      "voiceHowTo": "Rest your hands on the static rail — or hover them — and keep the stride going with legs alone. Feel the core switch on to keep you steady. Hold your stride rate even though the arms are on holiday.",
+      "voiceFormCues": ["Core keeps you steady.", "Even stride rate.", "Tall through the crown."],
+      "defaultWorkSec": 120, "defaultRestSec": 0, "minSec": 45, "maxSec": 300,
+      "met": 5.0, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["CARDIO", "BALANCE"], "contraindications": [],
+      "machine": {"elliptical": {"resistanceLow": 0.5, "direction": "FORWARD", "arms": "legs only, hands resting on the static rail"}},
+      "animationId": "el_legsonly"
+    },
+    {
+      "id": "ell_arms_drive", "name": "Arms emphasis drive", "category": "ELLIPTICAL", "kind": "INTERVAL_SEGMENT", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Comparison of energy expenditure on a treadmill vs. an elliptical device at a self-selected exercise intensity", "authors": "Brown GA, Cook CM, Krueger RD, Heelan KA", "year": 2010, "journal": "Journal of Strength and Conditioning Research 24(6):1643-1649", "doiOrPmid": "10.1519/JSC.0b013e3181cb2854", "finding": "Whole-body elliptical work raises total energy demand; emphasising the handle drive engages the upper body (coaching convention — direct EMG evidence is limited)."}
+      ],
+      "summary": "Push and pull hard through the moving handles — share the work with your upper body.",
+      "voiceName": "Arms drive",
+      "voiceHowTo": "Grip the moving handles and make the arms genuine partners — push away strongly and pull back with intent. Let the legs keep an even rhythm while the upper body raises the total workload. Keep the shoulders down away from the ears.",
+      "voiceFormCues": ["Push and pull with intent.", "Shoulders down.", "Legs keep the rhythm."],
+      "defaultWorkSec": 120, "defaultRestSec": 0, "minSec": 45, "maxSec": 300,
+      "met": 5.5, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["CARDIO", "STRENGTH"], "contraindications": ["SHOULDER"],
+      "machine": {"elliptical": {"resistanceLow": 0.56, "direction": "FORWARD", "arms": "push and pull hard through the handles"}},
+      "animationId": "el_armsdrive"
+    },
+    {
+      "id": "ell_hill_grind", "name": "Hill grind", "category": "ELLIPTICAL", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "The Effect of Exercise on Visceral Adipose Tissue in Overweight Adults: A Systematic Review and Meta-Analysis", "authors": "Vissers D, Hens W, Taeymans J, Baeyens JP, Poortmans J, Van Gaal L", "year": 2013, "journal": "PLoS One 8(2):e56415", "doiOrPmid": "10.1371/journal.pone.0056415", "finding": "Higher-intensity aerobic work maximises visceral fat reduction; heavy-resistance elliptical blocks push intensity without impact."}
+      ],
+      "summary": "High resistance, slow powerful strides — the elliptical's answer to a standing climb.",
+      "voiceName": "Hill grind",
+      "voiceHowTo": "Take the level high and let the stride slow into strong deliberate pushes. Drive through the heels and pull the handles with purpose — this is your hill. Keep breathing deep and rhythmic all the way up.",
+      "voiceFormCues": ["Slow powerful strides.", "Drive through the heels.", "Deep rhythmic breath."],
+      "defaultWorkSec": 150, "defaultRestSec": 0, "minSec": 60, "maxSec": 360,
+      "met": 7.0, "intensity": "HIGH", "impact": "LOW",
+      "targets": ["VISCERAL_FAT", "CARDIO", "STRENGTH"], "contraindications": [],
+      "machine": {"elliptical": {"resistanceLow": 0.8, "direction": "FORWARD", "arms": "drive the handles with purpose"}},
+      "animationId": "el_hill"
+    },
+    {
+      "id": "ell_cooldown_easy", "name": "Cool-down glide", "category": "ELLIPTICAL", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG", "warmupCooldown": true,
+      "references": [
+        {"title": "Comparison of energy expenditure on a treadmill vs. an elliptical device at a self-selected exercise intensity", "authors": "Brown GA, Cook CM, Krueger RD, Heelan KA", "year": 2010, "journal": "Journal of Strength and Conditioning Research 24(6):1643-1649", "doiOrPmid": "10.1519/JSC.0b013e3181cb2854", "finding": "Progressive intensity reduction on the elliptical brings heart rate down while keeping movement low impact."}
+      ],
+      "summary": "Ease the level and stride down step by step until breathing is easy.",
+      "voiceName": "Cool-down glide",
+      "voiceHowTo": "Step the resistance down low and let the stride soften. Breathe long and slow, unclench the hands, and let the heart rate walk back down. Finish feeling looser than you started.",
+      "voiceFormCues": ["Everything softens.", "Long slow breaths.", "Unclench the hands."],
+      "defaultWorkSec": 240, "defaultRestSec": 0, "minSec": 120, "maxSec": 600,
+      "met": 3.5, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CARDIO", "MOBILITY"], "contraindications": [],
+      "machine": {"elliptical": {"resistanceLow": 0.19, "direction": "FORWARD", "arms": "light hold on the moving handles"}},
+      "animationId": "el_forward"
+    }
+  ],
+  "routines": [
+    {
+      "id": "rt_spin_pyramid", "name": "Pyramid Climb", "category": "SPIN", "intensity": "HIGH",
+      "summary": "Resistance ladders up to a standing-climb peak, then steps back down — the classic pyramid class shape.",
+      "steps": [
+        {"exerciseId": "spin_warmup_flat", "durationSec": 240},
+        {"exerciseId": "spin_seated_flat_steady", "durationSec": 120},
+        {"exerciseId": "spin_seated_climb", "durationSec": 120},
+        {"exerciseId": "spin_seated_climb_heavy", "durationSec": 120},
+        {"exerciseId": "spin_standing_climb", "durationSec": 90},
+        {"exerciseId": "spin_seated_climb_heavy", "durationSec": 120},
+        {"exerciseId": "spin_seated_climb", "durationSec": 120},
+        {"exerciseId": "spin_seated_flat_steady", "durationSec": 120},
+        {"exerciseId": "spin_cooldown_easy", "durationSec": 180}
+      ]
+    },
+    {
+      "id": "rt_spin_tabata", "name": "Tabata Sprints", "category": "SPIN", "intensity": "VERY_HIGH",
+      "summary": "Two Tabata blocks of 8 x 20s all-out / 10s soft, separated by a proper recovery spin.",
+      "steps": [
+        {"exerciseId": "spin_warmup_flat", "durationSec": 300},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20},
+        {"exerciseId": "spin_recovery_soft", "durationSec": 150},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20}, {"exerciseId": "spin_recovery_soft", "durationSec": 10},
+        {"exerciseId": "spin_tabata_sprint", "durationSec": 20},
+        {"exerciseId": "spin_cooldown_easy", "durationSec": 240}
+      ]
+    },
+    {
+      "id": "rt_spin_rolling_hills", "name": "Rolling Hills", "category": "SPIN", "intensity": "HIGH",
+      "summary": "Three rolling climbs: seated build, standing crest, flat descent — repeat.",
+      "steps": [
+        {"exerciseId": "spin_warmup_flat", "durationSec": 240},
+        {"exerciseId": "spin_seated_climb", "durationSec": 150},
+        {"exerciseId": "spin_standing_climb", "durationSec": 60},
+        {"exerciseId": "spin_seated_flat_steady", "durationSec": 90},
+        {"exerciseId": "spin_seated_climb", "durationSec": 150},
+        {"exerciseId": "spin_standing_climb", "durationSec": 60},
+        {"exerciseId": "spin_seated_flat_steady", "durationSec": 90},
+        {"exerciseId": "spin_seated_climb", "durationSec": 150},
+        {"exerciseId": "spin_standing_climb", "durationSec": 60},
+        {"exerciseId": "spin_seated_flat_steady", "durationSec": 90},
+        {"exerciseId": "spin_cooldown_easy", "durationSec": 180}
+      ]
+    },
+    {
+      "id": "rt_spin_endurance", "name": "Endurance Ride", "category": "SPIN", "intensity": "MODERATE",
+      "summary": "Long steady aerobic blocks with one leg-speed surge — the MICT workhorse ride.",
+      "steps": [
+        {"exerciseId": "spin_warmup_flat", "durationSec": 240},
+        {"exerciseId": "spin_seated_flat_steady", "durationSec": 480},
+        {"exerciseId": "spin_fast_flat", "durationSec": 60},
+        {"exerciseId": "spin_seated_flat_steady", "durationSec": 480},
+        {"exerciseId": "spin_recovery_soft", "durationSec": 60},
+        {"exerciseId": "spin_seated_flat_steady", "durationSec": 300},
+        {"exerciseId": "spin_cooldown_easy", "durationSec": 240}
+      ]
+    },
+    {
+      "id": "rt_spin_3030", "name": "30/30 Sprint Intervals", "category": "SPIN", "intensity": "VERY_HIGH",
+      "summary": "Ten rounds of 30 seconds hard against 30 seconds soft — a classic 1:1 interval set.",
+      "steps": [
+        {"exerciseId": "spin_warmup_flat", "durationSec": 300},
+        {"exerciseId": "spin_sprint", "durationSec": 30}, {"exerciseId": "spin_recovery_soft", "durationSec": 30},
+        {"exerciseId": "spin_sprint", "durationSec": 30}, {"exerciseId": "spin_recovery_soft", "durationSec": 30},
+        {"exerciseId": "spin_sprint", "durationSec": 30}, {"exerciseId": "spin_recovery_soft", "durationSec": 30},
+        {"exerciseId": "spin_sprint", "durationSec": 30}, {"exerciseId": "spin_recovery_soft", "durationSec": 30},
+        {"exerciseId": "spin_sprint", "durationSec": 30}, {"exerciseId": "spin_recovery_soft", "durationSec": 30},
+        {"exerciseId": "spin_sprint", "durationSec": 30}, {"exerciseId": "spin_recovery_soft", "durationSec": 30},
+        {"exerciseId": "spin_sprint", "durationSec": 30}, {"exerciseId": "spin_recovery_soft", "durationSec": 30},
+        {"exerciseId": "spin_sprint", "durationSec": 30}, {"exerciseId": "spin_recovery_soft", "durationSec": 30},
+        {"exerciseId": "spin_sprint", "durationSec": 30}, {"exerciseId": "spin_recovery_soft", "durationSec": 30},
+        {"exerciseId": "spin_sprint", "durationSec": 30},
+        {"exerciseId": "spin_recovery_soft", "durationSec": 120},
+        {"exerciseId": "spin_cooldown_easy", "durationSec": 240}
+      ]
+    },
+    {
+      "id": "rt_spin_ladder", "name": "Climb Ladder", "category": "SPIN", "intensity": "HIGH",
+      "summary": "Step the resistance up stage by stage to a standing summit, then a run home.",
+      "steps": [
+        {"exerciseId": "spin_warmup_flat", "durationSec": 240},
+        {"exerciseId": "spin_seated_flat_steady", "durationSec": 120},
+        {"exerciseId": "spin_seated_climb", "durationSec": 120},
+        {"exerciseId": "spin_seated_climb_heavy", "durationSec": 120},
+        {"exerciseId": "spin_standing_climb", "durationSec": 120},
+        {"exerciseId": "spin_seated_climb_heavy", "durationSec": 90},
+        {"exerciseId": "spin_recovery_soft", "durationSec": 60},
+        {"exerciseId": "spin_standing_run", "durationSec": 90},
+        {"exerciseId": "spin_cooldown_easy", "durationSec": 180}
+      ]
+    },
+    {
+      "id": "rt_spin_jumps_runs", "name": "Jumps and Runs", "category": "SPIN", "intensity": "HIGH",
+      "summary": "Position-change playground: jump blocks and standing runs with honest recoveries.",
+      "steps": [
+        {"exerciseId": "spin_warmup_flat", "durationSec": 240},
+        {"exerciseId": "spin_jumps", "durationSec": 60},
+        {"exerciseId": "spin_recovery_soft", "durationSec": 60},
+        {"exerciseId": "spin_standing_run", "durationSec": 90},
+        {"exerciseId": "spin_recovery_soft", "durationSec": 60},
+        {"exerciseId": "spin_jumps", "durationSec": 60},
+        {"exerciseId": "spin_recovery_soft", "durationSec": 60},
+        {"exerciseId": "spin_standing_run", "durationSec": 90},
+        {"exerciseId": "spin_seated_flat_steady", "durationSec": 120},
+        {"exerciseId": "spin_cooldown_easy", "durationSec": 180}
+      ]
+    },
+
+    {
+      "id": "rt_ell_pyramid", "name": "Resistance Pyramid", "category": "ELLIPTICAL", "intensity": "HIGH",
+      "summary": "Resistance steps up to a hill-grind peak and back down, arms working on the shoulders of the pyramid.",
+      "steps": [
+        {"exerciseId": "ell_warmup_easy", "durationSec": 240},
+        {"exerciseId": "ell_steady_forward", "durationSec": 120},
+        {"exerciseId": "ell_arms_drive", "durationSec": 120},
+        {"exerciseId": "ell_hill_grind", "durationSec": 150},
+        {"exerciseId": "ell_arms_drive", "durationSec": 120},
+        {"exerciseId": "ell_steady_forward", "durationSec": 120},
+        {"exerciseId": "ell_cooldown_easy", "durationSec": 240}
+      ]
+    },
+    {
+      "id": "rt_ell_hiit", "name": "HIIT Intervals", "category": "ELLIPTICAL", "intensity": "VERY_HIGH",
+      "summary": "Eight hard pushes with generous easy recoveries — the ACE-style elliptical HIIT shape.",
+      "steps": [
+        {"exerciseId": "ell_warmup_easy", "durationSec": 300},
+        {"exerciseId": "ell_hiit_push", "durationSec": 45}, {"exerciseId": "ell_recovery_easy", "durationSec": 75},
+        {"exerciseId": "ell_hiit_push", "durationSec": 45}, {"exerciseId": "ell_recovery_easy", "durationSec": 75},
+        {"exerciseId": "ell_hiit_push", "durationSec": 45}, {"exerciseId": "ell_recovery_easy", "durationSec": 75},
+        {"exerciseId": "ell_hiit_push", "durationSec": 45}, {"exerciseId": "ell_recovery_easy", "durationSec": 75},
+        {"exerciseId": "ell_hiit_push", "durationSec": 45}, {"exerciseId": "ell_recovery_easy", "durationSec": 75},
+        {"exerciseId": "ell_hiit_push", "durationSec": 45}, {"exerciseId": "ell_recovery_easy", "durationSec": 75},
+        {"exerciseId": "ell_hiit_push", "durationSec": 45}, {"exerciseId": "ell_recovery_easy", "durationSec": 75},
+        {"exerciseId": "ell_hiit_push", "durationSec": 45},
+        {"exerciseId": "ell_cooldown_easy", "durationSec": 255}
+      ]
+    },
+    {
+      "id": "rt_ell_direction_mix", "name": "Direction Mix", "category": "ELLIPTICAL", "intensity": "MODERATE",
+      "summary": "Forward and reverse blocks with a legs-only balance challenge in the middle.",
+      "steps": [
+        {"exerciseId": "ell_warmup_easy", "durationSec": 240},
+        {"exerciseId": "ell_steady_forward", "durationSec": 180},
+        {"exerciseId": "ell_reverse_stride", "durationSec": 120},
+        {"exerciseId": "ell_steady_forward", "durationSec": 120},
+        {"exerciseId": "ell_legs_only", "durationSec": 120},
+        {"exerciseId": "ell_reverse_stride", "durationSec": 120},
+        {"exerciseId": "ell_steady_forward", "durationSec": 180},
+        {"exerciseId": "ell_cooldown_easy", "durationSec": 240}
+      ]
+    },
+    {
+      "id": "rt_ell_endurance", "name": "Steady Cruise", "category": "ELLIPTICAL", "intensity": "MODERATE",
+      "summary": "The long moderate continuous session — 30 minutes of honest MICT with small texture changes.",
+      "steps": [
+        {"exerciseId": "ell_warmup_easy", "durationSec": 240},
+        {"exerciseId": "ell_steady_forward", "durationSec": 480},
+        {"exerciseId": "ell_legs_only", "durationSec": 120},
+        {"exerciseId": "ell_steady_forward", "durationSec": 360},
+        {"exerciseId": "ell_arms_drive", "durationSec": 120},
+        {"exerciseId": "ell_steady_forward", "durationSec": 240},
+        {"exerciseId": "ell_cooldown_easy", "durationSec": 240}
+      ]
+    },
+    {
+      "id": "rt_ell_arms_legs", "name": "Arms and Legs Focus", "category": "ELLIPTICAL", "intensity": "MODERATE",
+      "summary": "Alternating arm-drive and legs-only blocks — upper body and balance take turns.",
+      "steps": [
+        {"exerciseId": "ell_warmup_easy", "durationSec": 240},
+        {"exerciseId": "ell_arms_drive", "durationSec": 120},
+        {"exerciseId": "ell_legs_only", "durationSec": 120},
+        {"exerciseId": "ell_arms_drive", "durationSec": 120},
+        {"exerciseId": "ell_legs_only", "durationSec": 120},
+        {"exerciseId": "ell_arms_drive", "durationSec": 120},
+        {"exerciseId": "ell_legs_only", "durationSec": 120},
+        {"exerciseId": "ell_steady_forward", "durationSec": 180},
+        {"exerciseId": "ell_cooldown_easy", "durationSec": 240}
+      ]
+    }
+  ]
+}
