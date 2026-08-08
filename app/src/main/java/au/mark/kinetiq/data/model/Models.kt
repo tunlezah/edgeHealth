@@ -3,9 +3,12 @@ package au.mark.kinetiq.data.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** Exercise category — the four supported modalities. */
+/**
+ * Exercise category — the four equipment modalities plus BACK, a physiotherapy-informed
+ * core/lower-back strength category of mat exercises (see RESEARCH.md §11).
+ */
 @Serializable
-enum class Category { FLOOR, REFORMER, SPIN, ELLIPTICAL }
+enum class Category { FLOOR, REFORMER, SPIN, ELLIPTICAL, BACK }
 
 /** DISCRETE = timed exercise with rests; INTERVAL_SEGMENT = coached machine interval. */
 @Serializable

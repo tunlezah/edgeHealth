@@ -48,7 +48,7 @@ data class WorkoutPlan(
 /** Generator inputs (Section 5 of the spec). */
 @Serializable
 data class GeneratorConfig(
-    val totalDurationMin: Int = 30,
+    val totalDurationMin: Int = 15,
     /** null = auto */
     val exercisesPerCategory: Int? = null,
     val categories: List<Category> = listOf(Category.FLOOR),

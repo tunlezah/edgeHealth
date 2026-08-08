@@ -43,6 +43,19 @@ class DatabaseValidatorTest {
         assertThat(byCat[Category.ELLIPTICAL]!!.count { it.kind == ExerciseKind.INTERVAL_SEGMENT }).isAtLeast(8)
         assertThat(db.routines.count { it.category == Category.SPIN }).isAtLeast(6)
         assertThat(db.routines.count { it.category == Category.ELLIPTICAL }).isAtLeast(4)
+        assertThat(byCat[Category.BACK]!!.size).isAtLeast(10)
+    }
+
+    @Test
+    fun `BACK category is pain-safe by design — all entries low impact and discrete`() {
+        val db = loadRealDatabase()
+        val back = db.exercises.filter { it.category == Category.BACK }
+        assertThat(back.size).isAtLeast(10)
+        back.forEach { ex ->
+            assertThat(ex.impact).isEqualTo(au.mark.kinetiq.data.model.Impact.LOW)
+            assertThat(ex.kind).isEqualTo(ExerciseKind.DISCRETE)
+            assertThat(ex.machine).isNull()
+        }
     }
 
     @Test

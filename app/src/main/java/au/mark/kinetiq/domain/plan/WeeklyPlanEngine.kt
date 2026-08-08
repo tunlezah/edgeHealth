@@ -32,7 +32,7 @@ object WeeklyPlanEngine {
     )
 
     private val CARDIO_CATEGORIES = setOf("SPIN", "ELLIPTICAL")
-    private val STRENGTH_CATEGORIES = setOf("FLOOR", "REFORMER")
+    private val STRENGTH_CATEGORIES = setOf("FLOOR", "REFORMER", "BACK")
 
     fun progressForWeek(
         history: List<HistoryEntry>,

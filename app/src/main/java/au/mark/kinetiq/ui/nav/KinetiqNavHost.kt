@@ -1,22 +1,45 @@
 package au.mark.kinetiq.ui.nav
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -51,7 +74,12 @@ object Routes {
     const val DEBUG_ANIM = "debug_anim"
 }
 
-private data class Tab(val route: String, val label: String, val icon: @Composable () -> Unit)
+private data class Tab(
+    val route: String,
+    val label: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
+)
 
 @Composable
 fun KinetiqApp(mainViewModel: MainViewModel) {
@@ -69,36 +97,32 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
     }
 
     val tabs = listOf(
-        Tab(Routes.HOME, "Home") { Icon(Icons.Filled.Home, contentDescription = null) },
-        Tab(Routes.HISTORY, "History") { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
-        Tab(Routes.LIBRARY, "Library") { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null) },
-        Tab(Routes.PLAN, "Plan") { Icon(Icons.Filled.Insights, contentDescription = null) },
-        Tab(Routes.SETTINGS, "Settings") { Icon(Icons.Filled.Settings, contentDescription = null) },
+        Tab(Routes.HOME, "Home", Icons.Filled.Home, Icons.Outlined.Home),
+        Tab(Routes.HISTORY, "History", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+        Tab(Routes.LIBRARY, "Library", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook),
+        Tab(Routes.PLAN, "Plan", Icons.Filled.Insights, Icons.Outlined.Insights),
+        Tab(Routes.SETTINGS, "Settings", Icons.Filled.Settings, Icons.Outlined.Settings),
     )
 
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    val showBottomBar = currentRoute in tabs.map { it.route }
+    // The bar is permanent everywhere except onboarding, so navigation is always one tap away.
+    val showBottomBar = currentRoute != Routes.ONBOARDING
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
-                    tabs.forEach { tab ->
-                        NavigationBarItem(
-                            selected = currentRoute == tab.route,
-                            onClick = {
-                                navController.navigate(tab.route) {
-                                    popUpTo(Routes.HOME) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = tab.icon,
-                            label = { Text(tab.label) },
-                        )
-                    }
-                }
+                KinetiqBottomBar(
+                    tabs = tabs,
+                    currentRoute = currentRoute,
+                    onSelect = { route ->
+                        navController.navigate(route) {
+                            popUpTo(Routes.HOME) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
             }
         }
     ) { padding ->
@@ -154,6 +178,72 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
             }
             composable(Routes.HEALTH) { HealthDataScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.DEBUG_ANIM) { DebugAnimScreen() }
+        }
+    }
+}
+
+/**
+ * Bottom navigation with the Material 3 look (pill indicator, label under icon) but with the
+ * ENTIRE cell — icon, label, and all the space around them, right to the screen edges — as the
+ * touch target. Each cell is at least 72 dp tall and a fifth of the screen wide, so the edge
+ * tabs (Home, Settings) are as easy to hit as the middle ones.
+ */
+@Composable
+private fun KinetiqBottomBar(
+    tabs: List<Tab>,
+    currentRoute: String?,
+    onSelect: (String) -> Unit,
+) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .height(76.dp),
+        ) {
+            tabs.forEach { tab ->
+                val selected = currentRoute == tab.route
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .selectable(
+                            selected = selected,
+                            role = Role.Tab,
+                            onClick = { onSelect(tab.route) },
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 56.dp, height = 32.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.secondaryContainer
+                                    else MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0f)
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
+                                contentDescription = tab.label,
+                                tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = tab.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
         }
     }
 }
