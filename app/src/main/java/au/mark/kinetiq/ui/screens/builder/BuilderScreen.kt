@@ -137,8 +137,9 @@ class BuilderViewModel @Inject constructor(
             if (step.type != StepType.WORK) return@launch
             val settings = settingsRepository.current()
             val usedIds = session.plan.steps.mapNotNull { it.exerciseId }.toSet()
+            val discreteCategories = setOf(Category.FLOOR, Category.REFORMER, Category.BACK)
             val candidates = exerciseRepository.byCategory(step.category)
-                .filter { it.kind.name == (if (step.category == Category.FLOOR || step.category == Category.REFORMER) "DISCRETE" else "INTERVAL_SEGMENT") }
+                .filter { it.kind.name == (if (step.category in discreteCategories) "DISCRETE" else "INTERVAL_SEGMENT") }
                 .filter { !it.isWarmupCooldown && it.id !in usedIds }
                 .filter { settings.includeLowEvidence || it.evidenceTier != au.mark.kinetiq.data.model.EvidenceTier.LIMITED }
                 .filter { it.contraindications.none { c -> c in settings.constraints } }
@@ -193,7 +194,7 @@ fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderV
             Slider(
                 value = config.totalDurationMin.toFloat(),
                 onValueChange = { v -> viewModel.updateConfig { it.copy(totalDurationMin = v.toInt()) } },
-                valueRange = 10f..90f, steps = 15,
+                valueRange = 5f..60f, steps = 10,
             )
         }
         item {

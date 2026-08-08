@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "exercises": [
     {
       "id": "floor_squat", "name": "Bodyweight squat", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
@@ -964,6 +964,195 @@
       "targets": ["CARDIO", "MOBILITY"], "contraindications": [],
       "machine": {"elliptical": {"resistanceLow": 0.19, "direction": "FORWARD", "arms": "light hold on the moving handles"}},
       "animationId": "el_forward"
+    },
+
+    {
+      "id": "back_curl_up", "name": "McGill curl-up", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Low back stability: from formal description to issues for performance and rehabilitation", "authors": "McGill SM", "year": 2001, "journal": "Exercise and Sport Sciences Reviews 29(1):26-31", "doiOrPmid": "10.1097/00003677-200101000-00006", "finding": "Stabilization training should challenge the trunk while minimizing spine load — the basis of the curl-up / side bridge / bird dog 'big three'."},
+        {"title": "Exercise therapy for chronic low back pain", "authors": "Hayden JA, Ellis J, Ogilvie R, Malmivaara A, van Tulder MW", "year": 2021, "journal": "Cochrane Database of Systematic Reviews 2021(9):CD009790", "doiOrPmid": "10.1002/14651858.CD009790.pub2", "finding": "Across 249 trials, exercise probably reduces pain and improves function in chronic low back pain (moderate-certainty evidence)."}
+      ],
+      "summary": "The physio-designed abdominal exercise: a tiny head-and-shoulder lift with the spine held neutral — trains the abs without bending the lower back.",
+      "voiceName": "McGill curl-up",
+      "voiceHowTo": "Lie on your back with one knee bent and the other leg long, hands resting under the arch of your lower back. Lift just your head and shoulders a few centimetres, as if they were on a tray, without flattening or arching the spine. Hold for ten seconds, breathe, and lower with control. Swap the bent leg halfway.",
+      "voiceFormCues": ["Tiny lift, long neck.", "Spine stays neutral over your hands.", "Breathe through the hold."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CORE", "STRENGTH"], "contraindications": ["NECK"],
+      "animationId": "bk_curlup"
+    },
+    {
+      "id": "back_side_bridge", "name": "Side bridge (from knees)", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Low back stability: from formal description to issues for performance and rehabilitation", "authors": "McGill SM", "year": 2001, "journal": "Exercise and Sport Sciences Reviews 29(1):26-31", "doiOrPmid": "10.1097/00003677-200101000-00006", "finding": "The side bridge loads the lateral trunk stabilizers (quadratus lumborum, obliques) with one of the lowest spine-compression costs of any core exercise."},
+        {"title": "An update of stabilisation exercises for low back pain: a systematic review with meta-analysis", "authors": "Smith BE, Littlewood C, May S", "year": 2014, "journal": "BMC Musculoskeletal Disorders 15:416", "doiOrPmid": "10.1186/1471-2474-15-416", "finding": "Stabilisation exercise benefits low back pain, comparably to other active exercise forms."}
+      ],
+      "summary": "McGill big-three lateral hold, scaled from the knees so it stays pain-safe while the side of the trunk works.",
+      "voiceName": "Side bridge from the knees",
+      "voiceHowTo": "Lie on your side with knees bent back at ninety degrees and your elbow under your shoulder. Lift the hips forward and up until your body is straight from knees to head, and hold. Keep breathing, then lower softly. Swap sides at the halfway cue.",
+      "voiceFormCues": ["Hips forward and up.", "Long line, knees to head.", "Swap sides at halfway."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CORE", "STRENGTH"], "contraindications": ["SHOULDER"],
+      "animationId": "bk_sidebridge"
+    },
+    {
+      "id": "back_bird_dog", "name": "Bird dog (back care)", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Low back stability: from formal description to issues for performance and rehabilitation", "authors": "McGill SM", "year": 2001, "journal": "Exercise and Sport Sciences Reviews 29(1):26-31", "doiOrPmid": "10.1097/00003677-200101000-00006", "finding": "The bird dog trains back extensors and rotational stiffness with very low spine load — the third of the 'big three'."},
+        {"title": "Motor control exercise for chronic non-specific low-back pain", "authors": "Saragiotto BT, Maher CG, Yamato TP, Costa LOP, Menezes Costa LC, Ostelo RWJG, Macedo LG", "year": 2016, "journal": "Cochrane Database of Systematic Reviews 2016(1):CD012004", "doiOrPmid": "10.1002/14651858.CD012004", "finding": "Motor control exercise is more effective than minimal intervention for chronic non-specific low back pain."}
+      ],
+      "summary": "Quadruped opposite-arm-and-leg reach with a stopwatch-steady spine — the classic back-safe extensor drill.",
+      "voiceName": "Bird dog",
+      "voiceHowTo": "Start on hands and knees with a neutral spine. Reach one arm forward and the opposite leg back until both are level, without letting the hips tip. Hold a slow breath, sweep them back under you, and switch sides. Imagine balancing a cup of tea on your lower back.",
+      "voiceFormCues": ["Balance the cup of tea.", "Reach long, not high.", "Slow, quiet swaps."],
+      "defaultWorkSec": 40, "defaultRestSec": 15, "minSec": 20, "maxSec": 90,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CORE", "BALANCE", "STRENGTH"], "contraindications": ["WRIST", "KNEE"],
+      "animationId": "fl_birddog"
+    },
+    {
+      "id": "back_dead_bug", "name": "Dead bug (back care)", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Motor control exercise for chronic non-specific low-back pain", "authors": "Saragiotto BT, Maher CG, Yamato TP, Costa LOP, Menezes Costa LC, Ostelo RWJG, Macedo LG", "year": 2016, "journal": "Cochrane Database of Systematic Reviews 2016(1):CD012004", "doiOrPmid": "10.1002/14651858.CD012004", "finding": "Motor control training of deep trunk muscles reduces chronic low back pain versus minimal intervention."}
+      ],
+      "summary": "Anterior core control with the spine fully supported — the safest way to train the deep abdominals.",
+      "voiceName": "Dead bug",
+      "voiceHowTo": "Lie on your back, arms to the ceiling, knees stacked over hips. Press the lower back gently into the mat, then lower one arm and the opposite leg only as far as the back stays glued down. Return and switch sides, slow and smooth.",
+      "voiceFormCues": ["Back glued to the mat.", "Exhale as you lower.", "Smaller range beats a wobble."],
+      "defaultWorkSec": 40, "defaultRestSec": 15, "minSec": 20, "maxSec": 90,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CORE"], "contraindications": [],
+      "animationId": "fl_deadbug"
+    },
+    {
+      "id": "back_glute_bridge", "name": "Glute bridge (back care)", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Exercise interventions for the treatment of chronic low back pain: a systematic review and meta-analysis of randomised controlled trials", "authors": "Searle A, Spink M, Ho A, Chuter V", "year": 2015, "journal": "Clinical Rehabilitation 29(12):1155-1167", "doiOrPmid": "10.1177/0269215515570379", "finding": "Strength/resistance and coordination/stabilisation programs are the most effective exercise types for chronic low back pain."},
+        {"title": "Which exercises target the gluteal muscles while minimizing activation of the tensor fascia lata? Electromyographic assessment using fine-wire electrodes", "authors": "Selkowitz DM, Beneck GJ, Powers CM", "year": 2013, "journal": "Journal of Orthopaedic & Sports Physical Therapy 43(2):54-64", "doiOrPmid": "10.2519/jospt.2013.4116", "finding": "Bridging is among the best exercises for activating the gluteals selectively — strong hips take load off the lower back."}
+      ],
+      "summary": "Hip extension powered by the glutes, teaching the hips — not the lower back — to do the lifting.",
+      "voiceName": "Glute bridge",
+      "voiceHowTo": "Lie on your back with knees bent, feet flat near your hips. Squeeze your glutes first, then lift the hips until shoulders, hips and knees line up — no arching past that point. Pause at the top and melt back down slowly.",
+      "voiceFormCues": ["Glutes lift, not the back.", "Stop at the straight line.", "Slow melt down."],
+      "defaultWorkSec": 40, "defaultRestSec": 15, "minSec": 20, "maxSec": 90,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "CORE"], "contraindications": [],
+      "animationId": "fl_bridge"
+    },
+    {
+      "id": "back_pelvic_tilt", "name": "Pelvic tilt", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Motor control exercise for chronic non-specific low-back pain", "authors": "Saragiotto BT, Maher CG, Yamato TP, Costa LOP, Menezes Costa LC, Ostelo RWJG, Macedo LG", "year": 2016, "journal": "Cochrane Database of Systematic Reviews 2016(1):CD012004", "doiOrPmid": "10.1002/14651858.CD012004", "finding": "Gentle motor-control drills that teach pelvic and deep-abdominal awareness are a core ingredient of effective programs."}
+      ],
+      "summary": "The entry-level physio drill: tiny rocking of the pelvis that wakes up the deep core and eases a stiff lower back.",
+      "voiceName": "Pelvic tilts",
+      "voiceHowTo": "Lie on your back with knees bent and feet flat. Gently flatten your lower back into the mat by rolling the pelvis, hold a moment, then release to neutral. Small, slow, and completely pain-free — this is a conversation with your spine, not a workout for it.",
+      "voiceFormCues": ["Small and slow.", "Roll the pelvis, ribs stay quiet.", "Totally pain-free range only."],
+      "defaultWorkSec": 45, "defaultRestSec": 10, "minSec": 25, "maxSec": 90,
+      "met": 2.3, "intensity": "LOW", "impact": "LOW",
+      "targets": ["CORE", "MOBILITY"], "contraindications": [],
+      "animationId": "bk_pelvictilt"
+    },
+    {
+      "id": "back_cat_cow", "name": "Cat-cow (back care)", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A Systematic Review of the Effects of Exercise and Physical Activity on Non-Specific Chronic Low Back Pain", "authors": "Gordon R, Bloxham S", "year": 2016, "journal": "Healthcare (Basel) 4(2):22", "doiOrPmid": "10.3390/healthcare4020022", "finding": "Programs combining strengthening with flexibility work are effective for non-specific chronic low back pain."}
+      ],
+      "summary": "Slow spinal waves through the whole back — mobility between the strength drills.",
+      "voiceName": "Cat cow",
+      "voiceHowTo": "On hands and knees, inhale as the belly drops and the gaze lifts, then exhale as you round the spine to the ceiling and tuck the chin. Move through a comfortable range only, letting each breath set the pace. Think of moving one vertebra at a time.",
+      "voiceFormCues": ["Breath sets the pace.", "Comfortable range only.", "One vertebra at a time."],
+      "defaultWorkSec": 45, "defaultRestSec": 10, "minSec": 25, "maxSec": 120,
+      "met": 2.3, "intensity": "LOW", "impact": "LOW",
+      "targets": ["MOBILITY"], "contraindications": ["WRIST"],
+      "animationId": "fl_catcow"
+    },
+    {
+      "id": "back_mckenzie_pressup", "name": "Press-up (McKenzie extension)", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "The McKenzie method for low back pain: a systematic review of the literature with a meta-analysis approach", "authors": "Machado LA, de Souza MvS, Ferreira PH, Ferreira ML", "year": 2006, "journal": "Spine 31(9):E254-E262", "doiOrPmid": "10.1097/01.brs.0000214884.18502.93", "finding": "McKenzie extension work shows some benefit over passive therapy for acute low back pain; effects are modest — an honest MODERATE."}
+      ],
+      "summary": "The classic physio extension: press the chest up while the hips stay heavy, restoring comfortable backward bend.",
+      "voiceName": "Press-ups",
+      "voiceHowTo": "Lie face down with hands under your shoulders. Press your chest up and forward while the hips and legs stay completely relaxed on the mat. Rise only as far as feels easy, exhale at the top, and lower slowly. If anything travels down a leg, stop and skip this one.",
+      "voiceFormCues": ["Hips stay heavy.", "Easy range, no forcing.", "Stop if anything runs down a leg."],
+      "defaultWorkSec": 40, "defaultRestSec": 15, "minSec": 20, "maxSec": 90,
+      "met": 2.3, "intensity": "LOW", "impact": "LOW",
+      "targets": ["MOBILITY"], "contraindications": ["WRIST"],
+      "animationId": "bk_pressup"
+    },
+    {
+      "id": "back_hip_hinge", "name": "Hip hinge drill", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Exercise interventions for the treatment of chronic low back pain: a systematic review and meta-analysis of randomised controlled trials", "authors": "Searle A, Spink M, Ho A, Chuter V", "year": 2015, "journal": "Clinical Rehabilitation 29(12):1155-1167", "doiOrPmid": "10.1177/0269215515570379", "finding": "Strength and coordination training are the most effective exercise approaches for chronic low back pain — the hinge is the coordination pattern behind every safe lift."}
+      ],
+      "summary": "Learning to bow from the hips with a proud flat back — the movement skill that protects your spine every time you pick something up.",
+      "voiceName": "Hip hinge",
+      "voiceHowTo": "Stand tall with soft knees and hands sliding down the front of your thighs. Push your hips straight back and let your flat chest tip forward like a drawbridge, stopping when the hamstrings tighten. Drive the hips forward to stand, squeezing the glutes at the top.",
+      "voiceFormCues": ["Hips back, chest proud.", "Drawbridge, not a slump.", "Glutes finish the stand."],
+      "defaultWorkSec": 40, "defaultRestSec": 15, "minSec": 20, "maxSec": 90,
+      "met": 3.0, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "MOBILITY"], "contraindications": [],
+      "animationId": "bk_hinge"
+    },
+    {
+      "id": "back_clamshell", "name": "Clamshell", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Which exercises target the gluteal muscles while minimizing activation of the tensor fascia lata? Electromyographic assessment using fine-wire electrodes", "authors": "Selkowitz DM, Beneck GJ, Powers CM", "year": 2013, "journal": "Journal of Orthopaedic & Sports Physical Therapy 43(2):54-64", "doiOrPmid": "10.2519/jospt.2013.4116", "finding": "Fine-wire EMG showed the clam best activates the gluteals while minimizing tensor fascia lata activation — a physio staple for hip control."}
+      ],
+      "summary": "Side-lying knee opening that strengthens the deep hip stabilisers supporting the pelvis and lower back.",
+      "voiceName": "Clamshells",
+      "voiceHowTo": "Lie on your side with hips and knees folded, feet together, head resting on your arm. Keeping the feet touching, float the top knee open like a clam shell, without rolling the pelvis back. Lower with control and keep a steady rhythm. Swap sides at the halfway cue.",
+      "voiceFormCues": ["Pelvis stays stacked.", "Feet glued together.", "Swap sides at halfway."],
+      "defaultWorkSec": 40, "defaultRestSec": 15, "minSec": 20, "maxSec": 90,
+      "met": 2.5, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "BALANCE"], "contraindications": ["HIP"],
+      "animationId": "bk_clam"
+    },
+    {
+      "id": "back_side_plank_progression", "name": "Full side bridge", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "An update of stabilisation exercises for low back pain: a systematic review with meta-analysis", "authors": "Smith BE, Littlewood C, May S", "year": 2014, "journal": "BMC Musculoskeletal Disorders 15:416", "doiOrPmid": "10.1186/1471-2474-15-416", "finding": "Stabilisation exercise improves low back pain; progressions keep the stimulus growing as tolerance builds."}
+      ],
+      "summary": "The straight-leg progression of the side bridge — earn it after the knee version feels easy.",
+      "voiceName": "Full side bridge",
+      "voiceHowTo": "From your side with legs long and feet stacked, set the elbow under the shoulder and lift the hips until you form one straight line. Hold with steady breathing and level hips. Drop back to the knee version any time form fades. Swap sides halfway.",
+      "voiceFormCues": ["One straight line.", "Hips level, no sag.", "Knees version is always there."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 90,
+      "met": 2.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["CORE", "STRENGTH"], "contraindications": ["SHOULDER", "WRIST"],
+      "animationId": "fl_side_plank"
+    },
+    {
+      "id": "back_extension_hold", "name": "Back extension hold", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "A review of the specificity of exercises designed for conditioning the lumbar extensors", "authors": "Steele J, Bruce-Low S, Smith D", "year": 2015, "journal": "British Journal of Sports Medicine 49(5):291-297", "doiOrPmid": "10.1136/bjsports-2013-092197", "finding": "Honest caveat: free-body trunk extensions condition the whole posterior chain but poorly isolate the lumbar extensors — still useful, just not magic."},
+        {"title": "Best Exercise Options for Reducing Pain and Disability in Adults With Chronic Low Back Pain: Pilates, Strength, Core-Based, and Mind-Body. A Network Meta-analysis", "authors": "Fernandez-Rodriguez R, Alvarez-Bueno C, Cavero-Redondo I, Torres-Costoso A, Pozuelo-Carrascosa DP, Reina-Gutierrez S, Pascual-Morena C, Martinez-Vizcaino V", "year": 2022, "journal": "Journal of Orthopaedic & Sports Physical Therapy 52(8):505-521", "doiOrPmid": "10.2519/jospt.2022.10671", "finding": "Network meta-analysis of 118 RCTs: Pilates, strength, and core-based exercise are the most effective options for chronic low back pain."}
+      ],
+      "summary": "A gentle prone hold for the whole posterior chain — chest floats, legs stay grounded, effort stays mild.",
+      "voiceName": "Back extension hold",
+      "voiceHowTo": "Lie face down with arms beside you or swept slightly back. Float your chest a few centimetres off the mat, keeping the feet down and the neck long. Hold for a few steady breaths at a gentle effort, then lower softly.",
+      "voiceFormCues": ["Chest floats, feet stay down.", "Gentle effort, long neck.", "Steady breaths through the hold."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 60,
+      "met": 2.5, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "CORE"], "contraindications": ["LOWER_BACK"],
+      "animationId": "fl_superman"
+    },
+    {
+      "id": "back_toe_touch_stretch", "name": "Seated toe reach", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "LIMITED",
+      "popularityNote": "Toe-touch stretching is hugely popular for a 'tight lower back', but the evidence that flexion stretching helps back pain is limited, and repeated loaded flexion can aggravate a sensitive spine. If it feels good, keep it gentle and seated; if your back is flared up, skip it and do pelvic tilts instead.",
+      "references": [
+        {"title": "A Systematic Review of the Effects of Exercise and Physical Activity on Non-Specific Chronic Low Back Pain", "authors": "Gordon R, Bloxham S", "year": 2016, "journal": "Healthcare (Basel) 4(2):22", "doiOrPmid": "10.3390/healthcare4020022", "finding": "Flexibility work is supported only as part of a combined program — not as a stand-alone fix for back pain."}
+      ],
+      "summary": "The popular hamstring-and-back reach, kept seated and gentle. Real evidence for it is limited (see note).",
+      "voiceName": "Seated toe reach",
+      "voiceHowTo": "Sit with one leg long and the other foot tucked in. Hinge gently forward over the straight leg, reaching toward the shin or toes, and stop well short of any pinch in the back. Breathe and let the stretch stay in the back of the thigh. Swap legs at the halfway cue.",
+      "voiceFormCues": ["Stretch lives in the thigh, not the spine.", "Well short of any pinch.", "Swap legs halfway."],
+      "defaultWorkSec": 45, "defaultRestSec": 10, "minSec": 25, "maxSec": 120,
+      "met": 2.3, "intensity": "LOW", "impact": "LOW",
+      "targets": ["MOBILITY"], "contraindications": ["LOWER_BACK"],
+      "animationId": "fl_hamstretch"
     }
   ],
   "routines": [

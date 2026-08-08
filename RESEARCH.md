@@ -213,3 +213,48 @@ light; cool-down drops resistance and cadence progressively.
   from Weight + Height; waist circumference and smart-scale visceral rating are manual-entry only.
   Waist-circumference risk thresholds surfaced in the app (WHO): elevated risk ≥94 cm men / ≥80 cm women;
   substantially increased ≥102 cm / ≥88 cm (WHO waist circumference report, 2008/2011).
+
+## 11. Back care category (added v1.1) — physiotherapy-informed core & lower-back strength
+
+All citations verified against PubMed at build time.
+
+- **Hayden JA, Ellis J, Ogilvie R, Malmivaara A, van Tulder MW (2021).** Exercise therapy for chronic
+  low back pain. *Cochrane Database Syst Rev* 2021(9):CD009790. DOI 10.1002/14651858.CD009790.pub2,
+  PMID 34580864. — Across 249 trials, exercise probably reduces pain and improves function in chronic
+  LBP (moderate-certainty evidence).
+- **Saragiotto BT, Maher CG, Yamato TP, et al. (2016).** Motor control exercise for chronic
+  non-specific low-back pain. *Cochrane Database Syst Rev* 2016(1):CD012004. DOI
+  10.1002/14651858.CD012004, PMID 26742533. — Motor control exercise beats minimal intervention;
+  not superior to other exercise (honest MODERATE tiering for pure motor-control drills).
+- **Searle A, Spink M, Ho A, Chuter V (2015).** Exercise interventions for the treatment of chronic
+  low back pain: systematic review and meta-analysis. *Clin Rehabil* 29(12):1155–1167. DOI
+  10.1177/0269215515570379, PMID 25681408. — Strength/resistance and coordination/stabilisation
+  programs are the most effective exercise types for chronic LBP.
+- **Gordon R, Bloxham S (2016).** A systematic review of the effects of exercise and physical activity
+  on non-specific chronic low back pain. *Healthcare (Basel)* 4(2):22. DOI 10.3390/healthcare4020022,
+  PMID 27417610. — Combined strengthening + flexibility + aerobic programs are effective.
+- **McGill SM (2001).** Low back stability: from formal description to issues for performance and
+  rehabilitation. *Exerc Sport Sci Rev* 29(1):26–31. DOI 10.1097/00003677-200101000-00006, PMID
+  11210443. — Conceptual basis of the "big three" (curl-up, side bridge, bird dog): challenge the
+  trunk while minimizing spine load.
+- **Smith BE, Littlewood C, May S (2014).** An update of stabilisation exercises for low back pain:
+  systematic review with meta-analysis. *BMC Musculoskelet Disord* 15:416. DOI 10.1186/1471-2474-15-416,
+  PMID 25488399. — Stabilisation exercise helps, comparably to other active exercise.
+- **Machado LA, de Souza MvS, Ferreira PH, Ferreira ML (2006).** The McKenzie method for low back
+  pain. *Spine* 31(9):E254–E262. DOI 10.1097/01.brs.0000214884.18502.93, PMID 16641766. — Some
+  benefit over passive therapy for acute LBP; modest effects → press-ups tiered MODERATE.
+- **Selkowitz DM, Beneck GJ, Powers CM (2013).** Which exercises target the gluteal muscles while
+  minimizing activation of the tensor fascia lata? *J Orthop Sports Phys Ther* 43(2):54–64. DOI
+  10.2519/jospt.2013.4116, PMID 23160432. — Clam and bridge best activate gluteals selectively.
+- **Steele J, Bruce-Low S, Smith D (2015).** A review of the specificity of exercises designed for
+  conditioning the lumbar extensors. *Br J Sports Med* 49(5):291–297. DOI 10.1136/bjsports-2013-092197,
+  PMID 24092889. — Free-body extensions poorly isolate lumbar extensors (honest caveat on the
+  extension hold).
+- **Fernández-Rodríguez R, et al. (2022).** Best exercise options for reducing pain and disability in
+  adults with chronic low back pain: network meta-analysis. *J Orthop Sports Phys Ther* 52(8):505–521.
+  DOI 10.2519/jospt.2022.10671, PMID 35722759. — 118 RCTs: Pilates, strength and core-based exercise
+  are the most effective options for chronic LBP.
+
+Design rules applied: every BACK entry is LOW impact (enforced by the database validator), spoken
+cues stay in pain-free ranges ("stop if anything runs down a leg"), flexion-stretch content ships at
+LIMITED tier with an honest note, and the category counts toward the weekly strength target.

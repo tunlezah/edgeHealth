@@ -118,7 +118,7 @@ class WorkoutGenerator(
             }
             val secs = blockSec.getValue(cat)
             when (cat) {
-                Category.FLOOR, Category.REFORMER -> {
+                Category.FLOOR, Category.REFORMER, Category.BACK -> {
                     val (blockSteps, blockWarnings) = discreteBlock(cat, secs, config, profile, highAdiposity, index)
                     steps += blockSteps
                     warnings += blockWarnings
@@ -378,8 +378,13 @@ class WorkoutGenerator(
     // ---------------------------------------------------------------------------------------
     // Warm-up / cool-down
 
-    /** 3–5 minutes scaled to session length (10% of total, clamped). */
-    internal fun warmCoolSlice(totalSec: Int): Int = (totalSec / 10).coerceIn(3 * 60, 5 * 60)
+    /**
+     * 3–5 minutes scaled to session length (10% of total, clamped). Very short sessions
+     * (under ~18 min) get a proportional slice instead so a 5-minute session isn't
+     * swallowed by its own warm-up.
+     */
+    internal fun warmCoolSlice(totalSec: Int): Int =
+        (totalSec / 10).coerceIn(minOf(3 * 60, totalSec / 6), 5 * 60)
 
     private fun warmupSteps(cat: Category, seconds: Int, profile: Profile, blockIndex: Int): List<SessionStep> =
         warmCool(cat, seconds, StepType.WARMUP, profile, blockIndex)
@@ -416,6 +421,7 @@ class WorkoutGenerator(
             Category.REFORMER -> "the reformer"
             Category.SPIN -> "the bike"
             Category.ELLIPTICAL -> "the elliptical"
+            Category.BACK -> "the mat for back care"
         }
     }
 }

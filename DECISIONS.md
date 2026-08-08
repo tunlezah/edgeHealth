@@ -44,3 +44,12 @@
   task, a unit test, and a CI `aapt dump permissions` step.
 - **D-16 Process-death restoration** persists the running session snapshot every 5 s to a file in app storage
   (not Room) — cheap, atomic, and wiped on clean completion.
+- **D-17 Back care category (v1.1).** New BACK category of 13 physiotherapy-informed mat exercises
+  (McGill big three, motor-control drills, hip strength, McKenzie extension). The validator enforces
+  LOW impact for every BACK entry; flexion stretching ships LIMITED with an honest note. Counts toward
+  the weekly strength target. Citations verified on PubMed (RESEARCH.md §11).
+- **D-18 Custom bottom bar (v1.1).** Replaced M3 NavigationBar with a visually identical custom bar
+  whose full cells (76 dp tall, one-fifth screen wide, edge to edge) are the touch targets, fixing
+  hard-to-hit edge tabs on the Edge 60 Fusion's curved panel. The bar is permanent on every screen
+  except onboarding; during a workout, leaving via a tab is safe because the session runs in the
+  foreground service and Home shows a "return to player" button.

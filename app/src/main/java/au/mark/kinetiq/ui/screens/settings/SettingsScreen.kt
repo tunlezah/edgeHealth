@@ -302,7 +302,7 @@ fun SettingsScreen(
 
         // Hidden QA entry: long-press the version row to open the animation debug screen.
         Text(
-            "Kinetiq 1.0.0 — offline build (long-press for animation QA)",
+            "Kinetiq 1.1.0 — offline build (long-press for animation QA)",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier

@@ -1,6 +1,6 @@
 # WALKTHROUGH.md — every screen, briefly
 
-Use this to verify the feature list. Bottom navigation: **Home · History · Library · Plan · Settings**.
+Use this to verify the feature list. Bottom navigation: **Home · History · Library · Plan · Settings** — a permanent bar on every screen except onboarding, with the entire cell (icon, label, and surrounding space out to the screen edges) as the touch target.
 
 ## 1. Onboarding (first run only)
 1. **Disclaimer** — "general fitness guidance, not medical advice"; must be acknowledged to continue.
@@ -19,7 +19,7 @@ saved workouts (play/delete), link to body measurements, and — if the app was 
 **Resume interrupted workout**.
 
 ## 3. Workout builder
-All generator inputs: total duration (10–90 min), categories in tap order (block order), exercises
+All generator inputs: total duration (5–60 min, default 15), categories in tap order (block order) — including the physiotherapy-informed **Back care** category (McGill big three, motor-control drills, hip work; all low impact with pain-safe cues), exercises
 per category (or auto), work:rest ratio, intensity, warm-up/cool-down toggles, "use my health data".
 **Generate** shows warnings with one-tap fixes (e.g. "20 exercises in 8 min → Use 10 exercises",
 "light on cardio → Add the bike") and an editable preview: reorder (↑↓), swap (⇄ picks a compatible

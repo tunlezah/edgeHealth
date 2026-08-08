@@ -160,6 +160,27 @@ class WorkoutGeneratorTest {
     }
 
     @Test
+    fun `BACK category generates a discrete block of physio exercises`() {
+        val result = generator.generate(
+            GeneratorConfig(totalDurationMin = 15, categories = listOf(Category.BACK), warmup = false, cooldown = false),
+        )
+        val byId = db.exercises.associateBy { it.id }
+        val work = result.session.plan.steps.filter { it.type == StepType.WORK }
+        assertThat(work).isNotEmpty()
+        work.forEach { step ->
+            val ex = byId.getValue(step.exerciseId!!)
+            assertThat(ex.category).isEqualTo(Category.BACK)
+            assertThat(ex.impact).isEqualTo(au.mark.kinetiq.data.model.Impact.LOW)
+        }
+    }
+
+    @Test
+    fun `short sessions get a proportional warmup slice`() {
+        // 5-minute session: warm-up must not swallow the workout.
+        assertThat(generator.warmCoolSlice(5 * 60)).isAtMost(60)
+    }
+
+    @Test
     fun `warmup and cooldown appear when enabled`() {
         val result = generator.generate(
             GeneratorConfig(totalDurationMin = 30, categories = listOf(Category.FLOOR), warmup = true, cooldown = true),

@@ -43,6 +43,7 @@ object DatabaseValidator {
             problem("Need >= 10 SPIN segments, have ${countOf(Category.SPIN, ExerciseKind.INTERVAL_SEGMENT)}")
         if (countOf(Category.ELLIPTICAL, ExerciseKind.INTERVAL_SEGMENT) < 8)
             problem("Need >= 8 ELLIPTICAL segments, have ${countOf(Category.ELLIPTICAL, ExerciseKind.INTERVAL_SEGMENT)}")
+        if (countOf(Category.BACK) < 10) problem("Need >= 10 BACK exercises, have ${countOf(Category.BACK)}")
 
         val routinesByCat = db.routines.groupBy { it.category }
         if ((routinesByCat[Category.SPIN]?.size ?: 0) < 6)
@@ -126,6 +127,11 @@ object DatabaseValidator {
                 }
                 Category.FLOOR -> {
                     if (ex.kind != ExerciseKind.DISCRETE) problem("$where: FLOOR entries must be DISCRETE")
+                }
+                Category.BACK -> {
+                    if (ex.kind != ExerciseKind.DISCRETE) problem("$where: BACK entries must be DISCRETE")
+                    if (ex.impact != au.mark.kinetiq.data.model.Impact.LOW)
+                        problem("$where: BACK (physio) entries must be LOW impact — pain-safe by design")
                 }
             }
 
