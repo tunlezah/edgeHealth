@@ -53,3 +53,17 @@
   hard-to-hit edge tabs on the Edge 60 Fusion's curved panel. The bar is permanent on every screen
   except onboarding; during a workout, leaving via a tab is safe because the session runs in the
   foreground service and Home shows a "return to player" button.
+- **D-19 Animation accuracy overhaul (v1.2).** An audit found ~two-thirds of the hand-authored stick-figure
+  keyframes were geometrically wrong, traced to two root causes: the arm-angle doc in `Rig.kt` contradicted
+  the FK (arms mirrored on any leaned torso), and positive knee values fold the shank anatomically backwards
+  once the thigh rotates past ±90° (every supine pose). All affected poses were re-solved numerically against
+  the rig FK so support contacts actually land (feet on the foot bar, hands on the bar, elbows on the mat).
+  Structural upgrades: a two-segment spine channel (cat-cow, crunches and McKenzie press-ups now articulate),
+  per-segment easing with a minimum-jerk quintic default plus ACCEL/DECEL ballistic segments, asymmetric
+  rep tempo with end-range dwells (eccentric slower than concentric), a stance-foot ground constraint applied
+  after interpolation, and per-exercise variants that were previously shared (footwork heels vs toes, forward
+  vs reverse lunge, spin/elliptical cadences matching the voice coaching). Rendering moved from uniform
+  strokes to tapered capsule limbs with a weight hierarchy, a curved spine, near/far depth via blended color
+  and parallax shoulder/hip offsets, feet and hands, a radial contact shadow and a breathing overlay so holds
+  never freeze. A geometry test suite (floor penetration, joint limits, loop continuity, velocity caps) runs
+  over every registry animation in CI.

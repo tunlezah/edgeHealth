@@ -57,7 +57,7 @@
       "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
       "met": 3.8, "intensity": "MODERATE", "impact": "LOW",
       "targets": ["STRENGTH", "BALANCE"], "contraindications": ["KNEE"],
-      "animationId": "fl_lunge"
+      "animationId": "fl_reverse_lunge"
     },
     {
       "id": "floor_plank", "name": "Forearm plank", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
@@ -399,7 +399,7 @@
       "met": 2.8, "intensity": "LOW", "impact": "LOW",
       "targets": ["STRENGTH", "CORE"], "contraindications": [],
       "machine": {"reformer": {"springs": "MEDIUM_2", "bodyPosition": "lying supine on the carriage, heels on the foot bar"}},
-      "animationId": "rf_footwork"
+      "animationId": "rf_footwork_heels"
     },
     {
       "id": "ref_footwork_toes", "name": "Footwork — toes", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
@@ -414,7 +414,7 @@
       "met": 2.8, "intensity": "LOW", "impact": "LOW",
       "targets": ["STRENGTH", "BALANCE"], "contraindications": ["ANKLE"],
       "machine": {"reformer": {"springs": "MEDIUM_2", "bodyPosition": "lying supine on the carriage, balls of the feet on the bar"}},
-      "animationId": "rf_footwork"
+      "animationId": "rf_footwork_toes"
     },
     {
       "id": "ref_pelvic_curl", "name": "Pelvic curl", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "STRONG",
@@ -657,7 +657,7 @@
       "met": 4.0, "intensity": "LOW", "impact": "LOW",
       "targets": ["CARDIO"], "contraindications": [],
       "machine": {"spin": {"resistanceLow": 0.27, "cadenceRpmLow": 80, "cadenceRpmHigh": 90, "position": "seated flat"}},
-      "animationId": "sp_seated_flat"
+      "animationId": "sp_warmup"
     },
     {
       "id": "spin_recovery_soft", "name": "Recovery spin", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
@@ -672,7 +672,7 @@
       "met": 4.0, "intensity": "LOW", "impact": "LOW",
       "targets": ["CARDIO"], "contraindications": [],
       "machine": {"spin": {"resistanceLow": 0.27, "cadenceRpmLow": 80, "cadenceRpmHigh": 90, "position": "seated flat"}},
-      "animationId": "sp_seated_flat"
+      "animationId": "sp_recovery"
     },
     {
       "id": "spin_seated_flat_steady", "name": "Seated flat — steady state", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
@@ -703,7 +703,7 @@
       "met": 8.0, "intensity": "HIGH", "impact": "LOW",
       "targets": ["VISCERAL_FAT", "CARDIO"], "contraindications": [],
       "machine": {"spin": {"resistanceLow": 0.45, "cadenceRpmLow": 95, "cadenceRpmHigh": 105, "position": "seated flat"}},
-      "animationId": "sp_seated_flat"
+      "animationId": "sp_fast_flat"
     },
     {
       "id": "spin_seated_climb", "name": "Seated climb", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
@@ -733,7 +733,7 @@
       "met": 8.8, "intensity": "HIGH", "impact": "LOW",
       "targets": ["VISCERAL_FAT", "CARDIO", "STRENGTH"], "contraindications": ["KNEE"],
       "machine": {"spin": {"resistanceLow": 0.82, "resistanceHigh": 0.91, "cadenceRpmLow": 60, "cadenceRpmHigh": 70, "position": "seated climb"}},
-      "animationId": "sp_seated_climb"
+      "animationId": "sp_seated_climb_heavy"
     },
     {
       "id": "spin_standing_climb", "name": "Standing climb", "category": "SPIN", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
@@ -825,7 +825,7 @@
       "met": 3.5, "intensity": "LOW", "impact": "LOW",
       "targets": ["CARDIO", "MOBILITY"], "contraindications": [],
       "machine": {"spin": {"resistanceLow": 0.18, "cadenceRpmLow": 75, "cadenceRpmHigh": 85, "position": "seated flat"}},
-      "animationId": "sp_seated_flat"
+      "animationId": "sp_recovery"
     },
 
     {
@@ -841,7 +841,7 @@
       "met": 4.0, "intensity": "LOW", "impact": "LOW",
       "targets": ["CARDIO"], "contraindications": [],
       "machine": {"elliptical": {"resistanceLow": 0.25, "direction": "FORWARD", "arms": "light hold on the moving handles"}},
-      "animationId": "el_forward"
+      "animationId": "el_warmup"
     },
     {
       "id": "ell_steady_forward", "name": "Steady forward stride", "category": "ELLIPTICAL", "kind": "INTERVAL_SEGMENT", "evidenceTier": "STRONG",
@@ -888,7 +888,7 @@
       "met": 4.0, "intensity": "LOW", "impact": "LOW",
       "targets": ["CARDIO"], "contraindications": [],
       "machine": {"elliptical": {"resistanceLow": 0.25, "direction": "FORWARD", "arms": "light grip, catch your breath"}},
-      "animationId": "el_forward"
+      "animationId": "el_easy"
     },
     {
       "id": "ell_reverse_stride", "name": "Reverse stride", "category": "ELLIPTICAL", "kind": "INTERVAL_SEGMENT", "evidenceTier": "MODERATE",
@@ -963,7 +963,7 @@
       "met": 3.5, "intensity": "LOW", "impact": "LOW",
       "targets": ["CARDIO", "MOBILITY"], "contraindications": [],
       "machine": {"elliptical": {"resistanceLow": 0.19, "direction": "FORWARD", "arms": "light hold on the moving handles"}},
-      "animationId": "el_forward"
+      "animationId": "el_easy"
     },
 
     {
@@ -1137,7 +1137,7 @@
       "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 60,
       "met": 2.5, "intensity": "LOW", "impact": "LOW",
       "targets": ["STRENGTH", "CORE"], "contraindications": ["LOWER_BACK"],
-      "animationId": "fl_superman"
+      "animationId": "bk_extension"
     },
     {
       "id": "back_toe_touch_stretch", "name": "Seated toe reach", "category": "BACK", "kind": "DISCRETE", "evidenceTier": "LIMITED",

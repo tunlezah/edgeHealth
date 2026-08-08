@@ -1,7 +1,7 @@
 package au.mark.kinetiq.anim
 
 /** Prop drawn behind/with the figure. */
-enum class Prop { NONE, MAT, WALL, REFORMER, SPIN_BIKE, ELLIPTICAL }
+enum class Prop { NONE, MAT, WALL, REFORMER, REFORMER_LEG_STRAPS, REFORMER_ARM_STRAPS, SPIN_BIKE, ELLIPTICAL }
 
 /** Primary working muscle group — used for the optional highlight tint. */
 enum class MuscleGroup { LEGS, GLUTES, CORE, CHEST, BACK, SHOULDERS, ARMS, FULL_BODY }
@@ -9,8 +9,31 @@ enum class MuscleGroup { LEGS, GLUTES, CORE, CHEST, BACK, SHOULDERS, ARMS, FULL_
 /** Which joint traces the subtle motion-path arc. */
 enum class PathJoint { NONE, WRIST, ANKLE, PELVIS, HEAD }
 
-/** One keyframe: a pose at a fraction [t] in 0..1 of the loop. */
-data class Keyframe(val t: Float, val pose: Pose)
+/**
+ * Easing applied to the segment that STARTS at a keyframe.
+ *
+ * SMOOTH is a minimum-jerk quintic (zero velocity AND zero acceleration at both ends) — the
+ * default for muscle-driven motion; the old cosine ease had maximum acceleration exactly at
+ * the endpoints, which made every keyframe boundary pop. ACCEL/DECEL are the two halves of
+ * the quintic for ballistic phases (a fall accelerates, a rise decelerates). HOLD freezes the
+ * pose until the next keyframe (use for contact instants, not long pauses — for a visible
+ * pause, duplicate the keyframe so breathing overlays still run).
+ */
+enum class Ease {
+    SMOOTH, LINEAR, ACCEL, DECEL, HOLD;
+
+    fun apply(t: Float): Float = when (this) {
+        SMOOTH -> t * t * t * (t * (t * 6f - 15f) + 10f)
+        LINEAR -> t
+        // halves of the quintic, renormalized to 0..1
+        ACCEL -> { val h = t / 2f; 2f * (h * h * h * (h * (h * 6f - 15f) + 10f)) }
+        DECEL -> { val h = 0.5f + t / 2f; 2f * (h * h * h * (h * (h * 6f - 15f) + 10f)) - 1f }
+        HOLD -> 0f
+    }
+}
+
+/** One keyframe: a pose at a fraction [t] in 0..1 of the loop; [ease] shapes the segment to the next keyframe. */
+data class Keyframe(val t: Float, val pose: Pose, val ease: Ease = Ease.SMOOTH)
 
 sealed interface ExerciseAnim {
     val id: String
@@ -20,7 +43,7 @@ sealed interface ExerciseAnim {
 
 /**
  * Keyframed animation for FLOOR / REFORMER exercises.
- * Keyframes are interpolated cyclically (last wraps to first) with ease-in/out,
+ * Keyframes are interpolated cyclically (last wraps to first) with per-segment easing,
  * so every loop is seamless by construction.
  */
 data class KeyframeAnim(
@@ -39,7 +62,7 @@ data class KeyframeAnim(
         require(keyframes.first().t >= 0f && keyframes.last().t <= 1f) { "$id keyframe times must be in 0..1" }
     }
 
-    /** Cyclic interpolation with cosine easing between neighbouring keyframes. */
+    /** Cyclic interpolation with per-segment easing between neighbouring keyframes. */
     fun poseAt(phase: Float): Pose {
         val t = ((phase % 1f) + 1f) % 1f
         val idx = keyframes.indexOfLast { it.t <= t }
@@ -63,9 +86,31 @@ data class KeyframeAnim(
         }
         if (span <= 0f) span = 1e-4f
         val raw = (local / span).coerceIn(0f, 1f)
-        val eased = (1f - kotlin.math.cos(raw * Math.PI.toFloat())) / 2f
-        return Rig.lerp(a.pose, b.pose, eased)
+        return groundContact(Rig.lerp(a.pose, b.pose, a.ease.apply(raw)))
     }
+
+    /**
+     * Stance-foot constraint: keyframe poses are authored with support feet exactly on the
+     * ground, but interpolating pelvis height and leg angles independently lets feet dip
+     * below the floor mid-transition. Correct by lifting the pelvis just enough that the
+     * lowest foot point lands on the ground line — never pushing down, so airborne phases
+     * (jumps) are unaffected.
+     */
+    private fun groundContact(p: Pose): Pose {
+        fun footLow(thigh: Float, knee: Float, foot: Float, hipY: Float): Float {
+            val ankleY = hipY +
+                Proportions.THIGH * cosd(thigh) +
+                Proportions.SHANK * cosd(thigh - knee)
+            val toeY = ankleY + Proportions.FOOT * cosd(thigh - knee + 90f + foot)
+            return maxOf(ankleY, toeY)
+        }
+        val near = footLow(p.thighR, p.kneeR, p.footR, p.pelvisY)
+        val far = footLow(p.thighL, p.kneeL, p.footL, p.pelvisY + Proportions.FAR_HIP_DY)
+        val penetration = maxOf(near, far) - AnimationRegistry.GY
+        return if (penetration > 0f) p.copy(pelvisY = p.pelvisY - penetration) else p
+    }
+
+    private fun cosd(deg: Float) = kotlin.math.cos(Math.toRadians(deg.toDouble())).toFloat()
 }
 
 /** Procedural spin-bike rider: legs solved by IK onto rotating pedals. */

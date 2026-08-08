@@ -5,9 +5,17 @@ import kotlin.math.cos
 /**
  * Every exercise animation in the app, keyed by animationId.
  *
- * Authoring space: Y grows down, ground line at y = [GY]; a standing figure's pelvis is at y = 0.
- * Poses were authored against the rig FK in [Rig]; ground contact is computed with the same
- * trigonometry the renderer uses ([grounded]) so feet land on the floor.
+ * Authoring space: Y grows down, ankle-level ground contact at y = [GY]; a standing figure's
+ * pelvis is at y ~ 0. Joints that touch the floor/mat (ankles, planted wrists, kneeling knees)
+ * are authored AT GY; a body lying on the mat has its joint line at [SUPINE_Y]; a body lying on
+ * the reformer carriage at [CARRIAGE_LIE]. Every contact below was solved numerically against
+ * the rig FK (see the geometry unit tests), so feet land on floors, hands land on bars and
+ * nothing pokes through a surface.
+ *
+ * Timing: strength moves use asymmetric tempo — the eccentric (lowering) phase is slower than
+ * the concentric, with a short dwell at end range (duplicated keyframes), which is how reps are
+ * actually performed; ballistic moves use ACCEL/DECEL segments for flight. Reformer moves are
+ * closer to symmetric by design (springs load the return).
  *
  * Spin and elliptical animations are procedural ([SpinAnim]/[EllipticalAnim]): legs are IK-solved
  * onto the moving pedals at render time, so cadence is exact and loops are perfectly smooth.
@@ -15,6 +23,10 @@ import kotlin.math.cos
 object AnimationRegistry {
 
     const val GY = 0.46f
+    /** Joint height of a body lying flat on the mat. */
+    const val SUPINE_Y = 0.45f
+    /** Joint height of a body lying on the reformer carriage. */
+    const val CARRIAGE_LIE = 0.40f
 
     private fun cosd(deg: Float) = cos(Math.toRadians(deg.toDouble())).toFloat()
 
@@ -22,140 +34,193 @@ object AnimationRegistry {
     private fun grounded(thigh: Float, knee: Float): Float =
         GY - Proportions.THIGH * cosd(thigh) - Proportions.SHANK * cosd(thigh - knee)
 
+    /** Reformer carriage center X for a given prop value (0 = home, 1 = fully out). */
+    private fun carriageX(prop: Float): Float = -0.16f + 0.24f * prop
+
     // ------------------------------------------------------------------ FLOOR
 
+    private val standing = Pose(pelvisY = grounded(0f, 0f), torso = 3f, neck = -2f,
+        uArmL = 14f, uArmR = 14f, elbowL = 8f, elbowR = 8f)
+
     private val flSquat = KeyframeAnim(
-        id = "fl_squat", durationMs = 2600, prop = Prop.NONE, muscle = MuscleGroup.LEGS,
+        id = "fl_squat", durationMs = 3000, prop = Prop.NONE, muscle = MuscleGroup.LEGS,
         pathJoint = PathJoint.PELVIS,
         keyframes = listOf(
-            Keyframe(0f, Pose(pelvisY = grounded(0f, 0f), torso = 5f, uArmL = 15f, uArmR = 15f, elbowL = 10f, elbowR = 10f)),
-            Keyframe(0.5f, Pose(
-                pelvisY = grounded(78f, 96f), pelvisX = -0.05f, torso = 32f,
-                uArmL = 55f, uArmR = 55f, elbowL = 25f, elbowR = 25f,
-                thighL = 78f, kneeL = 96f, thighR = 78f, kneeR = 96f,
+            Keyframe(0f, standing),                       // eccentric: 44% of the cycle
+            Keyframe(0.44f, Pose(                          // bottom: hips back, flat feet, trunk counterlean
+                pelvisX = -0.05f, pelvisY = grounded(78f, 96f), torso = 24f, spine = 8f, neck = -14f,
+                uArmL = 52f, uArmR = 52f, elbowL = 22f, elbowR = 22f,
+                thighL = 78f, kneeL = 96f, footL = 18f, thighR = 78f, kneeR = 96f, footR = 18f,
             )),
+            Keyframe(0.55f, Pose(                          // bottom dwell
+                pelvisX = -0.05f, pelvisY = grounded(78f, 96f), torso = 24f, spine = 8f, neck = -14f,
+                uArmL = 52f, uArmR = 52f, elbowL = 22f, elbowR = 22f,
+                thighL = 78f, kneeL = 96f, footL = 18f, thighR = 78f, kneeR = 96f, footR = 18f,
+            )),
+            Keyframe(0.92f, standing),                     // concentric faster than eccentric; short top rest
         ),
+    )
+
+    private val puTop = Pose(
+        pelvisX = 0.029f, pelvisY = 0.268f, torso = 69.4f, neck = -57.4f,
+        uArmL = -79.5f, uArmR = -79.5f, elbowL = 22.9f, elbowR = 22.9f,
+        thighL = -69.4f, thighR = -69.4f, footL = 45.8f, footR = 45.8f,
+    )
+    private val puBot = Pose(
+        pelvisX = 0.053f, pelvisY = 0.366f, torso = 82f, neck = -72f,
+        uArmL = -155.4f, uArmR = -155.4f, elbowL = 124.6f, elbowR = 124.6f,
+        thighL = -82f, thighR = -82f, footL = 58.4f, footR = 58.4f,
     )
 
     private val flPushup = KeyframeAnim(
-        id = "fl_pushup", durationMs = 2400, prop = Prop.MAT, muscle = MuscleGroup.CHEST,
+        id = "fl_pushup", durationMs = 2600, prop = Prop.MAT, muscle = MuscleGroup.CHEST,
         pathJoint = PathJoint.PELVIS,
         keyframes = listOf(
-            Keyframe(0f, Pose(
-                pelvisY = 0.27f, torso = 68f, neck = -55f,
-                uArmL = -68f, uArmR = -68f, elbowL = 2f, elbowR = 2f,
-                thighL = -68f, thighR = -68f, footL = -25f, footR = -25f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisY = 0.35f, torso = 76f, neck = -60f,
-                uArmL = -121f, uArmR = -121f, elbowL = 92f, elbowR = 92f,
-                thighL = -76f, thighR = -76f, footL = -25f, footR = -25f,
-            )),
+            Keyframe(0f, puTop),
+            Keyframe(0.42f, puBot),
+            Keyframe(0.52f, puBot),   // bottom dwell
+            Keyframe(0.90f, puTop),
         ),
     )
 
+    private fun lungeBottom(front: Boolean, shift: Float): Pose =
+        if (front) Pose(
+            pelvisX = shift, pelvisY = 0.187f, torso = 6f, neck = -4f,
+            thighR = 78f, kneeR = 83f, footR = 5f, thighL = -7.3f, kneeL = 83.9f, footL = 54.3f,
+            uArmL = 22f, uArmR = -22f, elbowL = 15f, elbowR = 15f,
+        ) else Pose( // mirrored legs: left leg lunges forward
+            pelvisX = shift, pelvisY = 0.187f, torso = 6f, neck = -4f,
+            thighL = 78f, kneeL = 83f, footL = 5f, thighR = -7.3f, kneeR = 83.9f, footR = 54.3f,
+            uArmR = 22f, uArmL = -22f, elbowL = 15f, elbowR = 15f,
+        )
+
+    /** Forward lunge, alternating legs each rep. */
     private val flLunge = KeyframeAnim(
-        id = "fl_lunge", durationMs = 3000, muscle = MuscleGroup.LEGS,
+        id = "fl_lunge", durationMs = 4200, muscle = MuscleGroup.LEGS,
         keyframes = listOf(
-            Keyframe(0f, Pose(pelvisY = grounded(0f, 0f), torso = 3f, uArmL = 12f, uArmR = 12f)),
-            Keyframe(0.5f, Pose(
-                pelvisY = grounded(55f, 88f) + 0.02f, torso = 8f,
-                thighR = 55f, kneeR = 88f, footR = 0f,
-                thighL = -35f, kneeL = 65f, footL = -45f,
-                uArmL = 20f, uArmR = -20f, elbowL = 15f, elbowR = 15f,
-            )),
+            Keyframe(0f, standing),
+            Keyframe(0.20f, lungeBottom(front = true, shift = 0.03f)),
+            Keyframe(0.30f, lungeBottom(front = true, shift = 0.03f)),
+            Keyframe(0.46f, standing),
+            Keyframe(0.70f, lungeBottom(front = false, shift = 0.03f)),
+            Keyframe(0.80f, lungeBottom(front = false, shift = 0.03f)),
+            Keyframe(0.96f, standing),
         ),
+    )
+
+    /** Reverse lunge: the working leg steps back instead (pelvis travels backward). */
+    private val flReverseLunge = KeyframeAnim(
+        id = "fl_reverse_lunge", durationMs = 4200, muscle = MuscleGroup.GLUTES,
+        keyframes = listOf(
+            Keyframe(0f, standing),
+            Keyframe(0.20f, lungeBottom(front = true, shift = -0.08f)),
+            Keyframe(0.30f, lungeBottom(front = true, shift = -0.08f)),
+            Keyframe(0.46f, standing),
+            Keyframe(0.70f, lungeBottom(front = false, shift = -0.08f)),
+            Keyframe(0.80f, lungeBottom(front = false, shift = -0.08f)),
+            Keyframe(0.96f, standing),
+        ),
+    )
+
+    private val plankPose = Pose(
+        pelvisX = -0.026f, pelvisY = 0.353f, torso = 80.4f, neck = -72.4f,
+        uArmL = -80.4f, uArmR = -80.4f, elbowL = 90f, elbowR = 90f,
+        thighL = -80.4f, thighR = -80.4f, footL = 56.8f, footR = 56.8f,
     )
 
     private val flPlank = KeyframeAnim(
-        id = "fl_plank", durationMs = 3200, prop = Prop.MAT, muscle = MuscleGroup.CORE,
+        id = "fl_plank", durationMs = 3600, prop = Prop.MAT, muscle = MuscleGroup.CORE,
         keyframes = listOf(
-            Keyframe(0f, Pose(
-                pelvisY = 0.315f, torso = 74f, neck = -58f,
-                uArmL = -100f, uArmR = -100f, elbowL = 95f, elbowR = 95f,
-                thighL = -74f, thighR = -74f, footL = -25f, footR = -25f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisY = 0.308f, torso = 74.5f, neck = -56f,
-                uArmL = -100f, uArmR = -100f, elbowL = 95f, elbowR = 95f,
-                thighL = -74.5f, thighR = -74.5f, footL = -25f, footR = -25f,
-            )),
+            Keyframe(0f, plankPose),
+            Keyframe(0.5f, plankPose.copy(torso = 80.9f, thighL = -80.9f, thighR = -80.9f, pelvisY = 0.350f)),
         ),
+    )
+
+    private val spDn = Pose(
+        pelvisX = -0.052f, pelvisY = 0.397f, torso = 72.5f, neck = -66.5f,
+        uArmL = -72.5f, uArmR = 29.5f, elbowL = 90f, elbowR = 4f,
+        thighL = -72.3f, kneeL = 22.8f, footL = 95.1f, thighR = -72.3f, kneeR = 22.8f, footR = 95.1f,
+    )
+    private val spUp = Pose(
+        pelvisX = -0.046f, pelvisY = 0.358f, torso = 79.5f, neck = -73.5f,
+        uArmL = -79.5f, uArmR = 22.5f, elbowL = 90f, elbowR = 4f,
+        thighL = -77.6f, kneeL = 2.4f, footL = 80f, thighR = -77.6f, kneeR = 2.4f, footR = 80f,
     )
 
     private val flSidePlank = KeyframeAnim(
-        id = "fl_side_plank", durationMs = 3400, prop = Prop.MAT, muscle = MuscleGroup.CORE,
+        id = "fl_side_plank", durationMs = 3800, prop = Prop.MAT, muscle = MuscleGroup.CORE,
+        pathJoint = PathJoint.PELVIS,
         keyframes = listOf(
-            Keyframe(0f, Pose(
-                pelvisY = 0.30f, torso = 66f, neck = -50f,
-                uArmL = -110f, uArmR = 96f, elbowL = 100f, elbowR = 4f,
-                thighL = -66f, thighR = -66f, footL = -20f, footR = -20f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisY = 0.286f, torso = 68f, neck = -50f,
-                uArmL = -110f, uArmR = 100f, elbowL = 100f, elbowR = 4f,
-                thighL = -68f, thighR = -68f, footL = -20f, footR = -20f,
-            )),
+            Keyframe(0f, spDn),
+            Keyframe(0.42f, spUp),
+            Keyframe(0.58f, spUp),   // top hold
+            Keyframe(0.95f, spDn),
         ),
+    )
+
+    private val brDn = Pose(
+        pelvisY = SUPINE_Y, torso = 93f, neck = -14f, uArmL = 177f, uArmR = 177f, elbowL = 2f, elbowR = 2f,
+        thighL = -149.8f, kneeL = -131.2f, footL = -161f, thighR = -149.8f, kneeR = -131.2f, footR = -161f,
+    )
+    private val brUp = Pose(
+        pelvisY = 0.335f, torso = 110.3f, neck = -24f, uArmL = 159.7f, uArmR = 159.7f, elbowL = 2f, elbowR = 2f,
+        thighL = -114.9f, kneeL = -120.8f, footL = -186f, thighR = -114.9f, kneeR = -120.8f, footR = -186f,
     )
 
     private val flBridge = KeyframeAnim(
-        id = "fl_bridge", durationMs = 2800, prop = Prop.MAT, muscle = MuscleGroup.GLUTES,
+        id = "fl_bridge", durationMs = 3400, prop = Prop.MAT, muscle = MuscleGroup.GLUTES,
         pathJoint = PathJoint.PELVIS,
         keyframes = listOf(
-            Keyframe(0f, Pose( // supine, knees bent, hips down
-                pelvisY = 0.40f, torso = 95f, neck = -20f,
-                uArmL = -35f, uArmR = -35f,
-                thighL = -55f, kneeL = 95f, thighR = -55f, kneeR = 95f,
-            )),
-            Keyframe(0.5f, Pose( // hips lifted: shoulders-to-knees line
-                pelvisY = 0.30f, torso = 108f, neck = -35f,
-                uArmL = -55f, uArmR = -55f,
-                thighL = -85f, kneeL = 62f, thighR = -85f, kneeR = 62f,
-            )),
+            Keyframe(0f, brDn),
+            Keyframe(0.32f, brUp),
+            Keyframe(0.60f, brUp),   // top squeeze
+            Keyframe(0.95f, brDn),
         ),
     )
 
+    private val burCrouch = Pose(
+        pelvisY = 0.30f, torso = 52f, spine = 24f, neck = -30f,
+        thighL = 85f, kneeL = 132f, footL = 47f, thighR = 85f, kneeR = 132f, footR = 47f,
+        uArmL = -53.9f, uArmR = -53.9f, elbowL = 2.7f, elbowR = 2.7f,
+    )
+    private val burPlank = puTop.copy(neck = -63.4f)
+    private val burApex = Pose(
+        pelvisY = grounded(0f, 0f) - 0.09f, torso = -4f, neck = 2f,
+        uArmL = 155f, uArmR = 155f, elbowL = 4f, elbowR = 4f,
+        thighL = 4f, kneeL = 12f, footL = -35f, thighR = 4f, kneeR = 12f, footR = -35f,
+    )
+    private val burLand = Pose(
+        pelvisX = -0.02f, pelvisY = grounded(38f, 55f), torso = 16f, neck = -8f,
+        thighL = 38f, kneeL = 55f, footL = 17f, thighR = 38f, kneeR = 55f, footR = 17f,
+        uArmL = 30f, uArmR = 30f, elbowL = 15f, elbowR = 15f,
+    )
+    private val burTakeoff = Pose(
+        pelvisY = grounded(8f, 14f), torso = 2f, neck = 0f,
+        uArmL = 95f, uArmR = 95f, elbowL = 10f, elbowR = 10f,
+        thighL = 8f, kneeL = 14f, footL = 6f, thighR = 8f, kneeR = 14f, footR = 6f,
+    )
+
     private val flBurpee = KeyframeAnim(
-        id = "fl_burpee", durationMs = 3600, prop = Prop.MAT, muscle = MuscleGroup.FULL_BODY,
+        id = "fl_burpee", durationMs = 3800, prop = Prop.MAT, muscle = MuscleGroup.FULL_BODY,
         pathJoint = PathJoint.PELVIS,
         keyframes = listOf(
-            Keyframe(0f, Pose(pelvisY = grounded(0f, 0f), torso = 2f, uArmL = 8f, uArmR = 8f)), // stand
-            Keyframe(0.2f, Pose( // crouch, hands to floor
-                pelvisY = grounded(85f, 115f), torso = 55f,
-                thighL = 85f, kneeL = 115f, thighR = 85f, kneeR = 115f,
-                uArmL = -100f, uArmR = -100f, elbowL = 5f, elbowR = 5f, neck = -25f,
-            )),
-            Keyframe(0.42f, Pose( // plank
-                pelvisY = 0.27f, torso = 70f, neck = -55f,
-                uArmL = -70f, uArmR = -70f, elbowL = 2f, elbowR = 2f,
-                thighL = -70f, thighR = -70f, footL = -25f, footR = -25f,
-            )),
-            Keyframe(0.62f, Pose( // feet jump back in
-                pelvisY = grounded(85f, 115f), torso = 55f,
-                thighL = 85f, kneeL = 115f, thighR = 85f, kneeR = 115f,
-                uArmL = -100f, uArmR = -100f, elbowL = 5f, elbowR = 5f, neck = -25f,
-            )),
-            Keyframe(0.82f, Pose( // jump, arms overhead
-                pelvisY = grounded(0f, 0f) - 0.09f, torso = -4f,
-                uArmL = 172f, uArmR = 172f, footL = -30f, footR = -30f,
-            )),
+            Keyframe(0f, standing),
+            Keyframe(0.14f, burCrouch, Ease.LINEAR),   // hands down, feet snap back
+            Keyframe(0.225f, burPlank),
+            Keyframe(0.36f, burPlank, Ease.LINEAR),    // brief plank, feet snap in
+            Keyframe(0.445f, burCrouch),
+            Keyframe(0.55f, burTakeoff, Ease.DECEL),   // drive up; rising flight decelerates
+            Keyframe(0.63f, burApex, Ease.ACCEL),      // falling flight accelerates
+            Keyframe(0.71f, burLand),                  // soft absorb
+            Keyframe(0.86f, standing),
         ),
     )
 
     private val flMountain = KeyframeAnim(
         id = "fl_mountain", durationMs = 1100, prop = Prop.MAT, muscle = MuscleGroup.CORE,
         keyframes = listOf(
-            Keyframe(0f, Pose(
-                pelvisY = 0.24f, torso = 62f, neck = -48f,
-                uArmL = -62f, uArmR = -62f, elbowL = 2f, elbowR = 2f,
-                thighL = -62f, kneeL = 4f, thighR = 28f, kneeR = 118f, footL = -25f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisY = 0.24f, torso = 62f, neck = -48f,
-                uArmL = -62f, uArmR = -62f, elbowL = 2f, elbowR = 2f,
-                thighR = -62f, kneeR = 4f, thighL = 28f, kneeL = 118f, footR = -25f,
-            )),
+            Keyframe(0f, burPlank.copy(thighR = 100.5f, kneeR = 136.1f, footR = -40f)),
+            Keyframe(0.5f, burPlank.copy(thighL = 100.5f, kneeL = 136.1f, footL = -40f)),
         ),
     )
 
@@ -165,7 +230,7 @@ object AnimationRegistry {
         keyframes = listOf(
             Keyframe(0f, Pose(pelvisY = grounded(0f, 0f), uArmL = 8f, uArmR = 8f)),
             Keyframe(0.5f, Pose(
-                pelvisY = grounded(22f, 8f) , uArmL = 165f, uArmR = 165f,
+                pelvisY = grounded(22f, 8f), uArmL = 165f, uArmR = 165f,
                 thighL = 22f, thighR = 22f, kneeL = 8f, kneeR = 8f,
             )),
         ),
@@ -176,12 +241,12 @@ object AnimationRegistry {
         keyframes = listOf(
             Keyframe(0f, Pose(
                 pelvisY = grounded(-8f, 12f) - 0.02f, torso = 4f,
-                thighL = -8f, kneeL = 12f, thighR = 95f, kneeR = 110f,
+                thighL = -8f, kneeL = 12f, thighR = 95f, kneeR = 110f, footR = -20f,
                 uArmL = 35f, elbowL = 70f, uArmR = -30f, elbowR = 70f,
             )),
             Keyframe(0.5f, Pose(
                 pelvisY = grounded(-8f, 12f) - 0.02f, torso = 4f,
-                thighR = -8f, kneeR = 12f, thighL = 95f, kneeL = 110f,
+                thighR = -8f, kneeR = 12f, thighL = 95f, kneeL = 110f, footL = -20f,
                 uArmR = 35f, elbowR = 70f, uArmL = -30f, elbowL = 70f,
             )),
         ),
@@ -192,170 +257,213 @@ object AnimationRegistry {
         pathJoint = PathJoint.PELVIS,
         keyframes = listOf(
             Keyframe(0f, Pose(
-                pelvisX = -0.16f, pelvisY = grounded(30f, 45f),
+                pelvisX = -0.16f, pelvisY = grounded(30f, 45f), torso = -10f, spine = -3f,
                 thighL = 30f, kneeL = 45f, thighR = -18f, kneeR = 35f,
                 uArmL = 40f, uArmR = 15f, elbowL = 40f, elbowR = 45f,
             )),
             Keyframe(0.5f, Pose(
-                pelvisX = 0.16f, pelvisY = grounded(30f, 45f),
+                pelvisX = 0.16f, pelvisY = grounded(30f, 45f), torso = 10f, spine = 3f,
                 thighR = 30f, kneeR = 45f, thighL = -18f, kneeL = 35f,
                 uArmR = 40f, uArmL = 15f, elbowR = 40f, elbowL = 45f,
             )),
         ),
     )
 
+    // Quadruped base: shoulders over wrists, hips over knees, shins flat on the mat.
+    private val quadruped = Pose(
+        pelvisY = 0.225f, torso = 77f, neck = -62f,
+        uArmL = -77f, uArmR = -77f, elbowL = 2f, elbowR = 2f,
+        thighL = 0f, kneeL = 90f, footL = -90f, thighR = 0f, kneeR = 90f, footR = -90f,
+    )
+
+    /** Bird dog, alternating diagonals with a hold at extension. */
     private val flBirdDog = KeyframeAnim(
-        id = "fl_birddog", durationMs = 3200, prop = Prop.MAT, muscle = MuscleGroup.CORE,
+        id = "fl_birddog", durationMs = 4400, prop = Prop.MAT, muscle = MuscleGroup.CORE,
         keyframes = listOf(
-            Keyframe(0f, Pose( // quadruped
-                pelvisY = 0.20f, torso = 88f, neck = -70f,
-                uArmL = -88f, uArmR = -88f, elbowL = 2f, elbowR = 2f,
-                thighL = -20f, kneeL = 92f, thighR = -20f, kneeR = 92f,
-            )),
-            Keyframe(0.5f, Pose( // right arm + left leg extended
-                pelvisY = 0.20f, torso = 88f, neck = -70f,
-                uArmR = 88f, elbowR = 2f, uArmL = -88f, elbowL = 2f,
-                thighL = -95f, kneeL = 2f, thighR = -20f, kneeR = 92f,
-            )),
+            Keyframe(0f, quadruped),
+            Keyframe(0.18f, quadruped.copy(uArmR = 13f, thighL = -92f, kneeL = -2f, footL = -20f)),
+            Keyframe(0.32f, quadruped.copy(uArmR = 13f, thighL = -92f, kneeL = -2f, footL = -20f)),
+            Keyframe(0.46f, quadruped),
+            Keyframe(0.64f, quadruped.copy(uArmL = 13f, thighR = -92f, kneeR = -2f, footR = -20f)),
+            Keyframe(0.78f, quadruped.copy(uArmL = 13f, thighR = -92f, kneeR = -2f, footR = -20f)),
+            Keyframe(0.94f, quadruped),
         ),
     )
 
+    // Supine base: lying on the back, head toward +X.
+    private val supineTabletop = Pose(
+        pelvisY = SUPINE_Y, torso = 93f, neck = -14f,
+        uArmL = 87f, uArmR = 87f, elbowL = 4f, elbowR = 4f,
+        thighL = -178f, kneeL = -88f, footL = -20f, thighR = -178f, kneeR = -88f, footR = -20f,
+    )
+
+    /** Dead bug, alternating opposite arm/leg. */
     private val flDeadBug = KeyframeAnim(
-        id = "fl_deadbug", durationMs = 3000, prop = Prop.MAT, muscle = MuscleGroup.CORE,
+        id = "fl_deadbug", durationMs = 3800, prop = Prop.MAT, muscle = MuscleGroup.CORE,
         keyframes = listOf(
-            Keyframe(0f, Pose( // supine, arms up, knees at 90
-                pelvisY = 0.40f, torso = 95f, neck = -15f,
-                uArmL = 95f, uArmR = 95f,
-                thighL = -85f, kneeL = 90f, thighR = -85f, kneeR = 90f,
-            )),
-            Keyframe(0.5f, Pose( // opposite arm/leg lowered
-                pelvisY = 0.40f, torso = 95f, neck = -15f,
-                uArmL = 170f, uArmR = 95f,
-                thighR = -100f, kneeR = 12f, thighL = -85f, kneeL = 90f,
-            )),
+            Keyframe(0f, supineTabletop),
+            Keyframe(0.20f, supineTabletop.copy(thighR = -110f, kneeR = -4f, uArmL = 177f, elbowL = 2f)),
+            Keyframe(0.32f, supineTabletop.copy(thighR = -110f, kneeR = -4f, uArmL = 177f, elbowL = 2f)),
+            Keyframe(0.48f, supineTabletop),
+            Keyframe(0.68f, supineTabletop.copy(thighL = -110f, kneeL = -4f, uArmR = 177f, elbowR = 2f)),
+            Keyframe(0.80f, supineTabletop.copy(thighL = -110f, kneeL = -4f, uArmR = 177f, elbowR = 2f)),
+            Keyframe(0.96f, supineTabletop),
         ),
     )
 
+    // Prone base (head toward -X).
+    private val smFlat = Pose(
+        pelvisY = SUPINE_Y, torso = -88f, spine = -6f, neck = 6f,
+        uArmL = 8f, uArmR = 8f, elbowL = 2f, elbowR = 2f,
+        thighL = 90f, kneeL = -2f, footL = -65f, thighR = 90f, kneeR = -2f, footR = -65f,
+    )
+    private val smLift = Pose(
+        pelvisY = SUPINE_Y, torso = -80f, spine = -20f, neck = 14f,
+        uArmL = 4f, uArmR = 4f, elbowL = 2f, elbowR = 2f,
+        thighL = 99f, kneeL = -2f, footL = -65f, thighR = 99f, kneeR = -2f, footR = -65f,
+    )
+
+    /** Superman: arms overhead, chest + legs lift together. */
     private val flSuperman = KeyframeAnim(
-        id = "fl_superman", durationMs = 3000, prop = Prop.MAT, muscle = MuscleGroup.BACK,
+        id = "fl_superman", durationMs = 3200, prop = Prop.MAT, muscle = MuscleGroup.BACK,
         keyframes = listOf(
-            Keyframe(0f, Pose( // prone flat
-                pelvisY = 0.42f, torso = -92f, neck = 10f,
-                uArmL = 165f, uArmR = 165f, thighL = 88f, kneeL = 2f, thighR = 88f, kneeR = 2f,
-            )),
-            Keyframe(0.5f, Pose( // chest + legs lifted
-                pelvisY = 0.42f, torso = -72f, neck = 18f,
-                uArmL = 175f, uArmR = 175f, thighL = 70f, kneeL = 2f, thighR = 70f, kneeR = 2f,
-            )),
+            Keyframe(0f, smFlat),
+            Keyframe(0.35f, smLift),
+            Keyframe(0.62f, smLift),   // hold at the top
+            Keyframe(0.92f, smFlat),
         ),
+    )
+
+    /** Back extension hold: same prone lift but arms alongside the body. */
+    private val bkExtension = KeyframeAnim(
+        id = "bk_extension", durationMs = 3600, prop = Prop.MAT, muscle = MuscleGroup.BACK,
+        keyframes = listOf(
+            Keyframe(0f, smFlat.copy(uArmL = 186f, uArmR = 186f)),
+            Keyframe(0.30f, smLift.copy(uArmL = 195f, uArmR = 195f)),
+            Keyframe(0.68f, smLift.copy(uArmL = 195f, uArmR = 195f)),
+            Keyframe(0.94f, smFlat.copy(uArmL = 186f, uArmR = 186f)),
+        ),
+    )
+
+    private val sjCrouch = Pose(
+        pelvisX = -0.04f, pelvisY = grounded(75f, 95f), torso = 28f, spine = 6f, neck = -16f,
+        thighL = 75f, kneeL = 95f, footL = 20f, thighR = 75f, kneeR = 95f, footR = 20f,
+        uArmL = 55f, uArmR = 55f, elbowL = 20f, elbowR = 20f,
     )
 
     private val flSquatJump = KeyframeAnim(
-        id = "fl_squatjump", durationMs = 1500, muscle = MuscleGroup.LEGS, pathJoint = PathJoint.PELVIS,
+        id = "fl_squatjump", durationMs = 1600, muscle = MuscleGroup.LEGS, pathJoint = PathJoint.PELVIS,
         keyframes = listOf(
-            Keyframe(0f, Pose(
-                pelvisY = grounded(75f, 95f), pelvisX = -0.04f, torso = 30f,
-                thighL = 75f, kneeL = 95f, thighR = 75f, kneeR = 95f,
-                uArmL = 50f, uArmR = 50f, elbowL = 20f, elbowR = 20f,
+            Keyframe(0f, sjCrouch),
+            Keyframe(0.16f, Pose(                        // full extension at takeoff
+                pelvisY = grounded(2f, 6f), torso = -2f,
+                uArmL = 150f, uArmR = 150f, thighL = 2f, kneeL = 6f, thighR = 2f, kneeR = 6f,
+                footL = -25f, footR = -25f,
+            ), Ease.DECEL),
+            Keyframe(0.28f, Pose(                        // apex
+                pelvisY = grounded(0f, 0f) - 0.115f, torso = -3f,
+                uArmL = 140f, uArmR = 140f, footL = -30f, footR = -30f,
+                thighL = 6f, kneeL = 14f, thighR = 6f, kneeR = 14f,
+            ), Ease.ACCEL),
+            Keyframe(0.40f, Pose(                        // touchdown, pre-flexed
+                pelvisY = grounded(18f, 26f), torso = 8f,
+                thighL = 18f, kneeL = 26f, footL = 8f, thighR = 18f, kneeR = 26f, footR = 8f,
+                uArmL = 30f, uArmR = 30f, elbowL = 12f, elbowR = 12f,
             )),
-            Keyframe(0.45f, Pose( // airborne, extended
-                pelvisY = grounded(0f, 0f) - 0.13f, torso = -3f,
-                uArmL = -35f, uArmR = -35f, footL = -30f, footR = -30f,
+            Keyframe(0.52f, Pose(                        // absorb deep
+                pelvisY = grounded(45f, 62f), torso = 16f,
+                thighL = 45f, kneeL = 62f, footL = 17f, thighR = 45f, kneeR = 62f, footR = 17f,
+                uArmL = 35f, uArmR = 35f, elbowL = 15f, elbowR = 15f,
             )),
-            Keyframe(0.75f, Pose( // land soft
-                pelvisY = grounded(45f, 60f), torso = 18f,
-                thighL = 45f, kneeL = 60f, thighR = 45f, kneeR = 60f,
-                uArmL = 25f, uArmR = 25f, elbowL = 15f, elbowR = 15f,
-            )),
+            Keyframe(0.80f, sjCrouch),                   // settle back to the loaded crouch
         ),
+    )
+
+    private val wallSit = Pose(
+        pelvisX = -0.215f, pelvisY = grounded(88f, 88f), torso = -2f, neck = 2f,
+        thighL = 88f, kneeL = 88f, footL = 0f, thighR = 88f, kneeR = 88f, footR = 0f,
+        uArmL = 8f, uArmR = 8f,
     )
 
     private val flWallSit = KeyframeAnim(
-        id = "fl_wallsit", durationMs = 3600, prop = Prop.WALL, muscle = MuscleGroup.LEGS,
+        id = "fl_wallsit", durationMs = 4000, prop = Prop.WALL, muscle = MuscleGroup.LEGS,
         keyframes = listOf(
-            Keyframe(0f, Pose(
-                pelvisX = 0.10f, pelvisY = grounded(88f, 88f), torso = -2f,
-                thighL = 88f, kneeL = 88f, thighR = 88f, kneeR = 88f,
-                uArmL = 10f, uArmR = 10f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisX = 0.10f, pelvisY = grounded(88f, 88f), torso = -1f,
-                thighL = 88f, kneeL = 88f, thighR = 88f, kneeR = 88f,
-                uArmL = 12f, uArmR = 12f,
-            )),
+            Keyframe(0f, wallSit),
+            Keyframe(0.5f, wallSit.copy(uArmL = 11f, uArmR = 11f, neck = 1f)),
         ),
     )
 
+    private val iwFold = Pose(
+        pelvisY = grounded(24f, 10f), torso = 112f, spine = 22f, neck = -15f,
+        thighL = 24f, kneeL = 10f, thighR = 24f, kneeR = 10f,
+        uArmL = -109.5f, uArmR = -109.5f, elbowL = 2.9f, elbowR = 2.9f,
+    )
+    private val iwMid = Pose( // halfway through the hand-walk
+        pelvisY = 0.19f, torso = 100f, spine = 12f, neck = -40f,
+        thighL = -10f, kneeL = 6f, thighR = -10f, kneeR = 6f, footL = 30f, footR = 30f,
+        uArmL = -122f, uArmR = -104f, elbowL = 3f, elbowR = 3f,
+    )
+
     private val flInchworm = KeyframeAnim(
-        id = "fl_inchworm", durationMs = 4200, prop = Prop.MAT, muscle = MuscleGroup.FULL_BODY,
+        id = "fl_inchworm", durationMs = 5000, prop = Prop.MAT, muscle = MuscleGroup.FULL_BODY,
         pathJoint = PathJoint.WRIST,
         keyframes = listOf(
-            Keyframe(0f, Pose(pelvisY = grounded(0f, 0f), torso = 3f, uArmL = 5f, uArmR = 5f)),
-            Keyframe(0.25f, Pose( // fold forward, hands near floor
-                pelvisY = grounded(28f, 6f), torso = 95f, neck = -30f,
-                thighL = 28f, kneeL = 6f, thighR = 28f, kneeR = 6f,
-                uArmL = -30f, uArmR = -30f,
-            )),
-            Keyframe(0.55f, Pose( // walked out to plank
-                pelvisY = 0.26f, torso = 69f, neck = -55f,
-                uArmL = -69f, uArmR = -69f, elbowL = 2f, elbowR = 2f,
-                thighL = -69f, thighR = -69f, footL = -25f, footR = -25f,
-            )),
-            Keyframe(0.8f, Pose( // walk feet back to fold
-                pelvisY = grounded(28f, 6f), torso = 95f, neck = -30f,
-                thighL = 28f, kneeL = 6f, thighR = 28f, kneeR = 6f,
-                uArmL = -30f, uArmR = -30f,
-            )),
+            Keyframe(0f, standing),
+            Keyframe(0.14f, iwFold),
+            Keyframe(0.26f, iwMid),
+            Keyframe(0.38f, burPlank),
+            Keyframe(0.50f, burPlank),
+            Keyframe(0.62f, iwMid.copy(uArmL = -104f, uArmR = -122f)),
+            Keyframe(0.74f, iwFold),
+            Keyframe(0.90f, standing),
         ),
+    )
+
+    private val bcBase = Pose(
+        pelvisY = 0.178f, torso = 87.1f, neck = -75.1f,
+        uArmL = -87.1f, uArmR = -87.1f, elbowL = 2f, elbowR = 2f,
+        thighL = 30f, kneeL = 110f, footL = 48.7f, thighR = 30f, kneeR = 110f, footR = 48.7f,
     )
 
     private val flBearCrawl = KeyframeAnim(
         id = "fl_bearcrawl", durationMs = 1400, prop = Prop.MAT, muscle = MuscleGroup.FULL_BODY,
         keyframes = listOf(
-            Keyframe(0f, Pose(
-                pelvisY = 0.22f, torso = 80f, neck = -62f,
-                uArmL = -60f, uArmR = -95f, elbowL = 4f, elbowR = 4f,
-                thighL = 5f, kneeL = 95f, thighR = -35f, kneeR = 80f, footR = -20f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisY = 0.22f, torso = 80f, neck = -62f,
-                uArmR = -60f, uArmL = -95f, elbowR = 4f, elbowL = 4f,
-                thighR = 5f, kneeR = 95f, thighL = -35f, kneeL = 80f, footL = -20f,
-            )),
+            Keyframe(0f, bcBase.copy(thighR = 45f, kneeR = 100f, thighL = 18f, kneeL = 115f,
+                uArmL = -75f, uArmR = -99f)),
+            Keyframe(0.5f, bcBase.copy(thighL = 45f, kneeL = 100f, thighR = 18f, kneeR = 115f,
+                uArmR = -75f, uArmL = -99f)),
         ),
+    )
+
+    private val crFlat = Pose(
+        pelvisY = SUPINE_Y, torso = 94f, neck = -30f,
+        uArmL = 60f, elbowL = 118f, uArmR = 60f, elbowR = 118f,
+        thighL = -149.8f, kneeL = -131.2f, footL = -161f, thighR = -149.8f, kneeR = -131.2f, footR = -161f,
     )
 
     private val flCrunch = KeyframeAnim(
-        id = "fl_crunch", durationMs = 2200, prop = Prop.MAT, muscle = MuscleGroup.CORE,
+        id = "fl_crunch", durationMs = 2800, prop = Prop.MAT, muscle = MuscleGroup.CORE,
         pathJoint = PathJoint.HEAD,
         keyframes = listOf(
-            Keyframe(0f, Pose(
-                pelvisY = 0.40f, torso = 95f, neck = -20f,
-                uArmL = 120f, elbowL = 110f, uArmR = 120f, elbowR = 110f,
-                thighL = -55f, kneeL = 95f, thighR = -55f, kneeR = 95f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisY = 0.40f, torso = 68f, neck = -35f,
-                uArmL = 118f, elbowL = 112f, uArmR = 118f, elbowR = 112f,
-                thighL = -55f, kneeL = 95f, thighR = -55f, kneeR = 95f,
-            )),
+            Keyframe(0f, crFlat),
+            Keyframe(0.36f, crFlat.copy(spine = -32f, neck = -42f)),  // chest curls via the spine
+            Keyframe(0.48f, crFlat.copy(spine = -32f, neck = -42f)),
+            Keyframe(0.92f, crFlat),                                   // slower eccentric
         ),
     )
 
+    private val ruBase = Pose(
+        pelvisY = 0.445f, torso = 42f, spine = 6f, neck = -18f,
+        thighL = -125f, kneeL = -30f, footL = -15f, thighR = -125f, kneeR = -30f, footR = -15f,
+        uArmL = -151f, uArmR = -135f, elbowL = 30f, elbowR = 30f,
+    )
+
     private val flRussian = KeyframeAnim(
-        id = "fl_russian", durationMs = 1800, prop = Prop.MAT, muscle = MuscleGroup.CORE,
+        id = "fl_russian", durationMs = 1900, prop = Prop.MAT, muscle = MuscleGroup.CORE,
         pathJoint = PathJoint.WRIST,
         keyframes = listOf(
-            Keyframe(0f, Pose( // V-sit, arms swung to one side
-                pelvisY = 0.40f, torso = 45f, neck = -12f,
-                uArmL = 60f, elbowL = 25f, uArmR = 40f, elbowR = 25f,
-                thighL = -60f, kneeL = 70f, thighR = -60f, kneeR = 70f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisY = 0.40f, torso = 42f, neck = -12f,
-                uArmL = 105f, elbowL = 25f, uArmR = 125f, elbowR = 25f,
-                thighL = -60f, kneeL = 70f, thighR = -60f, kneeR = 70f,
-            )),
+            Keyframe(0f, ruBase),
+            Keyframe(0.5f, ruBase.copy(torso = 45f, uArmL = -93f, elbowL = -7f, uArmR = -109f, elbowR = 21f)),
         ),
     )
 
@@ -364,12 +472,12 @@ object AnimationRegistry {
         keyframes = listOf(
             Keyframe(0f, Pose(
                 pelvisY = grounded(0f, 4f), torso = 2f,
-                thighL = 0f, kneeL = 4f, thighR = 62f, kneeR = 85f,
+                thighL = 0f, kneeL = 4f, thighR = 62f, kneeR = 85f, footR = -20f,
                 uArmL = 22f, elbowL = 45f, uArmR = -20f, elbowR = 45f,
             )),
             Keyframe(0.5f, Pose(
                 pelvisY = grounded(0f, 4f), torso = 2f,
-                thighR = 0f, kneeR = 4f, thighL = 62f, kneeL = 85f,
+                thighR = 0f, kneeR = 4f, thighL = 62f, kneeL = 85f, footL = -20f,
                 uArmR = 22f, elbowR = 45f, uArmL = -20f, elbowL = 45f,
             )),
         ),
@@ -386,467 +494,531 @@ object AnimationRegistry {
         ),
     )
 
+    // Cat-cow: real spinal articulation, wrists and knees pinned.
+    private val ccCow = Pose(
+        pelvisY = 0.222f, torso = 89.9f, spine = -24f, neck = -88f,
+        uArmL = -70.8f, uArmR = -70.8f, elbowL = 14.4f, elbowR = 14.4f,
+        thighL = 0f, kneeL = 90f, footL = -90f, thighR = 0f, kneeR = 90f, footR = -90f,
+    )
+    private val ccCat = Pose(
+        pelvisY = 0.230f, torso = 63.3f, spine = 26f, neck = -2f,
+        uArmL = -94.2f, uArmR = -94.2f, elbowL = 15.6f, elbowR = 15.6f,
+        thighL = 0f, kneeL = 90f, footL = -90f, thighR = 0f, kneeR = 90f, footR = -90f,
+    )
+
     private val flCatCow = KeyframeAnim(
-        id = "fl_catcow", durationMs = 3600, prop = Prop.MAT, muscle = MuscleGroup.BACK,
+        id = "fl_catcow", durationMs = 4200, prop = Prop.MAT, muscle = MuscleGroup.BACK,
         keyframes = listOf(
-            Keyframe(0f, Pose( // cow: back extended, head up
-                pelvisY = 0.205f, torso = 84f, neck = -95f,
-                uArmL = -84f, uArmR = -84f, elbowL = 2f, elbowR = 2f,
-                thighL = -20f, kneeL = 92f, thighR = -20f, kneeR = 92f,
-            )),
-            Keyframe(0.5f, Pose( // cat: back rounded, head tucked
-                pelvisY = 0.185f, torso = 96f, neck = -30f,
-                uArmL = -96f, uArmR = -96f, elbowL = 2f, elbowR = 2f,
-                thighL = -14f, kneeL = 90f, thighR = -14f, kneeR = 90f,
-            )),
+            Keyframe(0f, ccCow),
+            Keyframe(0.08f, ccCow),
+            Keyframe(0.50f, ccCat),
+            Keyframe(0.58f, ccCat),
         ),
     )
 
+    private val hsStart = Pose(
+        pelvisX = 0.02f, pelvisY = 0.445f, torso = -24f, spine = -10f, neck = -8f,
+        thighL = -89f, kneeL = -2f, footL = -178f, thighR = -90f, kneeR = -1f, footR = -178f,
+        uArmL = -19.2f, uArmR = -16.2f, elbowL = -2.3f, elbowR = -2.3f,
+    )
+    private val hsDeep = Pose(
+        pelvisX = 0.02f, pelvisY = 0.445f, torso = -38f, spine = -16f, neck = -8f,
+        thighL = -89f, kneeL = -2f, footL = -178f, thighR = -90f, kneeR = -1f, footR = -178f,
+        uArmL = 0f, uArmR = 3f, elbowL = -2.8f, elbowR = -2.8f,
+    )
+
+    /** Seated forward fold: slow reach, long hold — a static stretch, not a bounce. */
     private val flHamStretch = KeyframeAnim(
-        id = "fl_hamstretch", durationMs = 4000, prop = Prop.MAT, muscle = MuscleGroup.LEGS,
+        id = "fl_hamstretch", durationMs = 5000, prop = Prop.MAT, muscle = MuscleGroup.LEGS,
         keyframes = listOf(
-            Keyframe(0f, Pose( // seated, reaching to straight leg
-                pelvisY = 0.40f, torso = 42f, neck = -20f,
-                uArmL = 55f, uArmR = 55f, elbowL = 8f, elbowR = 8f,
-                thighL = -78f, kneeL = 4f, thighR = -50f, kneeR = 95f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisY = 0.40f, torso = 55f, neck = -25f,
-                uArmL = 62f, uArmR = 62f, elbowL = 4f, elbowR = 4f,
-                thighL = -78f, kneeL = 4f, thighR = -50f, kneeR = 95f,
-            )),
+            Keyframe(0f, hsStart),
+            Keyframe(0.35f, hsDeep),
+            Keyframe(0.72f, hsDeep),
+            Keyframe(0.97f, hsStart),
         ),
+    )
+
+    private val qsHold = Pose(
+        pelvisY = grounded(0f, 2f), torso = 8f, spine = 2f, neck = -6f,
+        thighL = 0f, kneeL = 2f, footL = 0f, thighR = -8f, kneeR = 152f, footR = -30f,
+        uArmL = 28f, elbowL = 10f, uArmR = -35.8f, elbowR = -2.9f,
     )
 
     private val flQuadStretch = KeyframeAnim(
-        id = "fl_quadstretch", durationMs = 4000, muscle = MuscleGroup.LEGS,
+        id = "fl_quadstretch", durationMs = 4200, muscle = MuscleGroup.LEGS,
         keyframes = listOf(
-            Keyframe(0f, Pose(
-                pelvisY = grounded(0f, 2f), torso = 3f,
-                thighL = 0f, kneeL = 2f, thighR = -18f, kneeR = 128f, footR = -15f,
-                uArmR = -148f, elbowR = 45f, uArmL = 35f, elbowL = 5f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisY = grounded(0f, 2f), torso = 5f,
-                thighL = 0f, kneeL = 2f, thighR = -22f, kneeR = 134f, footR = -15f,
-                uArmR = -150f, elbowR = 42f, uArmL = 40f, elbowL = 5f,
-            )),
+            Keyframe(0f, qsHold),
+            Keyframe(0.5f, qsHold.copy(torso = 9.5f, kneeR = 148f)),  // gentle pull, no bounce
         ),
     )
 
+    private val childPose = Pose(
+        pelvisX = -0.06f, pelvisY = 0.35f, torso = 88f, spine = 22f, neck = -20f,
+        thighL = 62f, kneeL = 152f, footL = -90f, thighR = 62f, kneeR = 152f, footR = -90f,
+        uArmL = -5.4f, uArmR = -5.4f, elbowL = -55.2f, elbowR = -55.2f,
+    )
+
     private val flChild = KeyframeAnim(
-        id = "fl_child", durationMs = 4600, prop = Prop.MAT, muscle = MuscleGroup.BACK,
+        id = "fl_child", durationMs = 5000, prop = Prop.MAT, muscle = MuscleGroup.BACK,
         keyframes = listOf(
-            Keyframe(0f, Pose( // kneeling fold, arms long
-                pelvisY = 0.335f, torso = 78f, neck = -45f,
-                uArmL = 55f, uArmR = 55f, elbowL = 4f, elbowR = 4f,
-                thighL = 25f, kneeL = 138f, thighR = 25f, kneeR = 138f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisY = 0.34f, torso = 80f, neck = -48f,
-                uArmL = 58f, uArmR = 58f, elbowL = 3f, elbowR = 3f,
-                thighL = 25f, kneeL = 138f, thighR = 25f, kneeR = 138f,
-            )),
+            Keyframe(0f, childPose),
+            Keyframe(0.5f, childPose.copy(pelvisY = 0.345f, torso = 89f)),
         ),
     )
 
     // ------------------------------------------------------------------ REFORMER
-    // Carriage rides along the rail with pose.prop (0 = home, 1 = fully out).
+    // Carriage rides along the rail with pose.prop (0 = home, 1 = fully out). The figure lies
+    // head toward +X; the foot bar is at the -X end, strap risers at the +X end.
 
-    private val rfFootwork = KeyframeAnim(
-        id = "rf_footwork", durationMs = 2800, prop = Prop.REFORMER, muscle = MuscleGroup.LEGS,
+    private fun supineOnCarriage(prop: Float, thigh: Float, knee: Float, foot: Float) = Pose(
+        pelvisX = carriageX(prop) + 0.03f, pelvisY = CARRIAGE_LIE, torso = 91f, neck = -12f,
+        uArmL = 179f, uArmR = 179f,
+        thighL = thigh, kneeL = knee, footL = foot, thighR = thigh, kneeR = knee, footR = foot,
+        prop = prop,
+    )
+
+    private fun footworkAnim(id: String, foot: Float) = KeyframeAnim(
+        id = id, durationMs = 3000, prop = Prop.REFORMER, muscle = MuscleGroup.LEGS,
         keyframes = listOf(
-            Keyframe(0f, Pose( // supine on carriage, knees bent, feet on bar
-                pelvisX = 0.02f, pelvisY = 0.315f, torso = 92f, neck = -12f,
-                uArmL = -8f, uArmR = -8f,
-                thighL = -118f, kneeL = 72f, thighR = -118f, kneeR = 72f,
-                prop = 0f,
+            Keyframe(0f, supineOnCarriage(0f, -156.4f, -105f, foot)),
+            Keyframe(0.42f, supineOnCarriage(0.75f, -106.7f, -14.7f, foot)),
+            Keyframe(0.52f, supineOnCarriage(0.75f, -106.7f, -14.7f, foot)),
+            Keyframe(0.94f, supineOnCarriage(0f, -156.4f, -105f, foot)),
+        ),
+    )
+
+    /** Footwork on heels: feet dorsiflexed on the bar. */
+    private val rfFootworkHeels = footworkAnim("rf_footwork_heels", foot = 15f)
+    /** Footwork on toes: ankles in relevé. */
+    private val rfFootworkToes = footworkAnim("rf_footwork_toes", foot = -25f)
+
+    private val rfHundred = KeyframeAnim(
+        id = "rf_hundred", durationMs = 1300, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
+        pathJoint = PathJoint.WRIST,
+        keyframes = listOf(
+            Keyframe(0f, Pose(
+                pelvisX = carriageX(0.35f) + 0.03f, pelvisY = CARRIAGE_LIE, torso = 94f, spine = -24f, neck = -26f,
+                thighL = -105f, kneeL = -4f, footL = -25f, thighR = -105f, kneeR = -4f, footR = -25f,
+                uArmL = -146f, uArmR = -146f, elbowL = 4f, elbowR = 4f, prop = 0.35f,
             )),
-            Keyframe(0.5f, Pose( // legs pressed long, carriage out
-                pelvisX = 0.15f, pelvisY = 0.315f, torso = 92f, neck = -12f,
-                uArmL = -8f, uArmR = -8f,
-                thighL = -99f, kneeL = 6f, thighR = -99f, kneeR = 6f,
-                prop = 1f,
+            Keyframe(0.5f, Pose(
+                pelvisX = carriageX(0.35f) + 0.03f, pelvisY = CARRIAGE_LIE, torso = 94f, spine = -24f, neck = -26f,
+                thighL = -105f, kneeL = -4f, footL = -25f, thighR = -105f, kneeR = -4f, footR = -25f,
+                uArmL = -158f, uArmR = -158f, elbowL = 4f, elbowR = 4f, prop = 0.35f,
             )),
         ),
     )
 
-    private val rfHundred = KeyframeAnim(
-        id = "rf_hundred", durationMs = 1400, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
-        pathJoint = PathJoint.WRIST,
-        keyframes = listOf(
-            Keyframe(0f, Pose( // head/shoulders curled, legs tabletop, arms pumping
-                pelvisX = 0.05f, pelvisY = 0.31f, torso = 78f, neck = -40f,
-                uArmL = -35f, uArmR = -35f,
-                thighL = -95f, kneeL = 25f, thighR = -95f, kneeR = 25f,
-                prop = 0.35f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisX = 0.05f, pelvisY = 0.31f, torso = 78f, neck = -40f,
-                uArmL = -55f, uArmR = -55f,
-                thighL = -95f, kneeL = 25f, thighR = -95f, kneeR = 25f,
-                prop = 0.35f,
-            )),
-        ),
+    private fun strapsLegs(prop: Float, thigh: Float, knee: Float) = Pose(
+        pelvisX = carriageX(prop) + 0.03f, pelvisY = CARRIAGE_LIE, torso = 91f, neck = -12f,
+        uArmL = 179f, uArmR = 179f,
+        thighL = thigh, kneeL = knee, footL = -155f, thighR = thigh, kneeR = knee, footR = -155f,
+        prop = prop,
     )
 
     private val rfLegCircles = KeyframeAnim(
-        id = "rf_legcircles", durationMs = 3000, prop = Prop.REFORMER, muscle = MuscleGroup.LEGS,
+        id = "rf_legcircles", durationMs = 3000, prop = Prop.REFORMER_LEG_STRAPS, muscle = MuscleGroup.LEGS,
         pathJoint = PathJoint.ANKLE,
         keyframes = listOf(
-            Keyframe(0f, Pose(
-                pelvisX = 0.05f, pelvisY = 0.315f, torso = 92f, neck = -12f, uArmL = -8f, uArmR = -8f,
-                thighL = -125f, kneeL = 5f, thighR = -125f, kneeR = 5f, prop = 0.3f,
-            )),
-            Keyframe(0.25f, Pose(
-                pelvisX = 0.05f, pelvisY = 0.315f, torso = 92f, neck = -12f, uArmL = -8f, uArmR = -8f,
-                thighL = -105f, kneeL = 5f, thighR = -105f, kneeR = 5f, prop = 0.45f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisX = 0.05f, pelvisY = 0.315f, torso = 92f, neck = -12f, uArmL = -8f, uArmR = -8f,
-                thighL = -88f, kneeL = 8f, thighR = -88f, kneeR = 8f, prop = 0.3f,
-            )),
-            Keyframe(0.75f, Pose(
-                pelvisX = 0.05f, pelvisY = 0.315f, torso = 92f, neck = -12f, uArmL = -8f, uArmR = -8f,
-                thighL = -105f, kneeL = 5f, thighR = -105f, kneeR = 5f, prop = 0.2f,
-            )),
+            Keyframe(0f, strapsLegs(0.30f, -128f, -4f)),
+            Keyframe(0.25f, strapsLegs(0.42f, -112f, -5f)),
+            Keyframe(0.5f, strapsLegs(0.30f, -98f, -6f)),
+            Keyframe(0.75f, strapsLegs(0.18f, -112f, -5f)),
         ),
     )
 
     private val rfFrog = KeyframeAnim(
-        id = "rf_frog", durationMs = 2600, prop = Prop.REFORMER, muscle = MuscleGroup.LEGS,
+        id = "rf_frog", durationMs = 2800, prop = Prop.REFORMER_LEG_STRAPS, muscle = MuscleGroup.LEGS,
         keyframes = listOf(
-            Keyframe(0f, Pose(
-                pelvisX = 0.03f, pelvisY = 0.315f, torso = 92f, neck = -12f, uArmL = -8f, uArmR = -8f,
-                thighL = -115f, kneeL = 85f, thighR = -115f, kneeR = 85f, prop = 0.1f,
-            )),
-            Keyframe(0.5f, Pose(
-                pelvisX = 0.12f, pelvisY = 0.315f, torso = 92f, neck = -12f, uArmL = -8f, uArmR = -8f,
-                thighL = -95f, kneeL = 6f, thighR = -95f, kneeR = 6f, prop = 0.8f,
-            )),
+            Keyframe(0f, strapsLegs(0.15f, -135f, -108f)),
+            Keyframe(0.42f, strapsLegs(0.60f, -118f, -4f)),
+            Keyframe(0.52f, strapsLegs(0.60f, -118f, -4f)),
+            Keyframe(0.94f, strapsLegs(0.15f, -135f, -108f)),
         ),
     )
 
-    private val rfElephant = KeyframeAnim(
-        id = "rf_elephant", durationMs = 2800, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
-        keyframes = listOf(
-            Keyframe(0f, Pose( // pike: hands on bar, feet on carriage
-                pelvisX = 0.05f, pelvisY = 0.10f, torso = 118f, neck = -35f,
-                uArmL = 8f, uArmR = 8f, elbowL = 2f, elbowR = 2f,
-                thighL = -32f, kneeL = 4f, thighR = -32f, kneeR = 4f, footL = -25f, footR = -25f,
-                prop = 0.15f,
-            )),
-            Keyframe(0.5f, Pose( // carriage pushed back with the legs
-                pelvisX = 0.17f, pelvisY = 0.13f, torso = 108f, neck = -35f,
-                uArmL = 16f, uArmR = 16f, elbowL = 2f, elbowR = 2f,
-                thighL = -45f, kneeL = 4f, thighR = -45f, kneeR = 4f, footL = -25f, footR = -25f,
-                prop = 0.7f,
-            )),
-        ),
-    )
-
-    private val rfKneeStretch = KeyframeAnim(
-        id = "rf_kneestretch", durationMs = 1800, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
-        keyframes = listOf(
-            Keyframe(0f, Pose( // kneeling on carriage, hands on bar
-                pelvisX = 0.12f, pelvisY = 0.22f, torso = 62f, neck = -45f,
-                uArmL = -25f, uArmR = -25f, elbowL = 4f, elbowR = 4f,
-                thighL = -30f, kneeL = 115f, thighR = -30f, kneeR = 115f,
-                prop = 0.1f,
-            )),
-            Keyframe(0.5f, Pose( // knees drive the carriage back
-                pelvisX = 0.24f, pelvisY = 0.225f, torso = 70f, neck = -48f,
-                uArmL = -8f, uArmR = -8f, elbowL = 3f, elbowR = 3f,
-                thighL = -55f, kneeL = 110f, thighR = -55f, kneeR = 110f,
-                prop = 0.65f,
-            )),
-        ),
-    )
-
-    private val rfLongStretch = KeyframeAnim(
-        id = "rf_longstretch", durationMs = 2600, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
-        keyframes = listOf(
-            Keyframe(0f, Pose( // plank: hands on bar, feet against shoulder rests
-                pelvisX = 0.10f, pelvisY = 0.20f, torso = 78f, neck = -55f,
-                uArmL = -55f, uArmR = -55f, elbowL = 3f, elbowR = 3f,
-                thighL = -78f, thighR = -78f, footL = -25f, footR = -25f,
-                prop = 0.15f,
-            )),
-            Keyframe(0.5f, Pose( // whole plank slides back
-                pelvisX = 0.22f, pelvisY = 0.205f, torso = 82f, neck = -55f,
-                uArmL = -30f, uArmR = -30f, elbowL = 3f, elbowR = 3f,
-                thighL = -82f, thighR = -82f, footL = -25f, footR = -25f,
-                prop = 0.75f,
-            )),
-        ),
-    )
-
-    private val rfPike = KeyframeAnim(
-        id = "rf_pike", durationMs = 3000, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
-        pathJoint = PathJoint.PELVIS,
-        keyframes = listOf(
-            Keyframe(0f, Pose( // up-stretch: high pike
-                pelvisX = 0.02f, pelvisY = 0.06f, torso = 128f, neck = -40f,
-                uArmL = 15f, uArmR = 15f, elbowL = 2f, elbowR = 2f,
-                thighL = -28f, kneeL = 3f, thighR = -28f, kneeR = 3f, footL = -25f, footR = -25f,
-                prop = 0.1f,
-            )),
-            Keyframe(0.5f, Pose( // lengthen out toward plank
-                pelvisX = 0.14f, pelvisY = 0.15f, torso = 95f, neck = -50f,
-                uArmL = -20f, uArmR = -20f, elbowL = 2f, elbowR = 2f,
-                thighL = -60f, kneeL = 3f, thighR = -60f, kneeR = 3f, footL = -25f, footR = -25f,
-                prop = 0.6f,
-            )),
-        ),
-    )
-
-    private val rfChestExp = KeyframeAnim(
-        id = "rf_chestexp", durationMs = 2600, prop = Prop.REFORMER, muscle = MuscleGroup.BACK,
-        pathJoint = PathJoint.WRIST,
-        keyframes = listOf(
-            Keyframe(0f, Pose( // kneeling tall, arms forward holding straps
-                pelvisX = 0.10f, pelvisY = 0.245f, torso = 2f, neck = 0f,
-                uArmL = 55f, uArmR = 55f, elbowL = 4f, elbowR = 4f,
-                thighL = 5f, kneeL = 100f, thighR = 5f, kneeR = 100f,
-                prop = 0.1f,
-            )),
-            Keyframe(0.5f, Pose( // arms pulled to hips
-                pelvisX = 0.10f, pelvisY = 0.245f, torso = -2f, neck = 2f,
-                uArmL = -18f, uArmR = -18f, elbowL = 4f, elbowR = 4f,
-                thighL = 5f, kneeL = 100f, thighR = 5f, kneeR = 100f,
-                prop = 0.45f,
-            )),
-        ),
-    )
-
-    private val rfRowing = KeyframeAnim(
-        id = "rf_rowing", durationMs = 3000, prop = Prop.REFORMER, muscle = MuscleGroup.BACK,
-        keyframes = listOf(
-            Keyframe(0f, Pose( // seated, arms long forward
-                pelvisX = 0.06f, pelvisY = 0.27f, torso = 12f, neck = -8f,
-                uArmL = 78f, uArmR = 78f, elbowL = 6f, elbowR = 6f,
-                thighL = -78f, kneeL = 25f, thighR = -78f, kneeR = 25f,
-                prop = 0.15f,
-            )),
-            Keyframe(0.5f, Pose( // row back: elbows bend, slight lean
-                pelvisX = 0.06f, pelvisY = 0.27f, torso = -6f, neck = 0f,
-                uArmL = 15f, uArmR = 15f, elbowL = 95f, elbowR = 95f,
-                thighL = -78f, kneeL = 25f, thighR = -78f, kneeR = 25f,
-                prop = 0.55f,
-            )),
-        ),
-    )
-
-    private val rfLunge = KeyframeAnim(
-        id = "rf_lunge", durationMs = 3200, prop = Prop.REFORMER, muscle = MuscleGroup.LEGS,
-        keyframes = listOf(
-            Keyframe(0f, Pose( // front foot down, rear foot on carriage
-                pelvisX = 0.0f, pelvisY = 0.16f, torso = 12f,
-                thighL = 58f, kneeL = 80f, thighR = -42f, kneeR = 55f, footR = -30f,
-                uArmL = 20f, uArmR = 20f, elbowL = 10f, elbowR = 10f,
-                prop = 0.15f,
-            )),
-            Keyframe(0.5f, Pose( // carriage presses back, hip opens
-                pelvisX = 0.06f, pelvisY = 0.185f, torso = 8f,
-                thighL = 48f, kneeL = 62f, thighR = -68f, kneeR = 40f, footR = -30f,
-                uArmL = 25f, uArmR = 25f, elbowL = 8f, elbowR = 8f,
-                prop = 0.7f,
-            )),
-        ),
-    )
-
-    private val rfMermaid = KeyframeAnim(
-        id = "rf_mermaid", durationMs = 3800, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
-        pathJoint = PathJoint.WRIST,
-        keyframes = listOf(
-            Keyframe(0f, Pose( // side-seated, arm reaching over
-                pelvisX = 0.06f, pelvisY = 0.28f, torso = -8f, neck = -5f,
-                uArmL = 30f, elbowL = 20f, uArmR = 150f, elbowR = 8f,
-                thighL = -45f, kneeL = 110f, thighR = -30f, kneeR = 120f,
-                prop = 0.1f,
-            )),
-            Keyframe(0.5f, Pose( // side bend pushes carriage out
-                pelvisX = 0.06f, pelvisY = 0.28f, torso = -28f, neck = -8f,
-                uArmL = 15f, elbowL = 30f, uArmR = 172f, elbowR = 4f,
-                thighL = -45f, kneeL = 110f, thighR = -30f, kneeR = 120f,
-                prop = 0.5f,
-            )),
-        ),
-    )
-
-    private val rfSideSplit = KeyframeAnim(
-        id = "rf_sidesplit", durationMs = 3200, facing = Facing.FRONT, prop = Prop.REFORMER,
-        muscle = MuscleGroup.LEGS,
-        keyframes = listOf(
-            Keyframe(0f, Pose( // standing on carriage + platform, feet apart
-                pelvisY = grounded(14f, 4f) - 0.06f, thighL = 14f, thighR = 14f, kneeL = 4f, kneeR = 4f,
-                uArmL = 88f, uArmR = 88f, prop = 0.15f,
-            )),
-            Keyframe(0.5f, Pose( // carriage slides out: wider stance
-                pelvisY = grounded(32f, 4f) - 0.06f, thighL = 32f, thighR = 32f, kneeL = 4f, kneeR = 4f,
-                uArmL = 88f, uArmR = 88f, prop = 0.7f,
-            )),
-        ),
-    )
-
+    /** Feet in straps: legs lower toward the bar and lift with control. */
     private val rfStraps = KeyframeAnim(
-        id = "rf_straps", durationMs = 3000, prop = Prop.REFORMER, muscle = MuscleGroup.GLUTES,
+        id = "rf_straps", durationMs = 3200, prop = Prop.REFORMER_LEG_STRAPS, muscle = MuscleGroup.GLUTES,
         keyframes = listOf(
-            Keyframe(0f, Pose( // supine, legs up in straps
-                pelvisX = 0.04f, pelvisY = 0.315f, torso = 92f, neck = -12f, uArmL = -8f, uArmR = -8f,
-                thighL = -115f, kneeL = 8f, thighR = -115f, kneeR = 8f, prop = 0.2f,
-            )),
-            Keyframe(0.5f, Pose( // legs lower toward the bar, carriage out
-                pelvisX = 0.10f, pelvisY = 0.315f, torso = 92f, neck = -12f, uArmL = -8f, uArmR = -8f,
-                thighL = -78f, kneeL = 6f, thighR = -78f, kneeR = 6f, prop = 0.65f,
-            )),
+            Keyframe(0f, strapsLegs(0.20f, -128f, -4f)),
+            Keyframe(0.42f, strapsLegs(0.60f, -95f, -6f)),
+            Keyframe(0.55f, strapsLegs(0.60f, -95f, -6f)),
+            Keyframe(0.94f, strapsLegs(0.20f, -128f, -4f)),
         ),
+    )
+
+    private fun pullStraps(prop: Float, uArm: Float) = Pose(
+        pelvisX = carriageX(prop) + 0.03f, pelvisY = CARRIAGE_LIE, torso = 91f, neck = -12f,
+        uArmL = uArm, uArmR = uArm, elbowL = 4f, elbowR = 4f,
+        thighL = -100f, kneeL = -8f, footL = -20f, thighR = -100f, kneeR = -8f, footR = -20f,
+        prop = prop,
     )
 
     private val rfPullStraps = KeyframeAnim(
-        id = "rf_pullstraps", durationMs = 2800, prop = Prop.REFORMER, muscle = MuscleGroup.ARMS,
+        id = "rf_pullstraps", durationMs = 2900, prop = Prop.REFORMER_ARM_STRAPS, muscle = MuscleGroup.ARMS,
         pathJoint = PathJoint.WRIST,
         keyframes = listOf(
-            Keyframe(0f, Pose( // supine, arms to ceiling holding straps
-                pelvisX = 0.05f, pelvisY = 0.315f, torso = 92f, neck = -12f,
-                uArmL = -95f, uArmR = -95f, elbowL = 4f, elbowR = 4f,
-                thighL = -95f, kneeL = 30f, thighR = -95f, kneeR = 30f, prop = 0.15f,
+            Keyframe(0f, pullStraps(0.15f, 94f)),
+            Keyframe(0.40f, pullStraps(0.50f, 174f)),
+            Keyframe(0.52f, pullStraps(0.50f, 174f)),
+            Keyframe(0.92f, pullStraps(0.15f, 94f)),
+        ),
+    )
+
+    private val elIn = Pose(
+        pelvisX = -0.02f, pelvisY = 0.115f, torso = -118f, spine = -14f, neck = -46f,
+        thighL = 50.2f, kneeL = 100.2f, footL = 8f, thighR = 50.2f, kneeR = 100.2f, footR = 8f,
+        uArmL = 111.3f, uArmR = 111.3f, elbowL = -110.3f, elbowR = -110.3f, prop = 0.2f,
+    )
+    private val elOut = Pose(
+        pelvisX = 0.05f, pelvisY = 0.135f, torso = -108f, spine = -14f, neck = -40f,
+        thighL = 58.4f, kneeL = 106f, footL = 8f, thighR = 58.4f, kneeR = 106f, footR = 8f,
+        uArmL = 92f, uArmR = 92f, elbowL = -84.8f, elbowR = -84.8f, prop = 0.6f,
+    )
+
+    /** Elephant: pike with hands on the foot bar, heels press the carriage back. */
+    private val rfElephant = KeyframeAnim(
+        id = "rf_elephant", durationMs = 3000, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
+        keyframes = listOf(
+            Keyframe(0f, elIn),
+            Keyframe(0.42f, elOut),
+            Keyframe(0.52f, elOut),
+            Keyframe(0.94f, elIn),
+        ),
+    )
+
+    private fun kneeStretch(prop: Float, uArm: Float, elbow: Float): Pose {
+        return Pose(
+            pelvisX = carriageX(prop), pelvisY = 0.171f, torso = -72f, spine = 22f, neck = -8f,
+            thighL = -5.6f, kneeL = 84.4f, footL = -88f, thighR = -5.6f, kneeR = 84.4f, footR = -88f,
+            uArmL = uArm, uArmR = uArm, elbowL = elbow, elbowR = elbow, prop = prop,
+        )
+    }
+
+    /** Knee stretches: rounded-back kneeling, knees pump the carriage. Dynamic — no dwell. */
+    private val rfKneeStretch = KeyframeAnim(
+        id = "rf_kneestretch", durationMs = 1900, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
+        keyframes = listOf(
+            Keyframe(0f, kneeStretch(0.12f, 44.8f, -5.2f)),
+            Keyframe(0.45f, kneeStretch(0.50f, 27.6f, -2.7f)),
+            Keyframe(0.95f, kneeStretch(0.12f, 44.8f, -5.2f)),
+        ),
+    )
+
+    private val lsFwd = Pose(
+        pelvisX = -0.198f, pelvisY = 0.176f, torso = -55.9f, spine = 6f, neck = 65.9f,
+        thighL = 91.5f, kneeL = 92.6f, footL = 25f, thighR = 91.5f, kneeR = 92.6f, footR = 25f,
+        uArmL = 52.9f, uArmR = 52.9f, elbowL = -2.7f, elbowR = -2.7f, prop = 0.55f,
+    )
+    private val lsBack = Pose(
+        pelvisX = -0.158f, pelvisY = 0.176f, torso = -61.7f, spine = 6f, neck = 71.7f,
+        thighL = 90f, kneeL = 77f, footL = 25f, thighR = 90f, kneeR = 77f, footR = 25f,
+        uArmL = 54.4f, uArmR = 54.4f, elbowL = -2.9f, elbowR = -2.9f, prop = 0.95f,
+    )
+
+    /** Long stretch: plank with hands on the bar, whole body glides with the carriage. */
+    private val rfLongStretch = KeyframeAnim(
+        id = "rf_longstretch", durationMs = 2800, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
+        keyframes = listOf(
+            Keyframe(0f, lsFwd),
+            Keyframe(0.42f, lsBack),
+            Keyframe(0.52f, lsBack),
+            Keyframe(0.94f, lsFwd),
+        ),
+    )
+
+    private val pkUp = Pose(
+        pelvisX = -0.214f, pelvisY = 0.075f, torso = -89.1f, spine = 10f, neck = 74.1f,
+        thighL = 64.5f, kneeL = 77.9f, footL = 25f, thighR = 64.5f, kneeR = 77.9f, footR = 25f,
+        uArmL = 104f, uArmR = 104f, elbowL = -18.5f, elbowR = -18.5f, prop = 0.15f,
+    )
+    private val pkOut = Pose(
+        pelvisX = -0.13f, pelvisY = 0.13f, torso = -78.1f, spine = 10f, neck = 63.1f,
+        thighL = 77.5f, kneeL = 95.4f, footL = 25f, thighR = 77.5f, kneeR = 95.4f, footR = 25f,
+        uArmL = 83.3f, uArmR = 83.3f, elbowL = -37.2f, elbowR = -37.2f, prop = 0.5f,
+    )
+
+    /** Up-stretch / pike. */
+    private val rfPike = KeyframeAnim(
+        id = "rf_pike", durationMs = 3200, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
+        pathJoint = PathJoint.PELVIS,
+        keyframes = listOf(
+            Keyframe(0f, pkUp),
+            Keyframe(0.42f, pkOut),
+            Keyframe(0.52f, pkOut),
+            Keyframe(0.94f, pkUp),
+        ),
+    )
+
+    private fun chestExp(prop: Float, torso: Float, uArm: Float): Pose {
+        val kx = carriageX(prop) + 0.10f
+        return Pose(
+            pelvisX = kx + 0.035f, pelvisY = 0.174f, torso = torso, neck = -torso,
+            uArmL = uArm, uArmR = uArm, elbowL = 4f, elbowR = 4f,
+            thighL = -8.6f, kneeL = 81.4f, footL = -88f, thighR = -8.6f, kneeR = 81.4f, footR = -88f,
+            prop = prop,
+        )
+    }
+
+    private val rfChestExp = KeyframeAnim(
+        id = "rf_chestexp", durationMs = 2800, prop = Prop.REFORMER_ARM_STRAPS, muscle = MuscleGroup.BACK,
+        pathJoint = PathJoint.WRIST,
+        keyframes = listOf(
+            Keyframe(0f, chestExp(0.15f, 2f, 33f)),
+            Keyframe(0.40f, chestExp(0.32f, -2f, -36f)),
+            Keyframe(0.54f, chestExp(0.32f, -2f, -36f)),   // hold the open chest
+            Keyframe(0.94f, chestExp(0.15f, 2f, 33f)),
+        ),
+    )
+
+    private fun rowing(prop: Float, torso: Float, uArm: Float, elbow: Float) = Pose(
+        pelvisX = carriageX(0.3f) - 0.02f, pelvisY = CARRIAGE_LIE - 0.02f, torso = torso, neck = -torso + 4f,
+        uArmL = uArm, uArmR = uArm, elbowL = elbow, elbowR = elbow,
+        thighL = 109.9f, kneeL = 47.7f, footL = -12f, thighR = 109.9f, kneeR = 47.7f, footR = -12f,
+        prop = prop,
+    )
+
+    /** Rowing back: seated facing the risers, pull the straps to the chest. */
+    private val rfRowing = KeyframeAnim(
+        id = "rf_rowing", durationMs = 3200, prop = Prop.REFORMER_ARM_STRAPS, muscle = MuscleGroup.BACK,
+        keyframes = listOf(
+            Keyframe(0f, rowing(0.30f, 14f, 41f, 6f)),
+            Keyframe(0.40f, rowing(0.42f, -8f, 28f, 95f)),
+            Keyframe(0.52f, rowing(0.42f, -8f, 28f, 95f)),
+            Keyframe(0.94f, rowing(0.30f, 14f, 41f, 6f)),
+        ),
+    )
+
+    private fun rfLungePose(prop: Float, pelX: Float, thighF: Float, kneeF: Float, footF: Float) = Pose(
+        pelvisX = pelX, pelvisY = 0.24f, torso = -14f, neck = 8f,
+        thighR = thighF, kneeR = kneeF, footR = footF,      // front leg on the platform
+        thighL = 44.5f, kneeL = -45.5f, footL = -85f,       // rear shin along the carriage
+        uArmL = -6f, uArmR = -6f, elbowL = 10f, elbowR = 10f, prop = prop,
+    )
+
+    /** Hip-flexor lunge: front foot at the bar-end platform, rear knee rides the carriage. */
+    private val rfLunge = KeyframeAnim(
+        id = "rf_lunge", durationMs = 3600, prop = Prop.REFORMER, muscle = MuscleGroup.LEGS,
+        keyframes = listOf(
+            Keyframe(0f, rfLungePose(0.2f, -0.40f, -69.9f, -123.3f, -53.4f)),
+            Keyframe(0.40f, rfLungePose(0.62f, -0.26f, -90.8f, -104.9f, -14.1f)),
+            Keyframe(0.56f, rfLungePose(0.62f, -0.26f, -90.8f, -104.9f, -14.1f)),   // sink into the stretch
+            Keyframe(0.94f, rfLungePose(0.2f, -0.40f, -69.9f, -123.3f, -53.4f)),
+        ),
+    )
+
+    private val mmTall = Pose(
+        pelvisX = carriageX(0.15f) + 0.02f, pelvisY = 0.20f, torso = -6f, spine = -6f, neck = -4f,
+        thighL = -30f, kneeL = -120f, footL = -10f, thighR = -34f, kneeR = -118f, footR = -10f,
+        uArmL = 52f, elbowL = 30f, uArmR = -130f, elbowR = 6f, prop = 0.15f,
+    )
+    private val mmReach = mmTall.copy(
+        torso = -16f, spine = -16f, uArmR = -110f, uArmL = 88f, prop = 0.42f,
+        pelvisX = carriageX(0.15f) + 0.02f,
+    )
+
+    /** Mermaid: kneel-seated side bend, reach arm sweeps overhead as the carriage glides. */
+    private val rfMermaid = KeyframeAnim(
+        id = "rf_mermaid", durationMs = 4000, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
+        pathJoint = PathJoint.WRIST,
+        keyframes = listOf(
+            Keyframe(0f, mmTall),
+            Keyframe(0.38f, mmReach),
+            Keyframe(0.58f, mmReach),
+            Keyframe(0.94f, mmTall),
+        ),
+    )
+
+    /** Side splits, front view: feet slide apart and pull back together. */
+    private val rfSideSplit = KeyframeAnim(
+        id = "rf_sidesplit", durationMs = 3400, facing = Facing.FRONT, prop = Prop.NONE,
+        muscle = MuscleGroup.LEGS,
+        keyframes = listOf(
+            Keyframe(0f, Pose(
+                pelvisY = grounded(14f, 4f), thighL = 14f, thighR = 14f, kneeL = 4f, kneeR = 4f,
+                uArmL = 88f, uArmR = 88f,
             )),
-            Keyframe(0.5f, Pose( // arms pull down to sides, carriage glides
-                pelvisX = 0.10f, pelvisY = 0.315f, torso = 92f, neck = -12f,
-                uArmL = -18f, uArmR = -18f, elbowL = 4f, elbowR = 4f,
-                thighL = -95f, kneeL = 30f, thighR = -95f, kneeR = 30f, prop = 0.55f,
+            Keyframe(0.42f, Pose(
+                pelvisY = grounded(32f, 4f), thighL = 32f, thighR = 32f, kneeL = 4f, kneeR = 4f,
+                uArmL = 88f, uArmR = 88f,
+            )),
+            Keyframe(0.55f, Pose(
+                pelvisY = grounded(32f, 4f), thighL = 32f, thighR = 32f, kneeL = 4f, kneeR = 4f,
+                uArmL = 88f, uArmR = 88f,
+            )),
+            Keyframe(0.94f, Pose(
+                pelvisY = grounded(14f, 4f), thighL = 14f, thighR = 14f, kneeL = 4f, kneeR = 4f,
+                uArmL = 88f, uArmR = 88f,
             )),
         ),
     )
 
+    private val pcDn = Pose(
+        pelvisX = carriageX(0.1f) + 0.03f, pelvisY = CARRIAGE_LIE, torso = 91f, neck = -12f,
+        uArmL = 179f, uArmR = 179f,
+        thighL = -151.6f, kneeL = -97.5f, footL = 12f, thighR = -151.6f, kneeR = -97.5f, footR = 12f,
+        prop = 0.1f,
+    )
+    private val pcUp = Pose(
+        pelvisX = carriageX(0.12f) + 0.03f, pelvisY = 0.315f, torso = 118.2f, spine = -16f, neck = -7f,
+        uArmL = 152f, uArmR = 152f,
+        thighL = -136.1f, kneeL = -99f, footL = 12f, thighR = -136.1f, kneeR = -99f, footR = 12f,
+        prop = 0.12f,
+    )
+
+    /** Pelvic curl on the reformer: hips roll up, shoulders stay heavy, feet stay on the bar. */
     private val rfPelvicCurl = KeyframeAnim(
-        id = "rf_pelviccurl", durationMs = 3200, prop = Prop.REFORMER, muscle = MuscleGroup.GLUTES,
+        id = "rf_pelviccurl", durationMs = 3600, prop = Prop.REFORMER, muscle = MuscleGroup.GLUTES,
         pathJoint = PathJoint.PELVIS,
         keyframes = listOf(
-            Keyframe(0f, Pose( // supine on carriage, feet on bar, hips down
-                pelvisX = 0.03f, pelvisY = 0.32f, torso = 94f, neck = -15f, uArmL = -10f, uArmR = -10f,
-                thighL = -112f, kneeL = 78f, thighR = -112f, kneeR = 78f, prop = 0.1f,
-            )),
-            Keyframe(0.5f, Pose( // hips rolled up
-                pelvisX = 0.03f, pelvisY = 0.27f, torso = 106f, neck = -28f, uArmL = -25f, uArmR = -25f,
-                thighL = -128f, kneeL = 66f, thighR = -128f, kneeR = 66f, prop = 0.15f,
-            )),
+            Keyframe(0f, pcDn),
+            Keyframe(0.36f, pcUp),
+            Keyframe(0.60f, pcUp),
+            Keyframe(0.94f, pcDn),
         ),
     )
 
     // ------------------------------------------------------------------ BACK (physio mat work)
 
+    private val cuStart = Pose(
+        pelvisY = SUPINE_Y, torso = 94f, neck = -16f,
+        uArmL = 122.1f, elbowL = 101.4f, uArmR = 122.1f, elbowR = 101.4f,   // hands under the low back
+        thighL = -149.8f, kneeL = -131.2f, footL = -161f, thighR = -90f, kneeR = -1f, footR = -171f,
+    )
+
+    /** McGill curl-up: one knee bent, tiny head/shoulder lift, spine stays neutral. */
     private val bkCurlUp = KeyframeAnim(
-        id = "bk_curlup", durationMs = 3200, prop = Prop.MAT, muscle = MuscleGroup.CORE,
+        id = "bk_curlup", durationMs = 3400, prop = Prop.MAT, muscle = MuscleGroup.CORE,
         pathJoint = PathJoint.HEAD,
         keyframes = listOf(
-            Keyframe(0f, Pose( // supine: one knee bent, one leg long, hands under the low back
-                pelvisY = 0.40f, torso = 95f, neck = -18f,
-                uArmL = -20f, elbowL = 55f, uArmR = -20f, elbowR = 55f,
-                thighL = -55f, kneeL = 95f, thighR = -88f, kneeR = 3f,
-            )),
-            Keyframe(0.5f, Pose( // small head/shoulder lift, spine stays neutral
-                pelvisY = 0.40f, torso = 84f, neck = -26f,
-                uArmL = -20f, elbowL = 55f, uArmR = -20f, elbowR = 55f,
-                thighL = -55f, kneeL = 95f, thighR = -88f, kneeR = 3f,
-            )),
+            Keyframe(0f, cuStart),
+            Keyframe(0.38f, cuStart.copy(spine = -14f, neck = -26f)),
+            Keyframe(0.58f, cuStart.copy(spine = -14f, neck = -26f)),
+            Keyframe(0.92f, cuStart),
         ),
     )
 
+    private val sbDn = Pose(
+        pelvisX = -0.03f, pelvisY = 0.408f, torso = 64.4f, neck = -58.4f,
+        uArmL = -64.4f, uArmR = 35.6f, elbowL = 90f, elbowR = 6f,
+        thighL = -78f, kneeL = 30f, footL = 60f, thighR = -78f, kneeR = 30f, footR = 60f,
+    )
+    private val sbUp = Pose(
+        pelvisX = -0.035f, pelvisY = 0.36f, torso = 75.8f, neck = -69.8f,
+        uArmL = -75.8f, uArmR = 26.2f, elbowL = 90f, elbowR = 6f,
+        thighL = -65.6f, kneeL = 30f, footL = 60f, thighR = -65.6f, kneeR = 30f, footR = 60f,
+    )
+
+    /** Side bridge from the knees. */
     private val bkSideBridge = KeyframeAnim(
-        id = "bk_sidebridge", durationMs = 3400, prop = Prop.MAT, muscle = MuscleGroup.CORE,
+        id = "bk_sidebridge", durationMs = 3600, prop = Prop.MAT, muscle = MuscleGroup.CORE,
         pathJoint = PathJoint.PELVIS,
         keyframes = listOf(
-            Keyframe(0f, Pose( // side-lying on the forearm, knees bent, hips down
-                pelvisY = 0.365f, torso = 62f, neck = -46f,
-                uArmL = -108f, elbowL = 98f, uArmR = 85f, elbowR = 8f,
-                thighL = -30f, kneeL = 95f, thighR = -30f, kneeR = 95f,
-            )),
-            Keyframe(0.5f, Pose( // hips lifted: straight line knee-hip-shoulder
-                pelvisY = 0.305f, torso = 68f, neck = -48f,
-                uArmL = -108f, elbowL = 98f, uArmR = 95f, elbowR = 6f,
-                thighL = -38f, kneeL = 95f, thighR = -38f, kneeR = 95f,
-            )),
+            Keyframe(0f, sbDn),
+            Keyframe(0.40f, sbUp),
+            Keyframe(0.58f, sbUp),
+            Keyframe(0.94f, sbDn),
         ),
     )
 
+    private val ptNeutral = Pose(
+        pelvisY = SUPINE_Y, torso = 94f, neck = -14f, uArmL = 177f, uArmR = 177f,
+        thighL = -149.8f, kneeL = -131.2f, footL = -161f, thighR = -149.8f, kneeR = -131.2f, footR = -161f,
+    )
+
+    /** Gentle posterior pelvic tilt: low back presses into the mat. */
     private val bkPelvicTilt = KeyframeAnim(
         id = "bk_pelvictilt", durationMs = 3000, prop = Prop.MAT, muscle = MuscleGroup.CORE,
         keyframes = listOf(
-            Keyframe(0f, Pose( // supine, knees bent, neutral spine
-                pelvisY = 0.405f, torso = 95f, neck = -18f,
-                uArmL = -25f, uArmR = -25f,
-                thighL = -55f, kneeL = 95f, thighR = -55f, kneeR = 95f,
-            )),
-            Keyframe(0.5f, Pose( // gentle posterior tilt: low back presses into the mat
-                pelvisY = 0.395f, torso = 99f, neck = -20f,
-                uArmL = -25f, uArmR = -25f,
-                thighL = -60f, kneeL = 98f, thighR = -60f, kneeR = 98f,
-            )),
+            Keyframe(0f, ptNeutral),
+            Keyframe(0.42f, ptNeutral.copy(pelvisY = 0.443f, torso = 98f, spine = -5f,
+                thighL = -153f, kneeL = -134f, footL = -160f, thighR = -153f, kneeR = -134f, footR = -160f)),
+            Keyframe(0.56f, ptNeutral.copy(pelvisY = 0.443f, torso = 98f, spine = -5f,
+                thighL = -153f, kneeL = -134f, footL = -160f, thighR = -153f, kneeR = -134f, footR = -160f)),
+            Keyframe(0.94f, ptNeutral),
         ),
     )
 
+    private val prDn = Pose(
+        pelvisX = 0.05f, pelvisY = SUPINE_Y, torso = -88f, spine = -4f, neck = 10f,
+        uArmL = -57.7f, uArmR = -57.7f, elbowL = 156.8f, elbowR = 156.8f,
+        thighL = 90f, kneeL = -2f, footL = -65f, thighR = 90f, kneeR = -2f, footR = -65f,
+    )
+    private val prUp = Pose(
+        pelvisX = 0.05f, pelvisY = SUPINE_Y, torso = -64f, spine = -26f, neck = 18f,
+        uArmL = -19.9f, uArmR = -19.9f, elbowL = 139.3f, elbowR = 139.3f,
+        thighL = 90f, kneeL = -2f, footL = -65f, thighR = 90f, kneeR = -2f, footR = -65f,
+    )
+
+    /** McKenzie press-up: hands stay planted, chest arcs up, hips stay heavy on the mat. */
     private val bkPressUp = KeyframeAnim(
-        id = "bk_pressup", durationMs = 3800, prop = Prop.MAT, muscle = MuscleGroup.BACK,
+        id = "bk_pressup", durationMs = 4000, prop = Prop.MAT, muscle = MuscleGroup.BACK,
         pathJoint = PathJoint.HEAD,
         keyframes = listOf(
-            Keyframe(0f, Pose( // prone, hands under the shoulders
-                pelvisY = 0.42f, torso = -88f, neck = 12f,
-                uArmL = 112f, elbowL = 108f, uArmR = 112f, elbowR = 108f,
-                thighL = 88f, kneeL = 2f, thighR = 88f, kneeR = 2f,
-            )),
-            Keyframe(0.5f, Pose( // press the chest up, hips stay heavy on the mat
-                pelvisY = 0.42f, torso = -56f, neck = 26f,
-                uArmL = 138f, elbowL = 34f, uArmR = 138f, elbowR = 34f,
-                thighL = 82f, kneeL = 2f, thighR = 82f, kneeR = 2f,
-            )),
+            Keyframe(0f, prDn),
+            Keyframe(0.40f, prUp),
+            Keyframe(0.62f, prUp),
+            Keyframe(0.94f, prDn),
         ),
+    )
+
+    private val hingeTop = Pose(pelvisY = grounded(0f, 2f), torso = 3f, uArmL = 8f, uArmR = 8f,
+        thighL = 0f, kneeL = 2f, thighR = 0f, kneeR = 2f)
+    private val hingeDown = Pose( // hips travel back, flat back tips forward, soft knees
+        pelvisX = -0.07f, pelvisY = grounded(18f, 22f), torso = 62f, neck = -30f,
+        uArmL = -58f, uArmR = -58f, elbowL = 4f, elbowR = 4f,
+        thighL = 18f, kneeL = 22f, thighR = 18f, kneeR = 22f,
     )
 
     private val bkHinge = KeyframeAnim(
-        id = "bk_hinge", durationMs = 3200, muscle = MuscleGroup.GLUTES,
+        id = "bk_hinge", durationMs = 3400, muscle = MuscleGroup.GLUTES,
         pathJoint = PathJoint.PELVIS,
         keyframes = listOf(
-            Keyframe(0f, Pose(pelvisY = grounded(0f, 2f), torso = 3f, uArmL = 8f, uArmR = 8f,
-                thighL = 0f, kneeL = 2f, thighR = 0f, kneeR = 2f)),
-            Keyframe(0.5f, Pose( // hips travel back, flat back tips forward, soft knees
-                pelvisX = -0.07f, pelvisY = grounded(18f, 22f), torso = 62f, neck = -30f,
-                uArmL = -58f, uArmR = -58f, elbowL = 4f, elbowR = 4f,
-                thighL = 18f, kneeL = 22f, thighR = 18f, kneeR = 22f,
-            )),
+            Keyframe(0f, hingeTop),
+            Keyframe(0.42f, hingeDown),
+            Keyframe(0.54f, hingeDown),
+            Keyframe(0.94f, hingeTop),
         ),
     )
 
+    private val clamBase = Pose(
+        pelvisY = 0.415f, torso = 84f, neck = -30f,
+        uArmL = 8f, elbowL = -6f, uArmR = 191f, elbowR = -4f,
+        thighL = -80f, kneeL = 8f, footL = -92f, thighR = -80f, kneeR = 8f, footR = -92f,
+    )
+
+    /** Clamshell (side view proxy: the top leg opens while the pelvis stays stacked). */
     private val bkClam = KeyframeAnim(
-        id = "bk_clam", durationMs = 2600, prop = Prop.MAT, muscle = MuscleGroup.GLUTES,
+        id = "bk_clam", durationMs = 2800, prop = Prop.MAT, muscle = MuscleGroup.GLUTES,
         pathJoint = PathJoint.ANKLE,
         keyframes = listOf(
-            Keyframe(0f, Pose( // side-lying, hips and knees folded, feet together
-                pelvisY = 0.385f, torso = 80f, neck = -20f,
-                uArmL = -60f, elbowL = 95f, uArmR = 40f, elbowR = 30f,
-                thighL = -52f, kneeL = 92f, thighR = -52f, kneeR = 92f,
-            )),
-            Keyframe(0.5f, Pose( // top knee opens like a clam shell, pelvis stays stacked
-                pelvisY = 0.385f, torso = 80f, neck = -20f,
-                uArmL = -60f, elbowL = 95f, uArmR = 40f, elbowR = 30f,
-                thighL = -52f, kneeL = 92f, thighR = -24f, kneeR = 92f,
-            )),
+            Keyframe(0f, clamBase),
+            Keyframe(0.42f, clamBase.copy(kneeR = 45f)),
+            Keyframe(0.55f, clamBase.copy(kneeR = 45f)),
+            Keyframe(0.94f, clamBase),
         ),
     )
 
     // ------------------------------------------------------------------ SPIN (procedural)
+    // Cadences follow the voice coaching; posture leans are degrees from vertical.
 
     private val spSeatedFlat = SpinAnim(id = "sp_seated_flat", cadenceRpm = 90, standing = 0f)
+    private val spWarmup = SpinAnim(id = "sp_warmup", cadenceRpm = 84, standing = 0f, extraLean = -4f)
+    private val spRecovery = SpinAnim(id = "sp_recovery", cadenceRpm = 76, standing = 0f, extraLean = -6f)
+    private val spFastFlat = SpinAnim(id = "sp_fast_flat", cadenceRpm = 98, standing = 0f, extraLean = 6f)
     private val spSeatedClimb = SpinAnim(id = "sp_seated_climb", cadenceRpm = 68, standing = 0f, extraLean = 6f)
-    private val spStandingClimb = SpinAnim(id = "sp_standing_climb", cadenceRpm = 64, standing = 1f, extraLean = 10f, muscle = MuscleGroup.GLUTES)
+    private val spSeatedClimbHeavy = SpinAnim(id = "sp_seated_climb_heavy", cadenceRpm = 58, standing = 0f, extraLean = 8f)
+    private val spStandingClimb = SpinAnim(id = "sp_standing_climb", cadenceRpm = 64, standing = 1f, extraLean = -3f, muscle = MuscleGroup.GLUTES)
     private val spStandingRun = SpinAnim(id = "sp_standing_run", cadenceRpm = 86, standing = 1f, extraLean = 4f)
     private val spJumps = SpinAnim(id = "sp_jumps", cadenceRpm = 84, standing = 0f, jumpPeriodMs = 4200, muscle = MuscleGroup.LEGS)
-    private val spSprint = SpinAnim(id = "sp_sprint", cadenceRpm = 106, standing = 0f, extraLean = 8f, muscle = MuscleGroup.FULL_BODY)
+    private val spSprint = SpinAnim(id = "sp_sprint", cadenceRpm = 118, standing = 0f, extraLean = 8f, muscle = MuscleGroup.FULL_BODY)
 
     // ------------------------------------------------------------------ ELLIPTICAL (procedural)
 
     private val elForward = EllipticalAnim(id = "el_forward", strideRpm = 55, armsDrive = true)
+    private val elWarmup = EllipticalAnim(id = "el_warmup", strideRpm = 50, armsDrive = true)
+    private val elEasy = EllipticalAnim(id = "el_easy", strideRpm = 46, armsDrive = true)
     private val elForwardFast = EllipticalAnim(id = "el_forward_fast", strideRpm = 72, armsDrive = true, muscle = MuscleGroup.FULL_BODY)
     private val elReverse = EllipticalAnim(id = "el_reverse", strideRpm = 52, reverse = true, muscle = MuscleGroup.LEGS)
     private val elLegsOnly = EllipticalAnim(id = "el_legsonly", strideRpm = 55, armsDrive = false, muscle = MuscleGroup.LEGS)
@@ -856,16 +1028,17 @@ object AnimationRegistry {
     // ------------------------------------------------------------------ registry
 
     val all: List<ExerciseAnim> = listOf(
-        flSquat, flPushup, flLunge, flPlank, flSidePlank, flBridge, flBurpee, flMountain,
-        flJack, flHighKnees, flSkater, flBirdDog, flDeadBug, flSuperman, flSquatJump,
+        flSquat, flPushup, flLunge, flReverseLunge, flPlank, flSidePlank, flBridge, flBurpee,
+        flMountain, flJack, flHighKnees, flSkater, flBirdDog, flDeadBug, flSuperman, flSquatJump,
         flWallSit, flInchworm, flBearCrawl, flCrunch, flRussian, flMarch, flArmCircles,
         flCatCow, flHamStretch, flQuadStretch, flChild,
-        rfFootwork, rfHundred, rfLegCircles, rfFrog, rfElephant, rfKneeStretch, rfLongStretch,
-        rfPike, rfChestExp, rfRowing, rfLunge, rfMermaid, rfSideSplit, rfStraps, rfPullStraps,
-        rfPelvicCurl,
-        bkCurlUp, bkSideBridge, bkPelvicTilt, bkPressUp, bkHinge, bkClam,
-        spSeatedFlat, spSeatedClimb, spStandingClimb, spStandingRun, spJumps, spSprint,
-        elForward, elForwardFast, elReverse, elLegsOnly, elArmsDrive, elHill,
+        rfFootworkHeels, rfFootworkToes, rfHundred, rfLegCircles, rfFrog, rfElephant,
+        rfKneeStretch, rfLongStretch, rfPike, rfChestExp, rfRowing, rfLunge, rfMermaid,
+        rfSideSplit, rfStraps, rfPullStraps, rfPelvicCurl,
+        bkCurlUp, bkSideBridge, bkPelvicTilt, bkPressUp, bkHinge, bkClam, bkExtension,
+        spSeatedFlat, spWarmup, spRecovery, spFastFlat, spSeatedClimb, spSeatedClimbHeavy,
+        spStandingClimb, spStandingRun, spJumps, spSprint,
+        elForward, elWarmup, elEasy, elForwardFast, elReverse, elLegsOnly, elArmsDrive, elHill,
     )
 
     val byId: Map<String, ExerciseAnim> = all.associateBy { it.id }
