@@ -10,19 +10,32 @@ import kotlin.math.sin
  * (7.5 head-heights, per classic figure proportion), pelvis at the origin-ish. X grows to the
  * viewer's right, Y grows DOWN (screen space). All angles are degrees.
  *
- * Angle conventions (side view):
- *  - torso: 0 = upright, positive = leaning forward (to +X)
- *  - upper arm: relative to the torso line, 0 = hanging straight down along the torso
- *  - elbow: bend of the forearm relative to the upper arm, 0 = straight, positive = flexion (forward)
- *  - thigh: absolute from vertical, 0 = straight down, positive = forward (hip flexion)
- *  - knee: bend relative to the thigh, 0 = straight, positive = flexion (heel toward glutes)
- *  - foot: relative to the shank, 0 = neutral 90° foot
- *  - neck/head: relative to the torso, positive = looking down/forward-flexed
+ * Angle conventions (side view). Every segment's world direction is written as
+ * (sin(a), cos(a)) — a = 0 points straight DOWN, positive a rotates toward +X:
+ *  - torso: lower-torso (pelvis -> mid) tilt from vertical-up; 0 = upright, positive = leaning
+ *    toward +X, ~90 = lying with the chest end toward +X
+ *  - spine: bend of the upper torso (mid -> shoulder line) relative to the lower torso;
+ *    0 = straight back, positive = flexing toward +X (same sense as torso)
+ *  - neck/head: relative to the upper torso line, positive = tipping toward +X
+ *  - upper arm: the arm's world angle is (torso + spine + uArm). With an upright torso,
+ *    uArm 0 = hanging straight down, +90 = horizontal toward +X, 180 = overhead.
+ *    NOTE: because the arm angle is additive about vertical-down (not mirrored along the
+ *    torso line), a leaned torso does NOT carry the "hanging" direction with it — always
+ *    compute the world angle you want, then subtract (torso + spine).
+ *  - elbow: forearm relative to the upper arm, 0 = straight, positive = flexion toward +X
+ *  - thigh: absolute from vertical-down, 0 = straight down, positive = toward +X (hip flexion
+ *    for a figure facing +X)
+ *  - knee: shank world angle = thigh - knee. Positive knee = heel folding toward -X, which is
+ *    anatomical flexion for an upright figure facing +X; supine poses (thigh beyond ±90) need
+ *    NEGATIVE knee values for an anatomical fold. The physical flexion magnitude is |knee|.
+ *  - foot: relative to the shank, 0 = neutral 90° foot; toe direction = (thigh - knee) + 90 + foot
  */
 data class Pose(
     val pelvisX: Float = 0f,
     val pelvisY: Float = 0f,
     val torso: Float = 0f,
+    /** Upper-torso bend relative to the lower torso (spinal flexion/extension). */
+    val spine: Float = 0f,
     val neck: Float = 0f,
     val uArmL: Float = 0f,
     val elbowL: Float = 0f,
@@ -42,7 +55,9 @@ data class Pose(
 object Proportions {
     const val HEAD_R = 0.062f       // head circle radius
     const val NECK = 0.045f
-    const val TORSO = 0.29f         // pelvis -> shoulder line
+    const val TORSO = 0.29f         // pelvis -> shoulder line (LOWER + UPPER)
+    const val LOWER_TORSO = 0.145f  // pelvis -> mid spine
+    const val UPPER_TORSO = 0.145f  // mid spine -> shoulder line
     const val UPPER_ARM = 0.155f
     const val FOREARM = 0.145f      // includes hand
     const val THIGH = 0.235f
@@ -50,6 +65,13 @@ object Proportions {
     const val FOOT = 0.075f
     const val SHOULDER_HALF = 0.095f // half shoulder width (front view)
     const val HIP_HALF = 0.055f      // half hip width (front view)
+
+    // Depth cheat in side view: the far shoulder/hip sit slightly behind and below the near
+    // ones so far limbs read as parallax silhouettes instead of being perfectly eclipsed.
+    const val FAR_SHOULDER_DX = -0.022f
+    const val FAR_SHOULDER_DY = 0.010f
+    const val FAR_HIP_DX = -0.016f
+    const val FAR_HIP_DY = 0.008f
 }
 
 data class Joint(val x: Float, val y: Float)
@@ -67,6 +89,7 @@ data class SkeletonSide(
 
 data class Skeleton(
     val pelvis: Joint,
+    val midTorso: Joint,  // spine bend point
     val chest: Joint,     // shoulder line center
     val neckTop: Joint,
     val headCenter: Joint,
@@ -79,7 +102,8 @@ enum class Facing { SIDE, FRONT }
 /**
  * Forward kinematics: converts a [Pose] into world-space joints.
  * In FRONT facing, "forward" angles are drawn as abduction (limbs swing out to the sides),
- * which is what front-view exercises (jumping jacks, arm circles, skaters) need.
+ * which is what front-view exercises (jumping jacks, arm circles, skaters) need; torso/spine
+ * read as lateral lean, so a skater can tip side to side.
  */
 object Rig {
 
@@ -93,11 +117,16 @@ object Rig {
         val pelvis = Joint(pose.pelvisX, pose.pelvisY)
 
         val torsoA = rad(pose.torso)
-        val chest = Joint(
-            pelvis.x + (Proportions.TORSO * sin(torsoA)).toFloat(),
-            pelvis.y - (Proportions.TORSO * cos(torsoA)).toFloat(),
+        val midTorso = Joint(
+            pelvis.x + (Proportions.LOWER_TORSO * sin(torsoA)).toFloat(),
+            pelvis.y - (Proportions.LOWER_TORSO * cos(torsoA)).toFloat(),
         )
-        val neckA = rad(pose.torso + pose.neck)
+        val upperA = rad(pose.torso + pose.spine)
+        val chest = Joint(
+            midTorso.x + (Proportions.UPPER_TORSO * sin(upperA)).toFloat(),
+            midTorso.y - (Proportions.UPPER_TORSO * cos(upperA)).toFloat(),
+        )
+        val neckA = rad(pose.torso + pose.spine + pose.neck)
         val neckTop = Joint(
             chest.x + (Proportions.NECK * sin(neckA)).toFloat(),
             chest.y - (Proportions.NECK * cos(neckA)).toFloat(),
@@ -108,13 +137,13 @@ object Rig {
         )
 
         fun arm(uArm: Float, elbow: Float, shoulder: Joint): Pair<Joint, Joint> {
-            // upper arm angle is relative to torso direction (down along torso = 0)
-            val ua = rad(pose.torso + uArm)
+            // world angle of the upper arm = torso + spine + uArm (0 = straight down)
+            val ua = rad(pose.torso + pose.spine + uArm)
             val e = Joint(
                 shoulder.x + (Proportions.UPPER_ARM * sin(ua)).toFloat(),
                 shoulder.y + (Proportions.UPPER_ARM * cos(ua)).toFloat(),
             )
-            val fa = rad(pose.torso + uArm + elbow)
+            val fa = rad(pose.torso + pose.spine + uArm + elbow)
             val w = Joint(
                 e.x + (Proportions.FOREARM * sin(fa)).toFloat(),
                 e.y + (Proportions.FOREARM * cos(fa)).toFloat(),
@@ -141,26 +170,47 @@ object Rig {
             return Triple(k, a, t)
         }
 
+        val farShoulder = Joint(chest.x + Proportions.FAR_SHOULDER_DX, chest.y + Proportions.FAR_SHOULDER_DY)
+        val farHip = Joint(pelvis.x + Proportions.FAR_HIP_DX, pelvis.y + Proportions.FAR_HIP_DY)
+
         val (elbowNear, wristNear) = arm(pose.uArmR, pose.elbowR, chest)
-        val (elbowFar, wristFar) = arm(pose.uArmL, pose.elbowL, chest)
+        val (elbowFar, wristFar) = arm(pose.uArmL, pose.elbowL, farShoulder)
         val (kneeNear, ankleNear, toeNear) = leg(pose.thighR, pose.kneeR, pose.footR, pelvis)
-        val (kneeFar, ankleFar, toeFar) = leg(pose.thighL, pose.kneeL, pose.footL, pelvis)
+        val (kneeFar, ankleFar, toeFar) = leg(pose.thighL, pose.kneeL, pose.footL, farHip)
 
         return Skeleton(
             pelvis = pelvis,
+            midTorso = midTorso,
             chest = chest,
             neckTop = neckTop,
             headCenter = headCenter,
             near = SkeletonSide(chest, elbowNear, wristNear, pelvis, kneeNear, ankleNear, toeNear),
-            far = SkeletonSide(chest, elbowFar, wristFar, pelvis, kneeFar, ankleFar, toeFar),
+            far = SkeletonSide(farShoulder, elbowFar, wristFar, farHip, kneeFar, ankleFar, toeFar),
         )
     }
 
     private fun solveFront(pose: Pose): Skeleton {
         val pelvis = Joint(pose.pelvisX, pose.pelvisY)
-        val chest = Joint(pelvis.x, pelvis.y - Proportions.TORSO)
-        val neckTop = Joint(chest.x, chest.y - Proportions.NECK)
-        val headCenter = Joint(neckTop.x, neckTop.y - Proportions.HEAD_R)
+        // torso/spine act as lateral lean in front view
+        val torsoA = rad(pose.torso)
+        val midTorso = Joint(
+            pelvis.x + (Proportions.LOWER_TORSO * sin(torsoA)).toFloat(),
+            pelvis.y - (Proportions.LOWER_TORSO * cos(torsoA)).toFloat(),
+        )
+        val upperA = rad(pose.torso + pose.spine)
+        val chest = Joint(
+            midTorso.x + (Proportions.UPPER_TORSO * sin(upperA)).toFloat(),
+            midTorso.y - (Proportions.UPPER_TORSO * cos(upperA)).toFloat(),
+        )
+        val neckA = rad(pose.torso + pose.spine + pose.neck)
+        val neckTop = Joint(
+            chest.x + (Proportions.NECK * sin(neckA)).toFloat(),
+            chest.y - (Proportions.NECK * cos(neckA)).toFloat(),
+        )
+        val headCenter = Joint(
+            neckTop.x + (Proportions.HEAD_R * sin(neckA)).toFloat(),
+            neckTop.y - (Proportions.HEAD_R * cos(neckA)).toFloat(),
+        )
 
         fun arm(uArm: Float, elbow: Float, dir: Int): Triple<Joint, Joint, Joint> {
             val shoulder = Joint(chest.x + dir * Proportions.SHOULDER_HALF, chest.y)
@@ -200,6 +250,7 @@ object Rig {
 
         return Skeleton(
             pelvis = pelvis,
+            midTorso = midTorso,
             chest = chest,
             neckTop = neckTop,
             headCenter = headCenter,
@@ -213,6 +264,7 @@ object Rig {
         pelvisX = lerpF(a.pelvisX, b.pelvisX, t),
         pelvisY = lerpF(a.pelvisY, b.pelvisY, t),
         torso = lerpF(a.torso, b.torso, t),
+        spine = lerpF(a.spine, b.spine, t),
         neck = lerpF(a.neck, b.neck, t),
         uArmL = lerpF(a.uArmL, b.uArmL, t),
         elbowL = lerpF(a.elbowL, b.elbowL, t),
