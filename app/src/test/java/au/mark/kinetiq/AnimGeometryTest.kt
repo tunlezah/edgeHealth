@@ -151,6 +151,34 @@ class AnimGeometryTest {
     }
 
     @Test
+    fun `mountain climber keeps hands planted and trunk still`() {
+        // Regression: the old ground constraint lifted the whole pelvis (hands included) when
+        // the swinging leg would dip; the knee-clearance constraint must keep the trunk fixed.
+        val anim = AnimationRegistry.byId["fl_mountain"] as KeyframeAnim
+        val ref = Rig.solve(anim.poseAt(0f), anim.facing)
+        for (i in 0 until 60) {
+            val pose = anim.poseAt(i / 60f)
+            val sk = Rig.solve(pose, anim.facing)
+            assertThat(abs(sk.near.wrist.x - ref.near.wrist.x)).isLessThan(0.012f)
+            assertThat(abs(sk.near.wrist.y - ref.near.wrist.y)).isLessThan(0.012f)
+            assertThat(abs(pose.pelvisY - ref.pelvis.y)).isLessThan(0.01f)
+        }
+    }
+
+    @Test
+    fun `planted support toes never lift during plank-family loops`() {
+        // The planted foot of a plank/climber must stay in touch with the floor at all phases.
+        for (id in listOf("fl_mountain", "fl_plank", "fl_pushup")) {
+            val anim = AnimationRegistry.byId[id] as KeyframeAnim
+            for (i in 0 until 60) {
+                val sk = Rig.solve(anim.poseAt(i / 60f), anim.facing)
+                val lowestToe = maxOf(sk.near.toe.y, sk.far.toe.y)
+                assertThat(lowestToe).isGreaterThan(AnimationRegistry.GY - 0.035f)
+            }
+        }
+    }
+
+    @Test
     fun `reformer carriage channel stays in range`() {
         for (anim in keyframed) {
             for (kf in anim.keyframes) {
