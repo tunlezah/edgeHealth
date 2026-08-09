@@ -90,27 +90,95 @@ data class KeyframeAnim(
     }
 
     /**
-     * Stance-foot constraint: keyframe poses are authored with support feet exactly on the
-     * ground, but interpolating pelvis height and leg angles independently lets feet dip
-     * below the floor mid-transition. Correct by lifting the pelvis just enough that the
-     * lowest foot point lands on the ground line — never pushing down, so airborne phases
-     * (jumps) are unaffected.
+     * Stance-limb constraint: keyframe poses are authored with support feet and planted hands
+     * exactly on the ground, but interpolating pelvis height and limb angles independently
+     * lets extremities dip below the floor mid-transition.
+     *
+     * Correction order matters: first each offending LEG bends its own knee just enough to
+     * clear the floor — that is what a real swinging leg does (a mountain-climber foot skims
+     * the ground while the trunk and planted hands stay put). Knee corrections stay on the
+     * shank's current side of vertical (flipping IK branches makes the knee visibly pop) and
+     * fade out near that boundary; the pelvis-lift residual covers whatever the fade leaves.
+     * Planted wrists get the analogous elbow correction. Nothing ever pushes the figure down,
+     * so airborne phases (jumps) are unaffected.
      */
     private fun groundContact(p: Pose): Pose {
-        fun footLow(thigh: Float, knee: Float, foot: Float, hipY: Float): Float {
-            val ankleY = hipY +
-                Proportions.THIGH * cosd(thigh) +
-                Proportions.SHANK * cosd(thigh - knee)
-            val toeY = ankleY + Proportions.FOOT * cosd(thigh - knee + 90f + foot)
-            return maxOf(ankleY, toeY)
+        val gy = AnimationRegistry.GY
+
+        fun ankleY(thigh: Float, knee: Float, hipY: Float): Float =
+            hipY + Proportions.THIGH * cosd(thigh) + Proportions.SHANK * cosd(thigh - knee)
+
+        fun toeY(thigh: Float, knee: Float, foot: Float, aY: Float): Float =
+            aY + Proportions.FOOT * cosd(thigh - knee + 90f + foot)
+
+        /** Bend this leg's knee along its current fold branch so its foot clears the floor. */
+        fun clearKnee(thigh: Float, knee: Float, foot: Float, hipY: Float): Float {
+            val sa0 = thigh - knee
+            val scale = (kotlin.math.abs(sa0) / 15f).coerceAtMost(1f)
+            if (scale <= 0f) return knee
+            var k = knee
+            for (i in 0 until 2) {
+                val aY = ankleY(thigh, k, hipY)
+                val tY = toeY(thigh, k, foot, aY)
+                if (maxOf(aY, tY) <= gy + 0.002f) break
+                val toeDrop = maxOf(0f, tY - aY)
+                val cosArg = (gy - toeDrop - hipY - Proportions.THIGH * cosd(thigh)) / Proportions.SHANK
+                if (cosArg < -1f || cosArg > 1f) break  // knee alone can't clear it
+                val sa = Math.toDegrees(kotlin.math.acos(cosArg.toDouble())).toFloat()
+                val solved = if (sa0 >= 0f) thigh - sa else thigh + sa
+                k = knee + (solved - knee) * scale
+            }
+            return k
         }
-        val near = footLow(p.thighR, p.kneeR, p.footR, p.pelvisY)
-        val far = footLow(p.thighL, p.kneeL, p.footL, p.pelvisY + Proportions.FAR_HIP_DY)
-        val penetration = maxOf(near, far) - AnimationRegistry.GY
-        return if (penetration > 0f) p.copy(pelvisY = p.pelvisY - penetration) else p
+
+        /** Bend this arm's elbow along its current fold branch so its wrist clears the floor. */
+        fun clearElbow(uArm: Float, elbow: Float, shoulderY: Float, base: Float): Float {
+            val a1 = base + uArm
+            val f0 = normDeg(a1 + elbow)
+            val scale = (kotlin.math.abs(f0) / 15f).coerceAtMost(1f)
+            if (scale <= 0f) return elbow
+            val eY = shoulderY + Proportions.UPPER_ARM * cosd(a1)
+            val wY = eY + Proportions.FOREARM * cosd(f0)
+            if (wY <= gy + 0.012f) return elbow
+            val cosArg = (gy + 0.010f - eY) / Proportions.FOREARM
+            if (cosArg < -1f || cosArg > 1f) return elbow
+            val fw = Math.toDegrees(kotlin.math.acos(cosArg.toDouble())).toFloat()
+            val solvedWorld = if (f0 >= 0f) fw else -fw
+            return elbow + normDeg(solvedWorld - f0) * scale
+        }
+
+        val kneeR = clearKnee(p.thighR, p.kneeR, p.footR, p.pelvisY)
+        val kneeL = clearKnee(p.thighL, p.kneeL, p.footL, p.pelvisY + Proportions.FAR_HIP_DY)
+        var out = if (kneeR != p.kneeR || kneeL != p.kneeL) p.copy(kneeR = kneeR, kneeL = kneeL) else p
+
+        val nearA = ankleY(out.thighR, out.kneeR, out.pelvisY)
+        val farA = ankleY(out.thighL, out.kneeL, out.pelvisY + Proportions.FAR_HIP_DY)
+        val low = maxOf(nearA, toeY(out.thighR, out.kneeR, out.footR, nearA),
+            farA, toeY(out.thighL, out.kneeL, out.footL, farA))
+        val penetration = low - gy
+        if (penetration > 0f) out = out.copy(pelvisY = out.pelvisY - penetration)
+
+        if (facing == Facing.SIDE) {
+            val chestY = out.pelvisY -
+                Proportions.LOWER_TORSO * cosd(out.torso) -
+                Proportions.UPPER_TORSO * cosd(out.torso + out.spine)
+            val base = out.torso + out.spine
+            val elbowR = clearElbow(out.uArmR, out.elbowR, chestY, base)
+            val elbowL = clearElbow(out.uArmL, out.elbowL, chestY + Proportions.FAR_SHOULDER_DY, base)
+            if (elbowR != out.elbowR || elbowL != out.elbowL) out = out.copy(elbowR = elbowR, elbowL = elbowL)
+        }
+        return out
     }
 
     private fun cosd(deg: Float) = kotlin.math.cos(Math.toRadians(deg.toDouble())).toFloat()
+
+    /** Normalize an angle to (-180, 180]. */
+    private fun normDeg(a: Float): Float {
+        var x = a % 360f
+        if (x > 180f) x -= 360f
+        if (x <= -180f) x += 360f
+        return x
+    }
 }
 
 /** Procedural spin-bike rider: legs solved by IK onto rotating pedals. */
