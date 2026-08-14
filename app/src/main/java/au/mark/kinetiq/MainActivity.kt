@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
         handleLaunchIntent(intent)
         setContent {
             val settings by viewModel.settings.collectAsState()
-            KinetiqTheme(mode = settings.theme) {
+            KinetiqTheme(mode = settings.theme, palette = settings.palette) {
                 KinetiqApp(viewModel)
             }
         }

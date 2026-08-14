@@ -52,8 +52,8 @@ the work is not done. See IMPLEMENTATION_PLAN.md for rules.
 - [ ] P2-B10o Summary re-save on rename
 - [ ] P2-B10p Library detail loading/error states
 - [ ] P2-B10q Home resume-snapshot via ViewModel with name/progress
-- [ ] P2-C11 7 accent palettes × Light/Dark/AMOLED/System, full 21-role coverage, swatch row, MainActivity wiring
-- [ ] P2-C12 ThemePaletteContrastTest + SettingsRoundTripTest
+- [x] P2-C11 7 accent palettes × Light/Dark/AMOLED/System, full 21-role coverage, swatch row, MainActivity wiring
+- [x] P2-C12 ThemePaletteContrastTest + SettingsRoundTripTest
 
 ## Phase 3 — Database & animations (PHASE3_DATABASE_ANIMATIONS.md)
 

@@ -3,9 +3,14 @@ package au.mark.kinetiq.ui.screens.settings
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -13,8 +18,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import au.mark.kinetiq.ui.theme.KinetiqPalettes
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -186,6 +197,33 @@ fun SettingsScreen(
                 )
             }
         }
+        Text("Accent", style = MaterialTheme.typography.bodyMedium)
+        val darkSwatches = isSystemInDarkTheme()
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            KinetiqPalettes.all.forEach { (palette, schemes) ->
+                val swatch = if (darkSwatches) schemes.dark.primary else schemes.light.primary
+                val selected = settings.palette == palette
+                Box(
+                    Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(swatch)
+                        .then(
+                            if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                            else Modifier
+                        )
+                        .clickable(onClickLabel = schemes.displayName) { viewModel.set { setPalette(palette) } }
+                        .semantics {
+                            contentDescription = "${schemes.displayName} theme" + if (selected) ", selected" else ""
+                        },
+                )
+            }
+        }
+        Text(
+            KinetiqPalettes.schemes(settings.palette).displayName,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
         SectionHeader("Health Connect")
         OutlinedButton(onClick = onOpenHealth, modifier = Modifier.fillMaxWidth()) {
