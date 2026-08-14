@@ -126,10 +126,12 @@ fun HomeScreen(
     onStartBuilder: () -> Unit,
     onOpenPlayer: () -> Unit,
     onOpenHealth: () -> Unit,
+    onOpenSummary: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val playerState by viewModel.sessionStateHolder.state.collectAsState()
+    val lastCompleted by viewModel.sessionStateHolder.lastCompleted.collectAsState()
     val context = LocalContext.current
     val hasSnapshot = WorkoutSessionService.hasSnapshot(context)
 
@@ -158,6 +160,15 @@ fun HomeScreen(
                     onClick = { viewModel.resumeSnapshot(context, onOpenPlayer) },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Resume interrupted workout") }
+            }
+        }
+        // Parking spot for a summary the user navigated away from without tapping Done.
+        val unviewedSummary = lastCompleted
+        if (unviewedSummary != null && playerState == null) {
+            item {
+                OutlinedButton(onClick = onOpenSummary, modifier = Modifier.fillMaxWidth()) {
+                    Text("View last session summary: ${unviewedSummary.name}")
+                }
             }
         }
         item {

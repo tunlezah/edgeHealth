@@ -75,12 +75,10 @@ class PlayerViewModel @Inject constructor(
 @Composable
 fun PlayerScreen(
     keepScreenOnDefault: Boolean,
-    onFinished: () -> Unit,
     onExit: () -> Unit,
     viewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.stateHolder.state.collectAsState()
-    val completed by viewModel.stateHolder.lastCompleted.collectAsState()
     val context = LocalContext.current
     val activity = LocalActivity.current
     var keepScreenOn by remember { mutableStateOf(keepScreenOnDefault) }
@@ -98,16 +96,13 @@ fun PlayerScreen(
         if (explainRequested > 0) viewModel.explainAgain()
     }
 
-    // When the session finishes, the service publishes a summary and clears the live state.
-    LaunchedEffect(state, completed) {
+    // Summary navigation is owned globally (KinetiqApp observes lastCompleted); this screen
+    // only backs out if the service never publishes a session.
+    LaunchedEffect(state) {
         if (state == null) {
-            if (completed != null) {
-                onFinished()
-            } else {
-                // Give a just-started service a moment to publish before bailing out.
-                kotlinx.coroutines.delay(1500)
-                if (viewModel.stateHolder.state.value == null && viewModel.stateHolder.lastCompleted.value == null) onExit()
-            }
+            // Give a just-started service a moment to publish before bailing out.
+            kotlinx.coroutines.delay(1500)
+            if (viewModel.stateHolder.state.value == null && viewModel.stateHolder.lastCompleted.value == null) onExit()
         }
     }
 

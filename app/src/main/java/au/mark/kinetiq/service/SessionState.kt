@@ -13,6 +13,8 @@ import javax.inject.Singleton
 data class PlayerState(
     val session: GeneratedSession,
     val sessionName: String,
+    /** Unique per started session; ties a CompletedSummary to the run that produced it. */
+    val sessionId: String = "",
     val stepIndex: Int = 0,
     val stepRemainingMs: Long = 0,
     /** > 0 == GET-READY countdown before the current step's clock starts. */
@@ -32,6 +34,7 @@ data class PlayerState(
 
 /** Result of a finished session, displayed by the Summary screen. */
 data class CompletedSummary(
+    val sessionId: String,
     val historyId: Long,
     val name: String,
     val startedAtEpochMs: Long,
@@ -78,4 +81,5 @@ data class SessionSnapshot(
     /** Per-block wall-clock bounds as [startEpochMs, endEpochMs] pairs. */
     val blockBounds: Map<Int, List<Long>> = emptyMap(),
     val prepareRemainingMs: Long = 0,
+    val sessionId: String = "",
 )

@@ -54,7 +54,11 @@ class SummaryViewModel @Inject constructor(
 @Composable
 fun SummaryScreen(onDone: () -> Unit, viewModel: SummaryViewModel = hiltViewModel()) {
     val summary by viewModel.stateHolder.lastCompleted.collectAsState()
-    val s = summary ?: run { onDone(); return }
+    // Navigation is a side effect — never run it during composition, and only once.
+    androidx.compose.runtime.LaunchedEffect(summary) {
+        if (summary == null) onDone()
+    }
+    val s = summary ?: return
     var name by remember { mutableStateOf(s.name) }
     var saved by remember { mutableStateOf(false) }
 
@@ -113,7 +117,9 @@ fun SummaryScreen(onDone: () -> Unit, viewModel: SummaryViewModel = hiltViewMode
         ) { Text(if (saved) "Saved ✓ — reusable from Home" else "Save workout") }
 
         OutlinedButton(
-            onClick = { viewModel.done(); onDone() },
+            // Clearing the summary triggers the LaunchedEffect above exactly once — calling
+            // onDone here as well would double-pop the back stack.
+            onClick = { viewModel.done() },
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Done") }
     }

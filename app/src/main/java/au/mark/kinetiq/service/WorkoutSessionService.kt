@@ -98,6 +98,10 @@ class WorkoutSessionService : LifecycleService() {
             val weight = measurementRepo.resolved(Metric.WEIGHT_KG)?.value ?: settings.fallbackWeightKg.toDouble()
 
             val first = session.plan.steps.firstOrNull() ?: return@launch
+            // A starting session invalidates any unviewed old summary — it can never hijack
+            // navigation into the previous session's results.
+            stateHolder.clearCompleted()
+            val sessionId = java.util.UUID.randomUUID().toString()
             val newEngine = SessionEngine(session.plan.steps, weight)
             engine = newEngine
             engineState = newEngine.initialState()
@@ -106,6 +110,7 @@ class WorkoutSessionService : LifecycleService() {
                 PlayerState(
                     session = session,
                     sessionName = name,
+                    sessionId = sessionId,
                     stepIndex = 0,
                     stepRemainingMs = first.durationSec * 1000L,
                     prepareRemainingMs = SessionEngine.PREPARE_DURATION_MS,
@@ -156,6 +161,7 @@ class WorkoutSessionService : LifecycleService() {
                 PlayerState(
                     session = snap.session,
                     sessionName = snap.sessionName,
+                    sessionId = snap.sessionId.ifBlank { java.util.UUID.randomUUID().toString() },
                     stepIndex = snap.stepIndex,
                     stepRemainingMs = snap.stepRemainingMs,
                     totalElapsedActiveMs = snap.totalElapsedActiveMs,
@@ -433,6 +439,7 @@ class WorkoutSessionService : LifecycleService() {
 
                 stateHolder.completed(
                     CompletedSummary(
+                        sessionId = state.sessionId,
                         historyId = historyId,
                         name = state.sessionName,
                         startedAtEpochMs = state.startedAtEpochMs,
@@ -478,6 +485,7 @@ class WorkoutSessionService : LifecycleService() {
                     blockActiveMs = es.blockActiveMs,
                     blockBounds = es.blockBounds.mapValues { (_, v) -> listOf(v.first, v.second) },
                     prepareRemainingMs = es.prepareRemainingMs,
+                    sessionId = state.sessionId,
                 )
                 val file = snapshotFile(this@WorkoutSessionService)
                 val tmp = File(file.parentFile, file.name + ".tmp")

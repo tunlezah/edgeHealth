@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,6 +82,10 @@ private data class Tab(
     val unselectedIcon: ImageVector,
 )
 
+/** Navigate to the summary once per finished session, wherever the user happens to be. */
+internal fun shouldNavigateToSummary(summaryId: String?, consumedId: String?): Boolean =
+    summaryId != null && summaryId != consumedId
+
 @Composable
 fun KinetiqApp(mainViewModel: MainViewModel) {
     val navController: NavHostController = rememberNavController()
@@ -93,6 +98,24 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
         if (pendingLaunch && playerState != null) {
             mainViewModel.pendingPlayerLaunch.value = false
             navController.navigate(Routes.PLAYER) { launchSingleTop = true }
+        }
+    }
+
+    // A finished session always reaches its summary, no matter which screen is open —
+    // and only once per sessionId, so leaving the summary via a tab doesn't yank the
+    // user back and a republished summary doesn't re-navigate.
+    val lastCompleted by mainViewModel.sessionStateHolder.lastCompleted.collectAsState()
+    var consumedSummaryId by androidx.compose.runtime.saveable.rememberSaveable {
+        androidx.compose.runtime.mutableStateOf<String?>(null)
+    }
+    LaunchedEffect(lastCompleted) {
+        val completed = lastCompleted ?: return@LaunchedEffect
+        if (shouldNavigateToSummary(completed.sessionId, consumedSummaryId)) {
+            consumedSummaryId = completed.sessionId
+            navController.navigate(Routes.SUMMARY) {
+                launchSingleTop = true
+                popUpTo(Routes.HOME)
+            }
         }
     }
 
@@ -141,6 +164,7 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
                     onStartBuilder = { navController.navigate(Routes.BUILDER) },
                     onOpenPlayer = { navController.navigate(Routes.PLAYER) },
                     onOpenHealth = { navController.navigate(Routes.HEALTH) },
+                    onOpenSummary = { navController.navigate(Routes.SUMMARY) { launchSingleTop = true } },
                 )
             }
             composable(Routes.BUILDER) {
@@ -152,7 +176,6 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
             composable(Routes.PLAYER) {
                 PlayerScreen(
                     keepScreenOnDefault = settings.keepScreenOn,
-                    onFinished = { navController.navigate(Routes.SUMMARY) { popUpTo(Routes.HOME) } },
                     onExit = { navController.popBackStack(Routes.HOME, inclusive = false) },
                 )
             }
