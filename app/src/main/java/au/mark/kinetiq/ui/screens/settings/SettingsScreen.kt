@@ -22,9 +22,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
 import au.mark.kinetiq.ui.theme.KinetiqPalettes
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -170,10 +172,19 @@ fun SettingsScreen(
         SettingSwitchRow("Halfway cue", voice.halfwayCue) { v -> viewModel.set { setVoice(voice.copy(halfwayCue = v)) } }
         SettingSwitchRow("Rest / next-up cues", voice.restNextUpCue) { v -> viewModel.set { setVoice(voice.copy(restNextUpCue = v)) } }
         SettingSwitchRow("Machine setting cues", voice.machineSettingCues, subtitle = "Spring, resistance, cadence and position calls") { v -> viewModel.set { setVoice(voice.copy(machineSettingCues = v)) } }
-        Text("Voice volume", style = MaterialTheme.typography.bodyMedium)
-        Slider(value = voice.volume, onValueChange = { v -> viewModel.set { setVoice(voice.copy(volume = v)) } })
+        Text("Voice volume: ${(voice.volume * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium)
+        Slider(
+            value = voice.volume,
+            onValueChange = { v -> viewModel.set { setVoice(voice.copy(volume = v)) } },
+            modifier = Modifier.semantics { contentDescription = "Voice volume" },
+        )
         Text("Speech rate: ${"%.1f".format(voice.speechRate)}×", style = MaterialTheme.typography.bodyMedium)
-        Slider(value = voice.speechRate, valueRange = 0.5f..1.8f, onValueChange = { v -> viewModel.set { setVoice(voice.copy(speechRate = v)) } })
+        Slider(
+            value = voice.speechRate,
+            valueRange = 0.5f..1.8f,
+            onValueChange = { v -> viewModel.set { setVoice(voice.copy(speechRate = v)) } },
+            modifier = Modifier.semantics { contentDescription = "Speech rate" },
+        )
         OutlinedButton(onClick = viewModel::testVoice) { Text("Test voice") }
         val voiceStatus by viewModel.voiceStatus.collectAsState()
         if (voiceStatus == au.mark.kinetiq.voice.TtsStatus.FAILED) {
@@ -264,6 +275,9 @@ fun SettingsScreen(
                 spinMax.toIntOrNull()?.let { n -> if (n in 4..40) viewModel.set { setMachines(settings.machines.copy(spinMaxLevel = n)) } }
             },
             label = { Text("GR7 spin bike — max resistance level (default 11)") },
+            isError = spinMax.toIntOrNull()?.let { it in 4..40 } != true,
+            supportingText = { Text("4–40") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
         )
         var ellMax by remember(settings.machines.ellipticalMaxLevel) { mutableStateOf(settings.machines.ellipticalMaxLevel.toString()) }
@@ -274,6 +288,9 @@ fun SettingsScreen(
                 ellMax.toIntOrNull()?.let { n -> if (n in 4..40) viewModel.set { setMachines(settings.machines.copy(ellipticalMaxLevel = n)) } }
             },
             label = { Text("VG50BS elliptical — max level (check console; BT variant lists 32)") },
+            isError = ellMax.toIntOrNull()?.let { it in 4..40 } != true,
+            supportingText = { Text("4–40") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
         )
         Text("Reformer spring notation", style = MaterialTheme.typography.bodyMedium)
@@ -350,8 +367,9 @@ fun SettingsScreen(
             }
         }
 
-        SectionHeader("Units & goals")
-        SettingSwitchRow("Metric units", settings.metricUnits, subtitle = "kg / cm (imperial display not yet offered)") { v -> viewModel.set { setMetricUnits(v) } }
+        SectionHeader("Goals")
+        // The app is metric-only; the old do-nothing "Metric units" switch is gone
+        // (the stored key is retained for settings back-compat).
         SettingSwitchRow("Visceral-fat goal", settings.visceralFatGoal, subtitle = "Biases generation toward moderate+ cardio time") { v -> viewModel.set { setVisceralGoal(v) } }
         var fallbackWeight by remember(settings.fallbackWeightKg) { mutableStateOf(settings.fallbackWeightKg.toInt().toString()) }
         OutlinedTextField(
@@ -361,6 +379,9 @@ fun SettingsScreen(
                 fallbackWeight.toIntOrNull()?.let { n -> if (n in 30..250) viewModel.set { setFallbackWeight(n.toFloat()) } }
             },
             label = { Text("Fallback weight for calories (kg)") },
+            isError = fallbackWeight.toIntOrNull()?.let { it in 30..250 } != true,
+            supportingText = { Text("30–250 kg") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
         )
 

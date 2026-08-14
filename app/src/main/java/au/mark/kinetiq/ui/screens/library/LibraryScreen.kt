@@ -35,6 +35,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import au.mark.kinetiq.anim.ExerciseAnimationView
 import au.mark.kinetiq.data.model.Category
+import au.mark.kinetiq.data.model.displayName
 import au.mark.kinetiq.data.model.EvidenceTier
 import au.mark.kinetiq.data.model.Exercise
 import au.mark.kinetiq.data.model.Target
@@ -104,7 +105,7 @@ fun LibraryScreen(onOpen: (String) -> Unit, viewModel: LibraryViewModel = hiltVi
                     FilterChip(
                         selected = state.category == c,
                         onClick = { viewModel.setCategory(if (state.category == c) null else c) },
-                        label = { Text(c.name.lowercase()) },
+                        label = { Text(c.displayName()) },
                     )
                 }
             }
@@ -133,6 +134,16 @@ fun LibraryScreen(onOpen: (String) -> Unit, viewModel: LibraryViewModel = hiltVi
                 }
             }
         }
+        if (filtered.isEmpty()) {
+            item {
+                Text(
+                    "No exercises match these filters.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 24.dp),
+                )
+            }
+        }
         items(filtered, key = { it.id }) { ex ->
             val greyedOut = ex.evidenceTier == EvidenceTier.LIMITED && !state.includeLowEvidence
             Card(
@@ -154,7 +165,7 @@ fun LibraryScreen(onOpen: (String) -> Unit, viewModel: LibraryViewModel = hiltVi
                             else MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            "${ex.category.name.lowercase()} · ${ex.met} MET · ${ex.intensity.name.lowercase().replace('_', ' ')}",
+                            "${ex.category.displayName()} · ${ex.met} MET · ${ex.intensity.name.lowercase().replace('_', ' ')}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -168,8 +179,27 @@ fun LibraryScreen(onOpen: (String) -> Unit, viewModel: LibraryViewModel = hiltVi
 
 @Composable
 fun ExerciseDetailScreen(exerciseId: String, onBack: () -> Unit, viewModel: LibraryViewModel = hiltViewModel()) {
-    val exercise by produceState<Exercise?>(null, exerciseId) { value = viewModel.exercise(exerciseId) }
-    val ex = exercise ?: return
+    // null = still loading; Optional-style wrapper distinguishes "loading" from "not found".
+    val loaded by produceState<Result<Exercise?>?>(null, exerciseId) {
+        value = runCatching { viewModel.exercise(exerciseId) }
+    }
+    when {
+        loaded == null -> {
+            androidx.compose.foundation.layout.Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) { androidx.compose.material3.CircularProgressIndicator() }
+            return
+        }
+        loaded?.getOrNull() == null -> {
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                Text("Exercise not found.", color = MaterialTheme.colorScheme.error)
+            }
+            return
+        }
+    }
+    val ex = loaded?.getOrNull() ?: return
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),

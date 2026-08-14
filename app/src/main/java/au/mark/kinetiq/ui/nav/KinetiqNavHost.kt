@@ -129,6 +129,16 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
 
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
+    // Nested routes highlight their parent tab instead of leaving the bar unselected.
+    val parentTab = mapOf(
+        Routes.BUILDER to Routes.HOME,
+        Routes.PLAYER to Routes.HOME,
+        Routes.SUMMARY to Routes.HOME,
+        Routes.LIBRARY_DETAIL to Routes.LIBRARY,
+        Routes.HEALTH to Routes.SETTINGS,
+        Routes.DEBUG_ANIM to Routes.SETTINGS,
+    )
+    val selectedTab = parentTab[currentRoute] ?: currentRoute
     // The bar is permanent everywhere except onboarding, so navigation is always one tap away.
     val showBottomBar = currentRoute != Routes.ONBOARDING
 
@@ -137,7 +147,7 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
             if (showBottomBar) {
                 KinetiqBottomBar(
                     tabs = tabs,
-                    currentRoute = currentRoute,
+                    currentRoute = selectedTab,
                     onSelect = { route ->
                         navController.navigate(route) {
                             popUpTo(Routes.HOME) { saveState = true }

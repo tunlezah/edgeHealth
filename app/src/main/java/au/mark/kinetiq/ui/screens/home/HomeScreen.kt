@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -29,6 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import au.mark.kinetiq.data.model.GeneratedSession
+import au.mark.kinetiq.data.model.displayName
 import au.mark.kinetiq.data.repo.SavedWorkout
 import au.mark.kinetiq.data.repo.SettingsRepository
 import au.mark.kinetiq.data.repo.WorkoutRepository
@@ -57,8 +59,10 @@ data class HomeUiState(
     val weekCalories: Int = 0,
     val lastWorkoutName: String? = null,
     val saved: List<SavedWorkout> = emptyList(),
-    val hasSnapshot: Boolean = false,
 )
+
+/** Interrupted-session details for the resume card, read off the main thread. */
+data class SnapshotInfo(val name: String, val stepIndex: Int, val totalSteps: Int)
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -66,7 +70,23 @@ class HomeViewModel @Inject constructor(
     settingsRepository: SettingsRepository,
     val sessionStateHolder: SessionStateHolder,
     private val json: Json,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
 ) : ViewModel() {
+
+    /** Snapshot check is disk I/O — never during composition. Refreshed on screen entry. */
+    val snapshot = kotlinx.coroutines.flow.MutableStateFlow<SnapshotInfo?>(null)
+
+    fun refreshSnapshot() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            snapshot.value = WorkoutSessionService.readSnapshot(appContext, json)?.let {
+                SnapshotInfo(name = it.sessionName, stepIndex = it.stepIndex, totalSteps = it.session.plan.steps.size)
+            }
+        }
+    }
+
+    init {
+        refreshSnapshot()
+    }
 
     val uiState = combine(
         workoutRepository.history(),
@@ -132,8 +152,30 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsState()
     val playerState by viewModel.sessionStateHolder.state.collectAsState()
     val lastCompleted by viewModel.sessionStateHolder.lastCompleted.collectAsState()
+    val snapshot by viewModel.snapshot.collectAsState()
     val context = LocalContext.current
-    val hasSnapshot = WorkoutSessionService.hasSnapshot(context)
+    var pendingDelete by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<SavedWorkout?>(null)
+    }
+
+    androidx.compose.runtime.LaunchedEffect(playerState) { viewModel.refreshSnapshot() }
+
+    pendingDelete?.let { workout ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Delete \"${workout.name}\"?") },
+            text = { Text("This saved workout can't be recovered.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    viewModel.deleteSaved(workout.id)
+                    pendingDelete = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
+            },
+        )
+    }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -154,12 +196,15 @@ fun HomeScreen(
                     Text("  Workout in progress — return to player")
                 }
             }
-        } else if (hasSnapshot) {
-            item {
-                Button(
-                    onClick = { viewModel.resumeSnapshot(context, onOpenPlayer) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Resume interrupted workout") }
+        } else {
+            val snap = snapshot
+            if (snap != null) {
+                item {
+                    Button(
+                        onClick = { viewModel.resumeSnapshot(context, onOpenPlayer) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Resume: ${snap.name} — step ${snap.stepIndex + 1} of ${snap.totalSteps}") }
+                }
             }
         }
         // Parking spot for a summary the user navigated away from without tapping Done.
@@ -188,6 +233,15 @@ fun HomeScreen(
                 Text("Build a workout")
             }
         }
+        if (state.lastWorkoutName == null && state.saved.isEmpty()) {
+            item {
+                Text(
+                    "Build your first workout to get started — your streak, saved workouts and weekly stats appear here.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         if (state.lastWorkoutName != null) {
             item {
                 OutlinedButton(
@@ -212,7 +266,7 @@ fun HomeScreen(
                         Column(Modifier.weight(1f)) {
                             Text(workout.name, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "${workout.session.plan.totalSec / 60} min · ${workout.session.config.categories.joinToString { it.name.lowercase() }}",
+                                "${workout.session.plan.totalSec / 60} min · ${workout.session.config.categories.joinToString { it.displayName() }}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -220,7 +274,7 @@ fun HomeScreen(
                         IconButton(onClick = { viewModel.startSaved(context, workout, onOpenPlayer) }) {
                             Icon(Icons.Filled.PlayArrow, contentDescription = "Start ${workout.name}")
                         }
-                        IconButton(onClick = { viewModel.deleteSaved(workout.id) }) {
+                        IconButton(onClick = { pendingDelete = workout }) {
                             Icon(Icons.Filled.Delete, contentDescription = "Delete ${workout.name}")
                         }
                     }

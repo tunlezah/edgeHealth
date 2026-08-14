@@ -186,12 +186,17 @@ private fun CachedMetricRow(entity: CachedHealthMetricEntity) {
 
 @Composable
 private fun ManualEntryField(label: String, range: ClosedFloatingPointRange<Double>, onSave: (Double) -> Unit) {
-    var text by remember { mutableStateOf("") }
+    var text by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
             value = text,
             onValueChange = { text = it.filter { c -> c.isDigit() || c == '.' }.take(6) },
             label = { Text(label) },
+            isError = text.isNotEmpty() && text.toDoubleOrNull()?.let { it in range } != true,
+            supportingText = { Text("${range.start.toInt()}–${range.endInclusive.toInt()}") },
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+            ),
             modifier = Modifier.weight(1f),
         )
         Button(

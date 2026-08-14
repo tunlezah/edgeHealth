@@ -35,23 +35,23 @@ the work is not done. See IMPLEMENTATION_PLAN.md for rules.
 - [x] P2-B7 Auto-pause on call / audio-becoming-noisy
 - [x] P2-B8 Keep-screen-on saveable + persisted + cleared while paused
 - [x] P2-B9 "+30" control legibility
-- [ ] P2-B10a Numeric keyboards (all number fields)
-- [ ] P2-B10b isError + supporting text on range-validated fields
-- [ ] P2-B10c Delete confirmations (History, Home saved workouts)
-- [ ] P2-B10d Empty states (Library, History, Home)
-- [ ] P2-B10e Category.displayName() everywhere + DisplayNameTest
-- [ ] P2-B10f Remove do-nothing Metric-units switch (keep stored key)
-- [ ] P2-B10g EvidenceBadge non-interactive
-- [ ] P2-B10h Onboarding back button + step indicator
-- [ ] P2-B10i Tab highlight on nested routes
-- [ ] P2-B10j Calendar day semantics + Mon/Tue headers
-- [ ] P2-B10k Slider semantics + volume % readout
+- [x] P2-B10a Numeric keyboards (all number fields)
+- [x] P2-B10b isError + supporting text on range-validated fields
+- [x] P2-B10c Delete confirmations (History, Home saved workouts)
+- [x] P2-B10d Empty states (Library, History, Home)
+- [x] P2-B10e Category.displayName() everywhere + DisplayNameTest
+- [x] P2-B10f Remove do-nothing Metric-units switch (keep stored key)
+- [x] P2-B10g EvidenceBadge non-interactive
+- [x] P2-B10h Onboarding back button + step indicator
+- [x] P2-B10i Tab highlight on nested routes
+- [x] P2-B10j Calendar day semantics + Mon/Tue headers
+- [x] P2-B10k Slider semantics + volume % readout
 - [x] P2-B10l Builder preview edit protection (banner + regenerate confirm)
-- [ ] P2-B10m rememberSaveable (Summary name, History month, manual entry)
-- [ ] P2-B10n PlanScreen goal-aware copy; drop “See RESEARCH.md”
-- [ ] P2-B10o Summary re-save on rename
-- [ ] P2-B10p Library detail loading/error states
-- [ ] P2-B10q Home resume-snapshot via ViewModel with name/progress
+- [x] P2-B10m rememberSaveable (Summary name, History month, manual entry)
+- [x] P2-B10n PlanScreen goal-aware copy; drop “See RESEARCH.md”
+- [x] P2-B10o Summary re-save on rename
+- [x] P2-B10p Library detail loading/error states
+- [x] P2-B10q Home resume-snapshot via ViewModel with name/progress
 - [x] P2-C11 7 accent palettes × Light/Dark/AMOLED/System, full 21-role coverage, swatch row, MainActivity wiring
 - [x] P2-C12 ThemePaletteContrastTest + SettingsRoundTripTest
 

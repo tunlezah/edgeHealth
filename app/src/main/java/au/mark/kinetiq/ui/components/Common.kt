@@ -59,7 +59,20 @@ fun EvidenceBadge(tier: EvidenceTier, modifier: Modifier = Modifier) {
         EvidenceTier.MODERATE -> "Moderate evidence" to MaterialTheme.colorScheme.secondary
         EvidenceTier.LIMITED -> "Limited evidence" to MaterialTheme.colorScheme.tertiary
     }
-    AssistChip(onClick = {}, label = { Text(label) }, modifier = modifier, colors = androidx.compose.material3.AssistChipDefaults.assistChipColors(labelColor = color))
+    // A plain label, not a chip: screen readers must never announce a do-nothing button.
+    androidx.compose.material3.Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.small,
+        color = androidx.compose.ui.graphics.Color.Transparent,
+        border = androidx.compose.foundation.BorderStroke(1.dp, color),
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        )
+    }
 }
 
 @Composable

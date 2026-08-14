@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import au.mark.kinetiq.data.model.displayName
 import au.mark.kinetiq.data.repo.WorkoutRepository
 import au.mark.kinetiq.service.SessionStateHolder
 import au.mark.kinetiq.ui.components.SectionHeader
@@ -95,8 +96,9 @@ fun SummaryScreen(
         if (summary == null && !resuming) onDone()
     }
     val s = summary ?: return
-    var name by remember { mutableStateOf(s.name) }
-    var saved by remember { mutableStateOf(false) }
+    var name by androidx.compose.runtime.saveable.rememberSaveable(s.sessionId) { mutableStateOf(s.name) }
+    // Tracks the name the workout was last saved under; editing re-enables "Save as new name".
+    var savedAs by androidx.compose.runtime.saveable.rememberSaveable(s.sessionId) { mutableStateOf<String?>(null) }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -114,9 +116,12 @@ fun SummaryScreen(
             Card(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(12.dp)) {
                     Column(Modifier.weight(1f)) {
+                        val categoryLabel = runCatching {
+                            au.mark.kinetiq.data.model.Category.valueOf(block.category)
+                        }.getOrNull()?.displayName()
+                            ?: block.category.lowercase().replaceFirstChar { it.uppercase() }
                         Text(
-                            block.category.lowercase().replaceFirstChar { it.uppercase() } +
-                                if (block.isHiit) " · HIIT" else "",
+                            categoryLabel + if (block.isHiit) " · HIIT" else "",
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
@@ -152,11 +157,20 @@ fun SummaryScreen(
             label = { Text("Workout name") },
             modifier = Modifier.fillMaxWidth(),
         )
+        val effectiveName = name.ifBlank { s.name }
         Button(
-            onClick = { viewModel.saveWorkout(name.ifBlank { s.name }) { saved = true } },
-            enabled = !saved,
+            onClick = { viewModel.saveWorkout(effectiveName) { savedAs = effectiveName } },
+            enabled = savedAs != effectiveName,
             modifier = Modifier.fillMaxWidth(),
-        ) { Text(if (saved) "Saved ✓ — reusable from Home" else "Save workout") }
+        ) {
+            Text(
+                when {
+                    savedAs == effectiveName -> "Saved ✓ — reusable from Home"
+                    savedAs != null -> "Save as new name"
+                    else -> "Save workout"
+                }
+            )
+        }
 
         if (s.stoppedEarly && au.mark.kinetiq.service.WorkoutSessionService.hasStoppedSnapshot(context)) {
             OutlinedButton(

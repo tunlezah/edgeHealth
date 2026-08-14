@@ -98,6 +98,15 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        Text(
+            "Step ${step + 1} of 4",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        androidx.compose.material3.LinearProgressIndicator(
+            progress = { (step + 1) / 4f },
+            modifier = Modifier.fillMaxWidth(),
+        )
         when (step) {
             0 -> {
                 Text("Welcome to Kinetiq", style = MaterialTheme.typography.headlineMedium)
@@ -135,6 +144,7 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
                     }
                 }
                 Button(onClick = { step = 2 }, modifier = Modifier.fillMaxWidth()) { Text("Continue") }
+                OutlinedButton(onClick = { step = 0 }, modifier = Modifier.fillMaxWidth()) { Text("Back") }
             }
             2 -> {
                 Text("Your machines", style = MaterialTheme.typography.headlineMedium)
@@ -142,13 +152,21 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
                 Text("The GR7 has 11 magnetic resistance levels. Voice cues reference these numbers.")
                 OutlinedTextField(
                     value = spinMax, onValueChange = { spinMax = it.filter(Char::isDigit).take(2) },
-                    label = { Text("Max resistance level") }, modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Max resistance level") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 SectionHeader("Elliptical — Infiniti VG50BS")
                 Text("Set your console's top resistance level (dealer specs suggest 32 for the BT variant; 16 is a safe default — check the console).")
                 OutlinedTextField(
                     value = ellipticalMax, onValueChange = { ellipticalMax = it.filter(Char::isDigit).take(2) },
-                    label = { Text("Max resistance level") }, modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Max resistance level") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 SectionHeader("Reformer springs")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -158,6 +176,7 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
                         label = { Text("Spring count") })
                 }
                 Button(onClick = { step = 3 }, modifier = Modifier.fillMaxWidth()) { Text("Continue") }
+                OutlinedButton(onClick = { step = 1 }, modifier = Modifier.fillMaxWidth()) { Text("Back") }
             }
             3 -> {
                 Text("Health Connect (optional)", style = MaterialTheme.typography.headlineMedium)
@@ -184,6 +203,7 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(if (hcEnabled) "Finish" else "Finish without Health Connect") }
+                OutlinedButton(onClick = { step = 2 }, modifier = Modifier.fillMaxWidth()) { Text("Back") }
             }
         }
     }

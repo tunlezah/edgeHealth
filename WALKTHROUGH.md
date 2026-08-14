@@ -11,6 +11,7 @@ Use this to verify the feature list. Bottom navigation: **Home · History · Lib
    ankles. Matching exercises are hard-excluded from generation.
 3. **Machines** — GR7 max resistance level (default 11), VG50BS max level (default 16 — check your
    console; the BT variant's dealer spec says 32), reformer spring notation (generic words vs count).
+   Every step shows a "Step N of 4" indicator and has a Back button.
 4. **Health Connect (optional)** — connect and grant read/write permissions, or skip entirely.
 
 ## 2. Home
@@ -20,17 +21,26 @@ saved workouts (play/delete), link to body measurements, and — if the app was 
 
 ## 3. Workout builder
 All generator inputs: total duration (5–60 min, default 15), categories in tap order (block order) — including the physiotherapy-informed **Back care** category (McGill big three, motor-control drills, hip work; all low impact with pain-safe cues), exercises
-per category (or auto), work:rest ratio, intensity, warm-up/cool-down toggles, "use my health data".
+per category (or auto), **rest mode** (Standard 15–20 s transitions / Recovery 30–45 s / Continuous
+back-to-back with a one-time notice), intensity, warm-up/cool-down toggles, "use my health data".
+Changing a setting keeps the generated preview visible under a "settings changed" banner, and
+regenerating over hand edits asks first.
 **Generate** shows warnings with one-tap fixes (e.g. "20 exercises in 8 min → Use 10 exercises",
 "light on cardio → Add the bike") and an editable preview: reorder (↑↓), swap (⇄ picks a compatible
 replacement honouring constraints/evidence), remove (✕). **Start workout** launches the player.
 
 ## 4. Player
-Big countdown timer, large animation with working-muscle tint and motion arc, step progress, machine
-cue text, next-up preview card during rests/transitions. Controls: pause/resume, skip, **+30 s**,
-stop, 🗣 explain-again (re-speaks the how-to). Keep-screen-on toggle (FLAG_KEEP_SCREEN_ON). Runs in a
-foreground service with media-style notification controls (pause/skip/stop) — survives screen-off
-and app switching; a 5-second disk snapshot enables restore after process death.
+Every session opens with a 10-second **Get ready** countdown (first exercise's animation + spoken
+how-to; tap to jump to the last 3 s) so exercise 1's clock never runs while you're walking to the
+mat. Big countdown timer, large machine-cue text readable from across the room, time-weighted
+overall progress with "~N min left", large animation, next-up preview card during
+rests/transitions — **rests are skippable** (tap anywhere or the Skip-rest button). Controls:
+pause/resume, skip, **+30 s**, stop (confirmed — never one tap; the summary offers a 10-minute
+undo), 🗣 explain-again. Auto-pauses on phone calls and headphone disconnects; every resume gets a
+3-2-1 countdown. Keep-screen-on toggle persists and lets the screen sleep while paused. Runs in a
+foreground service with media-style notification controls (pause/skip/two-tap stop) — survives
+screen-off and app switching; a 5-second disk snapshot enables restore after process death with
+per-block accounting intact.
 
 Voice: en-AU TTS announces names, how-tos (during the preceding rest), halfway, rest/next-up,
 machine settings ("Standing climb — resistance 8 to 9, 60 to 75 rpm."), plus 3-2-1 countdown beeps
@@ -58,7 +68,9 @@ plain-language suggestion for the rest of the week.
 ## 9. Settings
 - **Voice & sound**: six individual cue switches (beeps, names, how-to, halfway, rest/next-up,
   machine cues), volume slider, speech rate, test-voice button, link to system TTS settings.
-- **Theme**: Light / Dark / AMOLED black / System.
+- **Theme**: Light / Dark / AMOLED black / System, plus seven accent palettes (Kinetiq Mint,
+  Ocean, Ember, Violet, Citrus, Rose, Slate) — all WCAG-contrast-tested in every mode.
+- **Workout defaults**: default rest mode for new workouts.
 - **Health Connect**: manage connection + write-back toggle; body-measurements screen shows HC
   values with source app + timestamp, computed BMI, WHO waist-circumference risk thresholds, and
   manual entry (weight, height, body fat %, waist, smart-scale visceral rating — freshest wins).

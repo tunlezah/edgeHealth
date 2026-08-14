@@ -30,22 +30,34 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
+data class PlanUiState(
+    val progress: WeeklyPlanEngine.WeeklyProgress,
+    val visceralFatGoal: Boolean,
+)
+
 @HiltViewModel
 class PlanViewModel @Inject constructor(
     workoutRepository: WorkoutRepository,
     settingsRepository: SettingsRepository,
 ) : ViewModel() {
-    val progress = combine(workoutRepository.history(), settingsRepository.settings) { history, settings ->
-        WeeklyPlanEngine.progressForWeek(history, settings.visceralFatGoal)
+    val uiState = combine(workoutRepository.history(), settingsRepository.settings) { history, settings ->
+        PlanUiState(
+            progress = WeeklyPlanEngine.progressForWeek(history, settings.visceralFatGoal),
+            visceralFatGoal = settings.visceralFatGoal,
+        )
     }.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000),
-        WeeklyPlanEngine.progressForWeek(emptyList(), visceralFatGoal = true),
+        PlanUiState(
+            progress = WeeklyPlanEngine.progressForWeek(emptyList(), visceralFatGoal = true),
+            visceralFatGoal = true,
+        ),
     )
 }
 
 @Composable
 fun PlanScreen(viewModel: PlanViewModel = hiltViewModel()) {
-    val progress by viewModel.progress.collectAsState()
+    val state by viewModel.uiState.collectAsState()
+    val progress = state.progress
     val targets = progress.targets
 
     Column(
@@ -54,8 +66,14 @@ fun PlanScreen(viewModel: PlanViewModel = hiltViewModel()) {
     ) {
         Text("Weekly plan", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "Grounded in the WHO 2020 guidelines and the visceral-fat dose–response evidence " +
-                "(≥3 cardio sessions/week, 30–60 min each; strength 2×/week). See RESEARCH.md in the project for citations.",
+            if (state.visceralFatGoal) {
+                "Grounded in WHO 2020 activity guidelines and visceral-fat dose–response evidence: " +
+                    "at least 3 cardio sessions a week of 30–60 minutes, plus strength work twice a week. " +
+                    "Full citations live in each exercise's library page."
+            } else {
+                "Grounded in WHO 2020 activity guidelines: 150–300 minutes of moderate activity a week, " +
+                    "plus strength work twice a week. Full citations live in each exercise's library page."
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
