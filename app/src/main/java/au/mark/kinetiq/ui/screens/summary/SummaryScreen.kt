@@ -37,7 +37,25 @@ import javax.inject.Inject
 class SummaryViewModel @Inject constructor(
     val stateHolder: SessionStateHolder,
     private val workoutRepository: WorkoutRepository,
+    private val healthConnect: au.mark.kinetiq.health.HealthConnectManager,
 ) : ViewModel() {
+
+    /** Re-attempt a failed Health Connect write; clientRecordIds make this upsert-safe. */
+    fun retryHealthConnect() {
+        val s = stateHolder.lastCompleted.value ?: return
+        viewModelScope.launch {
+            val result = healthConnect.writeSession(
+                s.name, s.blocks, s.calories, s.startedAtEpochMs, s.endedAtEpochMs,
+            )
+            if (result.isSuccess && s.historyId > 0) workoutRepository.markHcWritten(s.historyId)
+            stateHolder.completed(
+                s.copy(
+                    healthConnectWritten = result.isSuccess,
+                    healthConnectError = result.exceptionOrNull()?.message,
+                )
+            )
+        }
+    }
     fun saveWorkout(name: String, onSaved: () -> Unit) {
         val summary = stateHolder.lastCompleted.value ?: return
         viewModelScope.launch {
@@ -120,6 +138,12 @@ fun SummaryScreen(
             },
             style = MaterialTheme.typography.bodyMedium,
         )
+        if (!s.healthConnectWritten && s.healthConnectError != null) {
+            OutlinedButton(
+                onClick = viewModel::retryHealthConnect,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Retry Health Connect write") }
+        }
 
         SectionHeader("Save this workout")
         OutlinedTextField(

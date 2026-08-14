@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,12 +61,14 @@ data class HistoryUiState(
     val sessionsPerWeek: Float = 0f,
     val minutesPerWeek: Int = 0,
     val caloriesPerWeek: Int = 0,
+    val hcEnabled: Boolean = false,
 )
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
     settingsRepository: SettingsRepository,
+    private val healthConnect: au.mark.kinetiq.health.HealthConnectManager,
 ) : ViewModel() {
 
     val uiState = combine(workoutRepository.history(), settingsRepository.settings) { history, settings ->
@@ -86,11 +89,22 @@ class HistoryViewModel @Inject constructor(
             sessionsPerWeek = recent.size / 4f,
             minutesPerWeek = recent.sumOf { it.totalActiveSec } / 60 / 4,
             caloriesPerWeek = recent.sumOf { it.calories }.toInt() / 4,
+            hcEnabled = settings.healthConnectEnabled && settings.healthConnectWriteback,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HistoryUiState())
 
     fun delete(id: Long) {
         viewModelScope.launch { workoutRepository.deleteHistory(id) }
+    }
+
+    /** Back-fill a session that failed its Health Connect write; upsert-safe via clientRecordIds. */
+    fun retryHcWrite(entry: HistoryEntry) {
+        viewModelScope.launch {
+            val result = healthConnect.writeSession(
+                entry.name, entry.blocks, entry.calories, entry.startedAtEpochMs, entry.endedAtEpochMs,
+            )
+            if (result.isSuccess) workoutRepository.markHcWritten(entry.id)
+        }
     }
 }
 
@@ -141,6 +155,14 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                    if (state.hcEnabled && !entry.healthConnectWritten && entry.blocks.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.retryHcWrite(entry) }) {
+                            Icon(
+                                Icons.Filled.Sync,
+                                contentDescription = "Write ${entry.name} to Health Connect",
+                            )
+                        }
                     }
                     IconButton(onClick = { viewModel.delete(entry.id) }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Delete session ${entry.name}")
