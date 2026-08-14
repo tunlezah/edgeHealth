@@ -27,9 +27,9 @@ the work is not done. See IMPLEMENTATION_PLAN.md for rules.
 ## Phase 2 — Rest model, player, themes (PHASE2_REST_PLAYER_THEMES.md)
 
 - [ ] P2-A1 RestMode enum + GeneratorConfig field (workRestRatio deprecated, kept) + settings keys + Builder chips + continuous notice + Settings default row
-- [ ] P2-A4 Mode-driven rests in generator (setupChange, recoveryRestSec, restBetween), new solver, continuous next-up cue + RestModeTest
+- [x] P2-A4 Mode-driven rests in generator (setupChange, recoveryRestSec, restBetween), new solver, continuous next-up cue + RestModeTest
 - [ ] P2-A2 Skippable rests (tap-anywhere + button)
-- [ ] P2-A3 Trailing-rest regression test
+- [x] P2-A3 Trailing-rest regression test
 - [ ] P2-B5 Machine cue prominence (titleLarge/onSurface; name headlineLarge)
 - [ ] P2-B6 Time-weighted progress + minutes-left caption
 - [ ] P2-B7 Auto-pause on call / audio-becoming-noisy

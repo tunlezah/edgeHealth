@@ -139,7 +139,10 @@ class WorkoutSessionService : LifecycleService() {
             // navigation into the previous session's results.
             stateHolder.clearCompleted()
             val sessionId = java.util.UUID.randomUUID().toString()
-            val newEngine = SessionEngine(session.plan.steps, weight)
+            val newEngine = SessionEngine(
+                session.plan.steps, weight,
+                announceNextDuringWork = session.config.restMode == au.mark.kinetiq.data.model.RestMode.CONTINUOUS,
+            )
             engine = newEngine
             engineState = newEngine.initialState()
             announceOnNextResume = false
@@ -179,7 +182,10 @@ class WorkoutSessionService : LifecycleService() {
             if (fromStopped) stoppedSnapshotFile(this@WorkoutSessionService).delete()
             val settings = settingsRepo.current()
             voice.settings = settings.voice
-            val newEngine = SessionEngine(snap.session.plan.steps, snap.weightKg)
+            val newEngine = SessionEngine(
+                snap.session.plan.steps, snap.weightKg,
+                announceNextDuringWork = snap.session.config.restMode == au.mark.kinetiq.data.model.RestMode.CONTINUOUS,
+            )
             val step = snap.session.plan.steps.getOrNull(snap.stepIndex)
             engine = newEngine
             engineState = SessionEngine.EngineState(
@@ -296,6 +302,10 @@ class WorkoutSessionService : LifecycleService() {
             SessionEngine.Effect.PlayCountdownBeeps -> voice.countdownBeeps()
             SessionEngine.Effect.SpeakHalfway -> voice.speak("Halfway.")
             is SessionEngine.Effect.SpeakNextHowTo -> speakHowToAt(effect.nextIndex)
+            is SessionEngine.Effect.SpeakNextUp -> {
+                val name = stateHolder.state.value?.session?.plan?.steps?.getOrNull(effect.nextIndex)?.exerciseName
+                if (name != null) voice.speak("Next up: $name.")
+            }
             is SessionEngine.Effect.AnnounceStep -> {
                 // Flush any still-running how-to so the new step's name is never delayed.
                 voice.stopSpeaking()

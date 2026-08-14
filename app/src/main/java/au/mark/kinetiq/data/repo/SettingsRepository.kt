@@ -60,6 +60,10 @@ data class AppSettings(
     val reminderHour: Int = 7,
     val reminderMinute: Int = 0,
     val visceralFatGoal: Boolean = true,
+    /** Default rest model seeded into the Builder for new configs. */
+    val defaultRestMode: au.mark.kinetiq.data.model.RestMode = au.mark.kinetiq.data.model.RestMode.STANDARD,
+    /** One-time "continuous mode removes rests" notice acknowledged. */
+    val continuousNoticeSeen: Boolean = false,
 )
 
 @Singleton
@@ -95,6 +99,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val reminderMinute = intPreferencesKey("reminder_minute")
         val visceralGoal = booleanPreferencesKey("visceral_goal")
         val lastConfig = stringPreferencesKey("last_config")
+        val restMode = stringPreferencesKey("rest_mode")
+        val continuousNoticeSeen = booleanPreferencesKey("continuous_notice_seen")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -132,6 +138,10 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             reminderHour = p[Keys.reminderHour] ?: 7,
             reminderMinute = p[Keys.reminderMinute] ?: 0,
             visceralFatGoal = p[Keys.visceralGoal] ?: true,
+            defaultRestMode = p[Keys.restMode]?.let {
+                runCatching { au.mark.kinetiq.data.model.RestMode.valueOf(it) }.getOrNull()
+            } ?: au.mark.kinetiq.data.model.RestMode.STANDARD,
+            continuousNoticeSeen = p[Keys.continuousNoticeSeen] ?: false,
         )
     }
 
@@ -170,6 +180,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         it[Keys.reminderMinute] = minute
     }
     suspend fun setVisceralGoal(v: Boolean) = edit { it[Keys.visceralGoal] = v }
+    suspend fun setDefaultRestMode(v: au.mark.kinetiq.data.model.RestMode) = edit { it[Keys.restMode] = v.name }
+    suspend fun setContinuousNoticeSeen(v: Boolean) = edit { it[Keys.continuousNoticeSeen] = v }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit(block)

@@ -32,12 +32,12 @@ class WorkoutGeneratorTest {
     }
 
     @Test
-    fun `duration solver computes work seconds within ratio`() {
-        // 10 minutes, 8 exercises, 2:1 work:rest → work = 600 / (8 + 7/2) = ~52s
-        val work = generator.solveWorkSec(600, 8, 2f)
-        assertThat(work).isEqualTo(52)
-        // Degenerate input
-        assertThat(generator.solveWorkSec(600, 0, 2f)).isEqualTo(0)
+    fun `duration solver divides block minus rests across exercises`() {
+        // 10 minutes, 8 exercises, 7 gaps of 15 s → work = (600 - 105) / 8 = 61 s
+        assertThat(generator.solveWorkSec(600, 8, 7 * 15)).isEqualTo(61)
+        // Degenerate inputs
+        assertThat(generator.solveWorkSec(600, 0, 0)).isEqualTo(0)
+        assertThat(generator.solveWorkSec(100, 4, 200)).isEqualTo(0)
     }
 
     @Test

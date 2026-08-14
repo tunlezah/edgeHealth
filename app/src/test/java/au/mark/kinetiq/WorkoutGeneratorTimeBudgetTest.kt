@@ -59,18 +59,18 @@ class WorkoutGeneratorTimeBudgetTest {
             listOf(Category.FLOOR, Category.SPIN),
             listOf(Category.FLOOR, Category.REFORMER, Category.SPIN),
         )
-        val ratios = listOf(0.5f, 2f, 6f)
+        val restModes = au.mark.kinetiq.data.model.RestMode.entries
         val perCategory = listOf(null, 3, 10)
-        for (min in durations) for (cats in categorySets) for (ratio in ratios) for (perCat in perCategory) {
+        for (min in durations) for (cats in categorySets) for (mode in restModes) for (perCat in perCategory) {
             assertOnBudgetOrExplained(
                 GeneratorConfig(
                     totalDurationMin = min,
                     categories = cats,
-                    workRestRatio = ratio,
+                    restMode = mode,
                     exercisesPerCategory = perCat,
                     useHealthData = false,
                 ),
-                label = "min=$min cats=$cats ratio=$ratio perCat=$perCat",
+                label = "min=$min cats=$cats mode=$mode perCat=$perCat",
             )
         }
     }
@@ -138,14 +138,14 @@ class WorkoutGeneratorTimeBudgetTest {
     }
 
     @Test
-    fun `rest clamp keeps block time on budget at extreme ratios`() {
-        for (ratio in listOf(0.5f, 6f)) {
+    fun `every rest mode keeps block time on budget`() {
+        for (mode in au.mark.kinetiq.data.model.RestMode.entries) {
             assertOnBudgetOrExplained(
                 GeneratorConfig(
                     totalDurationMin = 15, categories = listOf(Category.FLOOR),
-                    workRestRatio = ratio, warmup = false, cooldown = false, useHealthData = false,
+                    restMode = mode, warmup = false, cooldown = false, useHealthData = false,
                 ),
-                label = "floor ratio=$ratio",
+                label = "floor mode=$mode",
             )
         }
     }

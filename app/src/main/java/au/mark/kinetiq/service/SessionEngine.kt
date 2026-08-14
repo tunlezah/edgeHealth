@@ -15,6 +15,8 @@ import au.mark.kinetiq.domain.CalorieCalculator
 class SessionEngine(
     private val steps: List<SessionStep>,
     private val weightKg: Double,
+    /** CONTINUOUS rest mode: announce the next exercise over the last 5 s of the current one. */
+    private val announceNextDuringWork: Boolean = false,
 ) {
 
     data class CueFlags(
@@ -22,6 +24,7 @@ class SessionEngine(
         val countdownSpoken: Boolean = false,
         val howToSpoken: Boolean = false,
         val prepareBeepsPlayed: Boolean = false,
+        val nextUpSpoken: Boolean = false,
     )
 
     data class EngineState(
@@ -43,6 +46,7 @@ class SessionEngine(
         data object PlayCountdownBeeps : Effect
         data object SpeakHalfway : Effect
         data class SpeakNextHowTo(val nextIndex: Int) : Effect
+        data class SpeakNextUp(val nextIndex: Int) : Effect
         data class AnnounceStep(val index: Int, val fresh: Boolean) : Effect
         data object PrepareEnded : Effect
         data object Finished : Effect
@@ -124,6 +128,13 @@ class SessionEngine(
             cues = cues.copy(howToSpoken = true)
             if (next != null && next.type == StepType.WORK) effects += Effect.SpeakNextHowTo(state.stepIndex + 1)
         }
+        // Continuous mode: back-to-back WORK steps have no rest to carry the next-up cue.
+        if (announceNextDuringWork && !cues.nextUpSpoken && step.type == StepType.WORK &&
+            next != null && next.type == StepType.WORK && remaining <= NEXT_UP_LEAD_MS
+        ) {
+            cues = cues.copy(nextUpSpoken = true)
+            effects += Effect.SpeakNextUp(state.stepIndex + 1)
+        }
 
         val accrued = state.copy(
             totalElapsedActiveMs = state.totalElapsedActiveMs + accrualMs,
@@ -174,6 +185,7 @@ class SessionEngine(
         const val PREPARE_DURATION_MS = 10_000L
         const val RESUME_PREPARE_MS = 3_000L
         const val COUNTDOWN_LEAD_MS = 3_300L
+        const val NEXT_UP_LEAD_MS = 5_000L
 
         fun isActive(type: StepType): Boolean =
             type != StepType.REST && type != StepType.TRANSITION
