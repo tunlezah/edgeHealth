@@ -112,7 +112,9 @@ class WorkoutGenerator(
         val steps = mutableListOf<SessionStep>()
         val blocks = mutableListOf<SessionBlock>()
 
-        if (warmupSec > 0) steps += warmupSteps(categories.first(), warmupSec, profile, blockIndex = 0)
+        // Warm-up/cool-down carry sentinel block indices so their minutes never pollute the
+        // first/last block's history and Health Connect records.
+        if (warmupSec > 0) steps += warmupSteps(categories.first(), warmupSec, profile, blockIndex = WARMUP_BLOCK_INDEX)
 
         categories.forEachIndexed { index, cat ->
             if (index > 0) {
@@ -140,7 +142,7 @@ class WorkoutGenerator(
             }
         }
 
-        if (cooldownSec > 0) steps += cooldownSteps(categories.last(), cooldownSec, profile, blockIndex = categories.size - 1)
+        if (cooldownSec > 0) steps += cooldownSteps(categories.last(), cooldownSec, profile, blockIndex = COOLDOWN_BLOCK_INDEX)
 
         // Visceral-fat goal check: >= 50% of WORK time should be MODERATE+ cardio-targeted.
         if (profile.visceralFatGoal && config.useHealthData) {
@@ -524,6 +526,10 @@ class WorkoutGenerator(
     }
 
     companion object {
+        /** Sentinel block indices: warm-up/cool-down time is excluded from per-block records. */
+        const val WARMUP_BLOCK_INDEX = -1
+        const val COOLDOWN_BLOCK_INDEX = -2
+
         fun stationName(cat: Category): String = when (cat) {
             Category.FLOOR -> "the mat"
             Category.REFORMER -> "the reformer"

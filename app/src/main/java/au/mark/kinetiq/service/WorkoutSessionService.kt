@@ -18,19 +18,16 @@ import au.mark.kinetiq.MainActivity
 import au.mark.kinetiq.R
 import au.mark.kinetiq.data.model.GeneratedSession
 import au.mark.kinetiq.data.model.StepType
-import au.mark.kinetiq.data.repo.CompletedBlock
 import au.mark.kinetiq.data.repo.MeasurementRepository
 import au.mark.kinetiq.data.repo.Metric
 import au.mark.kinetiq.data.repo.SettingsRepository
 import au.mark.kinetiq.data.repo.WorkoutRepository
-import au.mark.kinetiq.domain.CalorieCalculator
 import au.mark.kinetiq.domain.generator.WorkoutGenerator
 import au.mark.kinetiq.health.HealthConnectManager
 import au.mark.kinetiq.voice.VoiceCoach
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -41,6 +38,10 @@ import javax.inject.Inject
  * Foreground service that runs the workout: an elapsed-realtime-based timer (accurate across
  * doze and screen-off, guarded by a partial wake lock), spoken coaching via [VoiceCoach],
  * media-style notification controls, and a 5-second disk snapshot for process-death restore.
+ *
+ * All timing/cue/accrual arithmetic lives in the pure [SessionEngine]; this class owns the
+ * Android pieces (ticker coroutine, wake lock, notification, TTS calls, snapshot I/O, DB and
+ * Health Connect writes) and executes the engine's effects.
  */
 @AndroidEntryPoint
 class WorkoutSessionService : LifecycleService() {
@@ -57,14 +58,11 @@ class WorkoutSessionService : LifecycleService() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var mediaSession: MediaSessionCompat? = null
 
-    /** Wall-clock step boundaries for the per-block Health Connect records. */
-    private val blockActiveMs = mutableMapOf<Int, Long>()
-    private val blockBounds = mutableMapOf<Int, Pair<Long, Long>>()
+    private var engine: SessionEngine? = null
+    private var engineState: SessionEngine.EngineState? = null
 
-    // Cue bookkeeping for the current step.
-    private var halfwaySpoken = false
-    private var countdownSpoken = false
-    private var howToSpoken = false
+    /** Restore lands paused; the first resume should re-announce the step after its countdown. */
+    private var announceOnNextResume = false
     private var lastSnapshotMs = 0L
 
     override fun onCreate() {
@@ -84,6 +82,7 @@ class WorkoutSessionService : LifecycleService() {
             ACTION_PAUSE -> setPaused(true)
             ACTION_RESUME -> setPaused(false)
             ACTION_SKIP -> skipStep()
+            ACTION_SKIP_PREPARE -> skipPrepare()
             ACTION_EXTEND -> extendStep()
             ACTION_STOP -> finishSession(userStopped = true)
         }
@@ -99,25 +98,33 @@ class WorkoutSessionService : LifecycleService() {
             val weight = measurementRepo.resolved(Metric.WEIGHT_KG)?.value ?: settings.fallbackWeightKg.toDouble()
 
             val first = session.plan.steps.firstOrNull() ?: return@launch
+            val newEngine = SessionEngine(session.plan.steps, weight)
+            engine = newEngine
+            engineState = newEngine.initialState()
+            announceOnNextResume = false
             stateHolder.update(
                 PlayerState(
                     session = session,
                     sessionName = name,
                     stepIndex = 0,
                     stepRemainingMs = first.durationSec * 1000L,
+                    prepareRemainingMs = SessionEngine.PREPARE_DURATION_MS,
                     startedAtEpochMs = System.currentTimeMillis(),
                     weightKg = weight,
                 )
             )
-            blockActiveMs.clear(); blockBounds.clear()
-            resetStepCues()
             goForeground()
+            // The GET-READY countdown absorbs TTS warm-up latency and the intro speech, so the
+            // first exercise's clock only starts once the user has been told what to do.
             voice.warmUp {
                 if (settings.disclaimerAcknowledged && settings.disclaimerLineInWorkout) {
                     voice.speak(getString(R.string.disclaimer_workout_reminder))
                 }
-                voice.speak("Starting ${name}. ${session.plan.steps.size} steps, about ${session.plan.totalSec / 60} minutes.")
-                announceStep(fresh = true)
+                voice.speak(
+                    "Starting $name. ${session.plan.steps.size} steps, about ${session.plan.totalSec / 60} minutes. " +
+                        "Get ready — first up: ${first.exerciseName}."
+                )
+                if (voice.settings.howToDescription) speakHowToAt(0)
             }
             startTicker()
         }
@@ -128,6 +135,23 @@ class WorkoutSessionService : LifecycleService() {
             val snap = readSnapshot(this@WorkoutSessionService, json) ?: return@launch
             val settings = settingsRepo.current()
             voice.settings = settings.voice
+            val newEngine = SessionEngine(snap.session.plan.steps, snap.weightKg)
+            val step = snap.session.plan.steps.getOrNull(snap.stepIndex)
+            engine = newEngine
+            engineState = SessionEngine.EngineState(
+                stepIndex = snap.stepIndex,
+                stepRemainingMs = snap.stepRemainingMs,
+                prepareRemainingMs = 0,
+                totalElapsedActiveMs = snap.totalElapsedActiveMs,
+                caloriesSoFar = snap.caloriesSoFar,
+                blockActiveMs = snap.blockActiveMs,
+                blockBounds = snap.blockBounds.mapValues { (_, v) ->
+                    (v.getOrElse(0) { 0L }) to (v.getOrElse(1) { 0L })
+                },
+                cues = step?.let { SessionEngine.cueFlagsForRestore(it, snap.stepRemainingMs) }
+                    ?: SessionEngine.CueFlags(),
+            )
+            announceOnNextResume = true
             stateHolder.update(
                 PlayerState(
                     session = snap.session,
@@ -141,7 +165,6 @@ class WorkoutSessionService : LifecycleService() {
                     paused = true,
                 )
             )
-            resetStepCues()
             goForeground()
             voice.warmUp { voice.speak("Workout restored — paused. Resume when you are ready.") }
             startTicker()
@@ -189,85 +212,50 @@ class WorkoutSessionService : LifecycleService() {
         }
     }
 
-    private suspend fun onTick(state: PlayerState, deltaMs: Long) {
-        val step = state.currentStep ?: run { finishSession(userStopped = false); return }
-        var remaining = state.stepRemainingMs - deltaMs
-        val stepDurationMs = step.durationSec * 1000L
-
-        // Accrue active time + calories for WORK-type steps.
-        val isActiveStep = step.type != StepType.TRANSITION && step.type != StepType.REST
-        val addedCalories = if (isActiveStep)
-            CalorieCalculator.kcal(step.met, state.weightKg, 1) * (deltaMs / 1000.0) else 0.0
-        if (isActiveStep) {
-            blockActiveMs.merge(step.blockIndex, deltaMs, Long::plus)
-            val now = System.currentTimeMillis()
-            blockBounds.merge(step.blockIndex, now to now) { old, new -> old.first to new.second }
-        }
-
-        // Halfway cue for long work steps.
-        if (!halfwaySpoken && voice.settings.halfwayCue && isActiveStep &&
-            stepDurationMs >= 40_000 && remaining <= stepDurationMs / 2
-        ) {
-            halfwaySpoken = true
-            voice.speak("Halfway.")
-        }
-
-        // Countdown beeps in the final 3 seconds before a WORK step starts.
-        val next = state.nextStep
-        if (!countdownSpoken && remaining <= 3300 && next != null && next.type == StepType.WORK &&
-            step.type != StepType.WORK
-        ) {
-            countdownSpoken = true
-            voice.countdownBeeps()
-        }
-
-        // Speak the next exercise's how-to during rests/transitions.
-        if (!howToSpoken && (step.type == StepType.REST || step.type == StepType.TRANSITION) &&
-            remaining <= stepDurationMs - 1500 && voice.settings.howToDescription
-        ) {
-            howToSpoken = true
-            speakNextHowTo(state)
-        }
-
-        if (remaining <= 0) {
-            advanceStep(state, carryCalories = addedCalories)
-        } else {
-            stateHolder.update(
-                state.copy(
-                    stepRemainingMs = remaining,
-                    totalElapsedActiveMs = state.totalElapsedActiveMs + (if (isActiveStep) deltaMs else 0),
-                    caloriesSoFar = state.caloriesSoFar + addedCalories,
-                )
-            )
+    private fun onTick(state: PlayerState, deltaMs: Long) {
+        val eng = engine ?: return
+        val es = engineState ?: return
+        val result = eng.onTick(es, deltaMs, System.currentTimeMillis())
+        engineState = result.state
+        if (!result.state.finished) {
+            syncState(state)
             maybeSnapshot()
-            if ((state.stepRemainingMs / 1000) != (remaining / 1000)) updateNotification()
+            if ((es.stepRemainingMs / 1000) != (result.state.stepRemainingMs / 1000) ||
+                (es.prepareRemainingMs / 1000) != (result.state.prepareRemainingMs / 1000) ||
+                es.stepIndex != result.state.stepIndex
+            ) updateNotification()
         }
+        executeEffects(result.effects)
     }
 
-    private fun advanceStep(state: PlayerState, carryCalories: Double) {
-        val nextIndex = state.stepIndex + 1
-        val next = state.session.plan.steps.getOrNull(nextIndex)
-        if (next == null) {
-            stateHolder.update(state.copy(caloriesSoFar = state.caloriesSoFar + carryCalories))
-            finishSession(userStopped = false)
-            return
-        }
+    /** Mirror the engine's numbers into the UI-facing state. */
+    private fun syncState(base: PlayerState? = null) {
+        val es = engineState ?: return
+        val current = base ?: stateHolder.state.value ?: return
         stateHolder.update(
-            state.copy(
-                stepIndex = nextIndex,
-                stepRemainingMs = next.durationSec * 1000L,
-                caloriesSoFar = state.caloriesSoFar + carryCalories,
+            current.copy(
+                stepIndex = es.stepIndex,
+                stepRemainingMs = es.stepRemainingMs,
+                prepareRemainingMs = es.prepareRemainingMs,
+                totalElapsedActiveMs = es.totalElapsedActiveMs,
+                caloriesSoFar = es.caloriesSoFar,
             )
         )
-        resetStepCues()
-        announceStep(fresh = false)
-        updateNotification()
     }
 
-    private fun resetStepCues() {
-        halfwaySpoken = false
-        countdownSpoken = false
-        howToSpoken = false
+    private fun executeEffects(effects: List<SessionEngine.Effect>) {
+        for (effect in effects) when (effect) {
+            SessionEngine.Effect.PlayCountdownBeeps -> voice.countdownBeeps()
+            SessionEngine.Effect.SpeakHalfway -> voice.speak("Halfway.")
+            is SessionEngine.Effect.SpeakNextHowTo -> speakHowToAt(effect.nextIndex)
+            is SessionEngine.Effect.AnnounceStep -> {
+                // Flush any still-running how-to so the new step's name is never delayed.
+                voice.stopSpeaking()
+                announceStep(fresh = effect.fresh)
+            }
+            SessionEngine.Effect.PrepareEnded -> updateNotification()
+            SessionEngine.Effect.Finished -> finishSession(userStopped = false)
+        }
     }
 
     // ------------------------------------------------------------------ voice cues
@@ -288,7 +276,7 @@ class WorkoutSessionService : LifecycleService() {
                 if (voice.settings.machineSettingCues && step.machineCueText != null) {
                     voice.speak(step.machineCueText)
                 }
-                if (fresh && voice.settings.howToDescription) speakCurrentHowTo(state)
+                if (fresh && voice.settings.howToDescription) speakHowToAt(state.stepIndex)
             }
             StepType.REST -> {
                 if (voice.settings.restNextUpCue) {
@@ -307,19 +295,10 @@ class WorkoutSessionService : LifecycleService() {
         }
     }
 
-    private fun speakCurrentHowTo(state: PlayerState) {
+    private fun speakHowToAt(index: Int) {
         lifecycleScope.launch {
-            val step = state.currentStep ?: return@launch
+            val step = stateHolder.state.value?.session?.plan?.steps?.getOrNull(index) ?: return@launch
             val id = step.exerciseId ?: return@launch
-            howToFor(id)?.let { voice.speak(it) }
-        }
-    }
-
-    private fun speakNextHowTo(state: PlayerState) {
-        lifecycleScope.launch {
-            val next = state.nextStep ?: return@launch
-            if (next.type != StepType.WORK) return@launch
-            val id = next.exerciseId ?: return@launch
             howToFor(id)?.let { voice.speak(it) }
         }
     }
@@ -327,7 +306,7 @@ class WorkoutSessionService : LifecycleService() {
     /** "Explain again" from the UI. */
     fun explainAgain() {
         val state = stateHolder.state.value ?: return
-        speakCurrentHowTo(state)
+        speakHowToAt(state.stepIndex)
     }
 
     private var exerciseHowTo: Map<String, String>? = null
@@ -349,20 +328,52 @@ class WorkoutSessionService : LifecycleService() {
 
     private fun setPaused(paused: Boolean) {
         val state = stateHolder.state.value ?: return
-        stateHolder.update(state.copy(paused = paused))
+        if (!paused && !state.finished) {
+            // Every resume gets a bare 3-2-1 so the user can get back into position.
+            // Only a snapshot restore re-announces the exercise; a plain unpause stays quiet.
+            engineState = engineState?.let { es ->
+                es.copy(
+                    prepareRemainingMs = SessionEngine.RESUME_PREPARE_MS,
+                    announceAfterPrepare = announceOnNextResume,
+                    cues = es.cues.copy(prepareBeepsPlayed = false),
+                )
+            }
+            announceOnNextResume = false
+        }
+        stateHolder.update(
+            state.copy(paused = paused, prepareRemainingMs = engineState?.prepareRemainingMs ?: 0)
+        )
         voice.speak(if (paused) "Paused." else "Resuming.", flush = true)
         updateNotification()
     }
 
     private fun skipStep() {
         val state = stateHolder.state.value ?: return
+        val eng = engine ?: return
+        val es = engineState ?: return
         voice.stopSpeaking()
-        advanceStep(state, carryCalories = 0.0)
+        val result = eng.skip(es)
+        engineState = result.state
+        if (!result.state.finished) {
+            syncState(state)
+            updateNotification()
+        }
+        executeEffects(result.effects)
+    }
+
+    private fun skipPrepare() {
+        val eng = engine ?: return
+        val es = engineState ?: return
+        engineState = eng.skipPrepare(es)
+        syncState()
+        updateNotification()
     }
 
     private fun extendStep() {
-        val state = stateHolder.state.value ?: return
-        stateHolder.update(state.copy(stepRemainingMs = state.stepRemainingMs + 30_000))
+        val eng = engine ?: return
+        val es = engineState ?: return
+        engineState = eng.extend(es)
+        syncState()
         voice.speak("Thirty seconds added.")
         updateNotification()
     }
@@ -370,6 +381,7 @@ class WorkoutSessionService : LifecycleService() {
     private fun finishSession(userStopped: Boolean) {
         val state = stateHolder.state.value ?: return
         if (state.finished) return
+        val es = engineState
         stateHolder.update(state.copy(finished = true, paused = true))
         tickerJob?.cancel()
         voice.speak(
@@ -379,65 +391,67 @@ class WorkoutSessionService : LifecycleService() {
         )
 
         lifecycleScope.launch {
-            val settings = settingsRepo.current()
-            val endedAt = System.currentTimeMillis()
-            val plan = state.session.plan
+            try {
+                val settings = settingsRepo.current()
+                val endedAt = System.currentTimeMillis()
+                val plan = state.session.plan
 
-            val blocks = plan.blocks.mapIndexedNotNull { index, block ->
-                val activeSec = ((blockActiveMs[index] ?: 0L) / 1000).toInt()
-                if (activeSec <= 0) return@mapIndexedNotNull null
-                val bounds = blockBounds[index] ?: (state.startedAtEpochMs to endedAt)
-                val met = plan.steps.filter { it.blockIndex == index && it.type != StepType.REST && it.type != StepType.TRANSITION }
-                    .map { it.met }.average().takeIf { !it.isNaN() } ?: 3.0
-                CompletedBlock(
-                    category = block.category.name,
-                    activeSec = activeSec,
-                    calories = CalorieCalculator.kcal(met.toFloat(), state.weightKg, activeSec),
-                    isHiit = block.isHiit,
-                    startedAtEpochMs = bounds.first,
-                    endedAtEpochMs = bounds.second,
+                val blocks = completedBlocks(
+                    plan = plan,
+                    blockActiveMs = es?.blockActiveMs ?: emptyMap(),
+                    blockBounds = es?.blockBounds ?: emptyMap(),
+                    weightKg = state.weightKg,
+                    fallbackBounds = state.startedAtEpochMs to endedAt,
                 )
+
+                val totalActiveSec = ((es?.totalElapsedActiveMs ?: 0L) / 1000).toInt()
+                val calories = es?.caloriesSoFar ?: 0.0
+                var hcWritten = false
+                var hcError: String? = null
+                if (settings.healthConnectEnabled && settings.healthConnectWriteback && blocks.isNotEmpty()) {
+                    val result = runCatching {
+                        healthConnect.writeSession(
+                            state.sessionName, blocks, calories, state.startedAtEpochMs, endedAt,
+                        )
+                    }.getOrElse { Result.failure(it) }
+                    hcWritten = result.isSuccess
+                    hcError = result.exceptionOrNull()?.message
+                }
+
+                val historyId = runCatching {
+                    workoutRepo.addHistory(
+                        startedAtEpochMs = state.startedAtEpochMs,
+                        endedAtEpochMs = endedAt,
+                        name = state.sessionName,
+                        totalActiveSec = totalActiveSec,
+                        calories = calories,
+                        blocks = blocks,
+                        healthConnectWritten = hcWritten,
+                        session = state.session,
+                    )
+                }.getOrElse { -1L }
+
+                stateHolder.completed(
+                    CompletedSummary(
+                        historyId = historyId,
+                        name = state.sessionName,
+                        startedAtEpochMs = state.startedAtEpochMs,
+                        endedAtEpochMs = endedAt,
+                        totalActiveSec = totalActiveSec,
+                        calories = calories,
+                        blocks = blocks,
+                        healthConnectWritten = hcWritten,
+                        healthConnectError = hcError,
+                        session = state.session,
+                    )
+                )
+            } finally {
+                // The service must always stop cleanly, even if history or HC writes threw:
+                // no zombie foreground service, no stale "resume" offer for a finished session.
+                deleteSnapshot(this@WorkoutSessionService)
+                stateHolder.update(null)
+                stopSelf()
             }
-
-            val totalActiveSec = (state.totalElapsedActiveMs / 1000).toInt()
-            var hcWritten = false
-            var hcError: String? = null
-            if (settings.healthConnectEnabled && settings.healthConnectWriteback && blocks.isNotEmpty()) {
-                val result = healthConnect.writeSession(
-                    state.sessionName, blocks, state.caloriesSoFar, state.startedAtEpochMs, endedAt,
-                )
-                hcWritten = result.isSuccess
-                hcError = result.exceptionOrNull()?.message
-            }
-
-            val historyId = workoutRepo.addHistory(
-                startedAtEpochMs = state.startedAtEpochMs,
-                endedAtEpochMs = endedAt,
-                name = state.sessionName,
-                totalActiveSec = totalActiveSec,
-                calories = state.caloriesSoFar,
-                blocks = blocks,
-                healthConnectWritten = hcWritten,
-                session = state.session,
-            )
-
-            stateHolder.completed(
-                CompletedSummary(
-                    historyId = historyId,
-                    name = state.sessionName,
-                    startedAtEpochMs = state.startedAtEpochMs,
-                    endedAtEpochMs = endedAt,
-                    totalActiveSec = totalActiveSec,
-                    calories = state.caloriesSoFar,
-                    blocks = blocks,
-                    healthConnectWritten = hcWritten,
-                    healthConnectError = hcError,
-                    session = state.session,
-                )
-            )
-            deleteSnapshot(this@WorkoutSessionService)
-            stateHolder.update(null)
-            stopSelf()
         }
     }
 
@@ -448,18 +462,22 @@ class WorkoutSessionService : LifecycleService() {
         if (now - lastSnapshotMs < 5_000) return
         lastSnapshotMs = now
         val state = stateHolder.state.value ?: return
+        val es = engineState ?: return
         lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             runCatching {
                 val snap = SessionSnapshot(
                     session = state.session,
                     sessionName = state.sessionName,
-                    stepIndex = state.stepIndex,
-                    stepRemainingMs = state.stepRemainingMs,
-                    totalElapsedActiveMs = state.totalElapsedActiveMs,
-                    caloriesSoFar = state.caloriesSoFar,
+                    stepIndex = es.stepIndex,
+                    stepRemainingMs = es.stepRemainingMs,
+                    totalElapsedActiveMs = es.totalElapsedActiveMs,
+                    caloriesSoFar = es.caloriesSoFar,
                     startedAtEpochMs = state.startedAtEpochMs,
                     weightKg = state.weightKg,
                     savedAtEpochMs = System.currentTimeMillis(),
+                    blockActiveMs = es.blockActiveMs,
+                    blockBounds = es.blockBounds.mapValues { (_, v) -> listOf(v.first, v.second) },
+                    prepareRemainingMs = es.prepareRemainingMs,
                 )
                 val file = snapshotFile(this@WorkoutSessionService)
                 val tmp = File(file.parentFile, file.name + ".tmp")
@@ -474,11 +492,19 @@ class WorkoutSessionService : LifecycleService() {
     private fun buildNotification(): Notification {
         val state = stateHolder.state.value
         val step = state?.currentStep
-        val title = step?.exerciseName ?: getString(R.string.app_name)
-        val remaining = ((state?.stepRemainingMs ?: 0) / 1000).toInt()
-        val text = if (state != null)
-            "${remaining / 60}:${(remaining % 60).toString().padStart(2, '0')} — step ${state.stepIndex + 1}/${state.totalSteps}"
-        else "Workout session"
+        val inPrepare = state?.inPrepare == true
+        val title = when {
+            inPrepare -> "Get ready"
+            step != null -> step.exerciseName
+            else -> getString(R.string.app_name)
+        }
+        val remaining = if (inPrepare) ((state?.prepareRemainingMs ?: 0) / 1000).toInt()
+        else ((state?.stepRemainingMs ?: 0) / 1000).toInt()
+        val text = when {
+            state == null -> "Workout session"
+            inPrepare -> "Starting in ${remaining}s — ${step?.exerciseName ?: ""}"
+            else -> "${remaining / 60}:${(remaining % 60).toString().padStart(2, '0')} — step ${state.stepIndex + 1}/${state.totalSteps}"
+        }
 
         fun action(action: String, icon: Int, label: String): NotificationCompat.Action {
             val intent = Intent(this, WorkoutSessionService::class.java).setAction(action)
@@ -536,6 +562,7 @@ class WorkoutSessionService : LifecycleService() {
         const val ACTION_PAUSE = "au.mark.kinetiq.PAUSE"
         const val ACTION_RESUME = "au.mark.kinetiq.RESUME"
         const val ACTION_SKIP = "au.mark.kinetiq.SKIP"
+        const val ACTION_SKIP_PREPARE = "au.mark.kinetiq.SKIP_PREPARE"
         const val ACTION_EXTEND = "au.mark.kinetiq.EXTEND"
         const val ACTION_STOP = "au.mark.kinetiq.STOP"
         const val EXTRA_SESSION_JSON = "session_json"

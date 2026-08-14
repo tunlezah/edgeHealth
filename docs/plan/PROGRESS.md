@@ -9,16 +9,16 @@ the work is not done. See IMPLEMENTATION_PLAN.md for rules.
 - [x] P1-5 Generator time-math: redistribute(), routine-fit guard, budget warnings, plannedTotalSec, minViableDurationMin, high-adiposity reorder
 - [x] P1-5T WorkoutGeneratorTimeBudgetTest (full config matrix ±5%)
 - [x] P1-7 VoiceCoach: TtsStatus flow, retry, bounded queue, counter clamp, Player/Settings banners + VoiceCoachStatusTest
-- [ ] P1-R SessionEngine extraction + SessionEngineTest (13 tests)
-- [ ] P1-6a Tick delta clamp
-- [ ] P1-6b Snapshot carries blockActiveMs/blockBounds (+ SessionSnapshotCompatTest)
-- [ ] P1-6c Skip WORK skips trailing REST
-- [ ] P1-6d TTS flush on natural advance + VoiceCoach flush-race fix
-- [ ] P1-6e Restore: cue flags from remaining time + re-announce on resume
-- [ ] P1-6f finishSession try/finally containment
-- [ ] P1-6g Final-tick accounting
-- [ ] P1-6h Block MET duration-weighted; warm-up/cool-down sentinel block indices (−1/−2)
-- [ ] P1-1 Get-ready prepare phase (10 s; tap-to-skip to 3 s; 3 s resume countdown; PrepareView; notification state)
+- [x] P1-R SessionEngine extraction + SessionEngineTest (13 tests)
+- [x] P1-6a Tick delta clamp
+- [x] P1-6b Snapshot carries blockActiveMs/blockBounds (+ SessionSnapshotCompatTest)
+- [x] P1-6c Skip WORK skips trailing REST
+- [x] P1-6d TTS flush on natural advance + VoiceCoach flush-race fix
+- [x] P1-6e Restore: cue flags from remaining time + re-announce on resume
+- [x] P1-6f finishSession try/finally containment
+- [x] P1-6g Final-tick accounting
+- [x] P1-6h Block MET duration-weighted; warm-up/cool-down sentinel block indices (−1/−2)
+- [x] P1-1 Get-ready prepare phase (10 s; tap-to-skip to 3 s; 3 s resume countdown; PrepareView; notification state)
 - [ ] P1-3 Summary: sessionId identity, global navigate-once, Home summary card, PlayerScreen simplification
 - [ ] P1-2 Stop confirmation (dialog + two-stage notification) + 10-min stopped-snapshot recovery
 - [ ] P1-4 Widget/start guards + widget updateAll on finish

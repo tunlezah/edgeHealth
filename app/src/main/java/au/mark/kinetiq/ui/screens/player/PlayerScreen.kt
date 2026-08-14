@@ -2,6 +2,7 @@ package au.mark.kinetiq.ui.screens.player
 
 import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -112,6 +113,10 @@ fun PlayerScreen(
 
     val s = state ?: return
     val step = s.currentStep ?: return
+    if (s.inPrepare && !s.paused) {
+        PrepareView(s)
+        return
+    }
     val remainingSec = (s.stepRemainingMs / 1000).toInt()
     val progress = if (step.durationSec > 0)
         1f - (s.stepRemainingMs.toFloat() / (step.durationSec * 1000f)) else 0f
@@ -232,6 +237,57 @@ fun PlayerScreen(
             title = "Keep screen on",
             checked = keepScreenOn,
             onCheckedChange = { keepScreenOn = it },
+        )
+    }
+}
+
+/** GET-READY countdown before the current step's clock starts. Tap to jump to the last 3 s. */
+@Composable
+private fun PrepareView(s: au.mark.kinetiq.service.PlayerState) {
+    val context = LocalContext.current
+    val step = s.currentStep ?: return
+    val prepareSec = ((s.prepareRemainingMs + 999) / 1000).toInt()
+    Column(
+        Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null,
+                onClickLabel = "Start now",
+            ) { WorkoutSessionService.command(context, WorkoutSessionService.ACTION_SKIP_PREPARE) }
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            "Get ready",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(top = 24.dp),
+        )
+        Text(
+            "$prepareSec",
+            style = MaterialTheme.typography.displayLarge,
+            modifier = Modifier
+                .padding(vertical = 8.dp)
+                .semantics { contentDescription = "Starting in $prepareSec seconds" },
+        )
+        Text("First up", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(step.exerciseName, style = MaterialTheme.typography.headlineSmall)
+        step.machineCueText?.let {
+            Text(it, style = MaterialTheme.typography.titleMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }
+        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            ExerciseAnimationView(
+                animationId = step.animationId,
+                modifier = Modifier.fillMaxWidth().aspectRatio(1.05f),
+                contentDesc = "Animation of ${step.exerciseName}",
+            )
+        }
+        Text(
+            "Tap anywhere to start now",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 16.dp),
         )
     }
 }
