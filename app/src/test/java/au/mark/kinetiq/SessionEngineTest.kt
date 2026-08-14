@@ -209,6 +209,17 @@ class SessionEngineTest {
     }
 
     @Test
+    fun `first stop arms and second stop within the window finishes`() {
+        // t=0: nothing armed → ARM. Armed until t=3000.
+        assertThat(au.mark.kinetiq.service.stopArmDecision(nowMs = 0, armedUntilMs = 0))
+            .isEqualTo(au.mark.kinetiq.service.StopDecision.ARM)
+        assertThat(au.mark.kinetiq.service.stopArmDecision(nowMs = 2_999, armedUntilMs = 3_000))
+            .isEqualTo(au.mark.kinetiq.service.StopDecision.FINISH)
+        assertThat(au.mark.kinetiq.service.stopArmDecision(nowMs = 3_001, armedUntilMs = 3_000))
+            .isEqualTo(au.mark.kinetiq.service.StopDecision.ARM)
+    }
+
+    @Test
     fun `block met aggregation excludes sentinel indices`() {
         val plan = WorkoutPlan(
             steps = listOf(

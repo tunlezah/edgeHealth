@@ -180,7 +180,10 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
                 )
             }
             composable(Routes.SUMMARY) {
-                SummaryScreen(onDone = { navController.popBackStack(Routes.HOME, inclusive = false) })
+                SummaryScreen(
+                    onDone = { navController.popBackStack(Routes.HOME, inclusive = false) },
+                    onResume = { navController.navigate(Routes.PLAYER) { launchSingleTop = true; popUpTo(Routes.HOME) } },
+                )
             }
             composable(Routes.HISTORY) { HistoryScreen() }
             composable(Routes.LIBRARY) {

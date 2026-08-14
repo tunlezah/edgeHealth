@@ -83,6 +83,24 @@ fun PlayerScreen(
     val activity = LocalActivity.current
     var keepScreenOn by remember { mutableStateOf(keepScreenOnDefault) }
     var explainRequested by remember { mutableStateOf(0) }
+    var showStopConfirm by remember { mutableStateOf(false) }
+
+    if (showStopConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showStopConfirm = false },
+            title = { Text("Stop workout?") },
+            text = { Text("Your progress so far will be saved to history. You can resume from the summary for the next 10 minutes.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showStopConfirm = false
+                    WorkoutSessionService.command(context, WorkoutSessionService.ACTION_STOP_CONFIRMED)
+                }) { Text("Stop") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showStopConfirm = false }) { Text("Keep going") }
+            },
+        )
+    }
 
     // FLAG_KEEP_SCREEN_ON while the player is visible (toggleable).
     DisposableEffect(keepScreenOn) {
@@ -219,7 +237,7 @@ fun PlayerScreen(
                 modifier = Modifier.size(56.dp),
             ) { Icon(Icons.Filled.Add, contentDescription = "Add 30 seconds") }
             FilledIconButton(
-                onClick = { WorkoutSessionService.command(context, WorkoutSessionService.ACTION_STOP) },
+                onClick = { showStopConfirm = true },
                 modifier = Modifier.size(56.dp),
             ) { Icon(Icons.Filled.Stop, contentDescription = "Stop workout") }
             IconButton(

@@ -45,6 +45,8 @@ data class CompletedSummary(
     val healthConnectWritten: Boolean,
     val healthConnectError: String? = null,
     val session: GeneratedSession,
+    /** True when the user stopped early — the summary offers a short-lived resume. */
+    val stoppedEarly: Boolean = false,
 )
 
 @Singleton

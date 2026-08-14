@@ -49,14 +49,32 @@ class SummaryViewModel @Inject constructor(
     fun done() {
         stateHolder.clearCompleted()
     }
+
+    /** Undo an accidental stop: drop the just-written history row and restore the session. */
+    fun resumeStopped(context: android.content.Context, onResumed: () -> Unit) {
+        val summary = stateHolder.lastCompleted.value ?: return
+        viewModelScope.launch {
+            if (summary.historyId > 0) workoutRepository.deleteHistory(summary.historyId)
+            stateHolder.clearCompleted()
+            au.mark.kinetiq.service.WorkoutSessionService.resumeStopped(context)
+            onResumed()
+        }
+    }
 }
 
 @Composable
-fun SummaryScreen(onDone: () -> Unit, viewModel: SummaryViewModel = hiltViewModel()) {
+fun SummaryScreen(
+    onDone: () -> Unit,
+    onResume: () -> Unit = {},
+    viewModel: SummaryViewModel = hiltViewModel(),
+) {
     val summary by viewModel.stateHolder.lastCompleted.collectAsState()
-    // Navigation is a side effect — never run it during composition, and only once.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Navigation is a side effect — never run it during composition, and only once. A resume
+    // clears the summary too, but owns its own navigation — don't double-navigate.
+    var resuming by remember { mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(summary) {
-        if (summary == null) onDone()
+        if (summary == null && !resuming) onDone()
     }
     val s = summary ?: return
     var name by remember { mutableStateOf(s.name) }
@@ -115,6 +133,16 @@ fun SummaryScreen(onDone: () -> Unit, viewModel: SummaryViewModel = hiltViewMode
             enabled = !saved,
             modifier = Modifier.fillMaxWidth(),
         ) { Text(if (saved) "Saved ✓ — reusable from Home" else "Save workout") }
+
+        if (s.stoppedEarly && au.mark.kinetiq.service.WorkoutSessionService.hasStoppedSnapshot(context)) {
+            OutlinedButton(
+                onClick = {
+                    resuming = true
+                    viewModel.resumeStopped(context, onResume)
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Stopped by accident? Resume workout") }
+        }
 
         OutlinedButton(
             // Clearing the summary triggers the LaunchedEffect above exactly once — calling

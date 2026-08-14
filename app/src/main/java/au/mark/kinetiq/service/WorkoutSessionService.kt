@@ -34,6 +34,12 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import javax.inject.Inject
 
+/** Outcome of a notification Stop tap given the arming window. */
+enum class StopDecision { ARM, FINISH }
+
+internal fun stopArmDecision(nowMs: Long, armedUntilMs: Long): StopDecision =
+    if (nowMs < armedUntilMs) StopDecision.FINISH else StopDecision.ARM
+
 /**
  * Foreground service that runs the workout: an elapsed-realtime-based timer (accurate across
  * doze and screen-off, guarded by a partial wake lock), spoken coaching via [VoiceCoach],
@@ -79,15 +85,38 @@ class WorkoutSessionService : LifecycleService() {
                 if (payload != null) startSession(json.decodeFromString(GeneratedSession.serializer(), payload), name)
             }
             ACTION_RESUME_SNAPSHOT -> restoreFromSnapshot()
+            ACTION_RESUME_STOPPED -> restoreFromSnapshot(fromStopped = true)
             ACTION_PAUSE -> setPaused(true)
             ACTION_RESUME -> setPaused(false)
             ACTION_SKIP -> skipStep()
             ACTION_SKIP_PREPARE -> skipPrepare()
             ACTION_EXTEND -> extendStep()
-            ACTION_STOP -> finishSession(userStopped = true)
+            // The notification's Stop is two-stage: the first tap arms it for 3 s (label flips
+            // to "Tap again to stop"), only a second tap inside the window ends the session.
+            ACTION_STOP -> {
+                val now = SystemClock.elapsedRealtime()
+                when (stopArmDecision(now, stopArmedUntil)) {
+                    StopDecision.FINISH -> finishSession(userStopped = true)
+                    StopDecision.ARM -> {
+                        stopArmedUntil = now + STOP_ARM_WINDOW_MS
+                        updateNotification()
+                        stopArmJob?.cancel()
+                        stopArmJob = lifecycleScope.launch {
+                            delay(STOP_ARM_WINDOW_MS)
+                            stopArmedUntil = 0L
+                            updateNotification()
+                        }
+                    }
+                }
+            }
+            // The player UI confirms with its own dialog, then sends this directly.
+            ACTION_STOP_CONFIRMED -> finishSession(userStopped = true)
         }
         return START_NOT_STICKY
     }
+
+    private var stopArmedUntil = 0L
+    private var stopArmJob: Job? = null
 
     // ------------------------------------------------------------------ lifecycle
 
@@ -135,9 +164,11 @@ class WorkoutSessionService : LifecycleService() {
         }
     }
 
-    private fun restoreFromSnapshot() {
+    private fun restoreFromSnapshot(fromStopped: Boolean = false) {
         lifecycleScope.launch {
-            val snap = readSnapshot(this@WorkoutSessionService, json) ?: return@launch
+            val snap = if (fromStopped) readStoppedSnapshot(this@WorkoutSessionService, json) ?: return@launch
+            else readSnapshot(this@WorkoutSessionService, json) ?: return@launch
+            if (fromStopped) stoppedSnapshotFile(this@WorkoutSessionService).delete()
             val settings = settingsRepo.current()
             voice.settings = settings.voice
             val newEngine = SessionEngine(snap.session.plan.steps, snap.weightKg)
@@ -161,7 +192,10 @@ class WorkoutSessionService : LifecycleService() {
                 PlayerState(
                     session = snap.session,
                     sessionName = snap.sessionName,
-                    sessionId = snap.sessionId.ifBlank { java.util.UUID.randomUUID().toString() },
+                    // A stop-resumed run needs a fresh id: the old one was already consumed by
+                    // the navigate-once summary guard, which would swallow the final summary.
+                    sessionId = if (fromStopped) java.util.UUID.randomUUID().toString()
+                    else snap.sessionId.ifBlank { java.util.UUID.randomUUID().toString() },
                     stepIndex = snap.stepIndex,
                     stepRemainingMs = snap.stepRemainingMs,
                     totalElapsedActiveMs = snap.totalElapsedActiveMs,
@@ -450,9 +484,12 @@ class WorkoutSessionService : LifecycleService() {
                         healthConnectWritten = hcWritten,
                         healthConnectError = hcError,
                         session = state.session,
+                        stoppedEarly = userStopped,
                     )
                 )
             } finally {
+                // A user-initiated stop stays recoverable for 10 minutes (accidental taps).
+                if (userStopped) runCatching { writeStoppedSnapshot(state, es) }
                 // The service must always stop cleanly, even if history or HC writes threw:
                 // no zombie foreground service, no stale "resume" offer for a finished session.
                 deleteSnapshot(this@WorkoutSessionService)
@@ -463,6 +500,25 @@ class WorkoutSessionService : LifecycleService() {
     }
 
     // ------------------------------------------------------------------ snapshot
+
+    /** Written synchronously on a user stop so an accidental stop is recoverable. */
+    private fun writeStoppedSnapshot(state: PlayerState, es: SessionEngine.EngineState?) {
+        val snap = SessionSnapshot(
+            session = state.session,
+            sessionName = state.sessionName,
+            stepIndex = es?.stepIndex ?: state.stepIndex,
+            stepRemainingMs = es?.stepRemainingMs ?: state.stepRemainingMs,
+            totalElapsedActiveMs = es?.totalElapsedActiveMs ?: state.totalElapsedActiveMs,
+            caloriesSoFar = es?.caloriesSoFar ?: state.caloriesSoFar,
+            startedAtEpochMs = state.startedAtEpochMs,
+            weightKg = state.weightKg,
+            savedAtEpochMs = System.currentTimeMillis(),
+            blockActiveMs = es?.blockActiveMs ?: emptyMap(),
+            blockBounds = es?.blockBounds?.mapValues { (_, v) -> listOf(v.first, v.second) } ?: emptyMap(),
+            sessionId = state.sessionId,
+        )
+        stoppedSnapshotFile(this).writeText(json.encodeToString(SessionSnapshot.serializer(), snap))
+    }
 
     private fun maybeSnapshot() {
         val now = SystemClock.elapsedRealtime()
@@ -527,6 +583,8 @@ class WorkoutSessionService : LifecycleService() {
         )
 
         val paused = state?.paused == true
+        val stopLabel = if (SystemClock.elapsedRealtime() < stopArmedUntil)
+            getString(R.string.notif_action_confirm_stop) else getString(R.string.notif_action_stop)
         return NotificationCompat.Builder(this, KinetiqApp.CHANNEL_SESSION)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
@@ -540,7 +598,7 @@ class WorkoutSessionService : LifecycleService() {
                 else action(ACTION_PAUSE, R.drawable.ic_notification, getString(R.string.notif_action_pause))
             )
             .addAction(action(ACTION_SKIP, R.drawable.ic_notification, getString(R.string.notif_action_skip)))
-            .addAction(action(ACTION_STOP, R.drawable.ic_notification, getString(R.string.notif_action_stop)))
+            .addAction(action(ACTION_STOP, R.drawable.ic_notification, stopLabel))
             .setStyle(
                 androidx.media.app.NotificationCompat.MediaStyle()
                     .setMediaSession(mediaSession?.sessionToken)
@@ -567,16 +625,37 @@ class WorkoutSessionService : LifecycleService() {
         const val NOTIFICATION_ID = 42
         const val ACTION_START = "au.mark.kinetiq.START"
         const val ACTION_RESUME_SNAPSHOT = "au.mark.kinetiq.RESUME_SNAPSHOT"
+        const val ACTION_RESUME_STOPPED = "au.mark.kinetiq.RESUME_STOPPED"
         const val ACTION_PAUSE = "au.mark.kinetiq.PAUSE"
         const val ACTION_RESUME = "au.mark.kinetiq.RESUME"
         const val ACTION_SKIP = "au.mark.kinetiq.SKIP"
         const val ACTION_SKIP_PREPARE = "au.mark.kinetiq.SKIP_PREPARE"
         const val ACTION_EXTEND = "au.mark.kinetiq.EXTEND"
         const val ACTION_STOP = "au.mark.kinetiq.STOP"
+        const val ACTION_STOP_CONFIRMED = "au.mark.kinetiq.STOP_CONFIRMED"
         const val EXTRA_SESSION_JSON = "session_json"
         const val EXTRA_SESSION_NAME = "session_name"
+        private const val STOP_ARM_WINDOW_MS = 3_000L
+        private const val STOPPED_SNAPSHOT_VALID_MS = 10 * 60 * 1000L
 
         fun snapshotFile(context: Context): File = File(context.filesDir, "session_snapshot.json")
+
+        fun stoppedSnapshotFile(context: Context): File = File(context.filesDir, "session_snapshot.stopped.json")
+
+        fun hasStoppedSnapshot(context: Context): Boolean = stoppedSnapshotFile(context).let {
+            it.exists() && System.currentTimeMillis() - it.lastModified() < STOPPED_SNAPSHOT_VALID_MS
+        }
+
+        fun readStoppedSnapshot(context: Context, json: Json): SessionSnapshot? = runCatching {
+            if (!hasStoppedSnapshot(context)) return null
+            json.decodeFromString(SessionSnapshot.serializer(), stoppedSnapshotFile(context).readText())
+        }.getOrNull()
+
+        fun resumeStopped(context: Context) {
+            context.startForegroundService(
+                Intent(context, WorkoutSessionService::class.java).setAction(ACTION_RESUME_STOPPED)
+            )
+        }
 
         fun hasSnapshot(context: Context): Boolean {
             val f = snapshotFile(context)
