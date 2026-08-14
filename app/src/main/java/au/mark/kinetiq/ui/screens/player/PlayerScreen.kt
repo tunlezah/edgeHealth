@@ -49,6 +49,7 @@ import au.mark.kinetiq.data.repo.ExerciseRepository
 import au.mark.kinetiq.service.SessionStateHolder
 import au.mark.kinetiq.service.WorkoutSessionService
 import au.mark.kinetiq.ui.components.SettingSwitchRow
+import au.mark.kinetiq.voice.TtsStatus
 import au.mark.kinetiq.voice.VoiceCoach
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -59,6 +60,10 @@ class PlayerViewModel @Inject constructor(
     private val voice: VoiceCoach,
     private val exerciseRepository: ExerciseRepository,
 ) : ViewModel() {
+    val voiceStatus = voice.status
+
+    fun retryVoice() = voice.retryInit()
+
     suspend fun explainAgain() {
         val state = stateHolder.state.value ?: return
         val id = state.currentStep?.exerciseId ?: return
@@ -125,6 +130,26 @@ fun PlayerScreen(
             progress = { (s.stepIndex + progress.coerceIn(0f, 1f)) / s.totalSteps },
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         )
+
+        val voiceStatus by viewModel.voiceStatus.collectAsState()
+        if (voiceStatus == TtsStatus.FAILED) {
+            Card(
+                Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ),
+            ) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Voice coach unavailable — cues are muted. Timers still run.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f),
+                    )
+                    androidx.compose.material3.TextButton(onClick = { viewModel.retryVoice() }) { Text("Retry") }
+                }
+            }
+        }
 
         Text(
             step.exerciseName,

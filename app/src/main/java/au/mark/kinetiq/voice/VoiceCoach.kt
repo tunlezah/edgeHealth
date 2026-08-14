@@ -13,12 +13,27 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+
+/** Lifecycle of the TTS engine; FAILED means init failed after a retry and speech is muted. */
+enum class TtsStatus { IDLE, INITIALIZING, READY, FAILED }
+
+/** What to do after a TTS init callback given the engine status and prior attempt count. */
+enum class TtsInitAction { READY, RETRY, FAIL }
+
+internal fun nextInitAction(status: Int, attempts: Int): TtsInitAction = when {
+    status == TextToSpeech.SUCCESS -> TtsInitAction.READY
+    attempts < VoiceCoach.MAX_INIT_ATTEMPTS -> TtsInitAction.RETRY
+    else -> TtsInitAction.FAIL
+}
 
 /**
  * On-device TTS coach.
@@ -28,6 +43,8 @@ import kotlinx.coroutines.Dispatchers
  *  - Requests transient-may-duck audio focus so cues duck the user's music
  *    instead of stopping it, releasing focus as soon as the queue drains.
  *  - Countdown beeps are synthesized with [ToneGenerator] — no bundled audio files.
+ *  - Engine init failure retries once, then surfaces [TtsStatus.FAILED] so the UI
+ *    can say the voice is unavailable; sessions keep running silently.
  *
  * Pre-warm by calling [warmUp] before a session starts.
  */
@@ -38,6 +55,10 @@ class VoiceCoach @Inject constructor(@ApplicationContext private val context: Co
     private var tts: TextToSpeech? = null
     private var ready = false
     private var pendingOnReady = mutableListOf<() -> Unit>()
+    private var initAttempts = 0
+
+    private val _status = MutableStateFlow(TtsStatus.IDLE)
+    val status: StateFlow<TtsStatus> = _status.asStateFlow()
 
     @Volatile var settings: VoiceSettings = VoiceSettings()
 
@@ -46,19 +67,62 @@ class VoiceCoach @Inject constructor(@ApplicationContext private val context: Co
     private var focusRequest: AudioFocusRequest? = null
     private var utteranceSeq = 0
 
+    internal val pendingCountForTest: Int get() = pendingOnReady.size
+    internal fun utteranceCountForTest(): Int = utteranceCount.get()
+
     fun warmUp(onReady: (() -> Unit)? = null) {
         if (ready) { onReady?.invoke(); return }
-        onReady?.let { pendingOnReady.add(it) }
+        onReady?.let { enqueuePending(it) }
+        if (_status.value == TtsStatus.FAILED) {
+            // Engine is known-dead: run callbacks so callers (session start) proceed silently.
+            drainPending()
+            return
+        }
         if (tts != null) return
+        _status.value = TtsStatus.INITIALIZING
         tts = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                configureVoice()
-                installListener()
-                ready = true
-                pendingOnReady.forEach { it() }
-                pendingOnReady.clear()
+            when (nextInitAction(status, ++initAttempts)) {
+                TtsInitAction.READY -> {
+                    configureVoice()
+                    installListener()
+                    ready = true
+                    initAttempts = 0
+                    _status.value = TtsStatus.READY
+                    drainPending()
+                }
+                TtsInitAction.RETRY -> {
+                    tts?.shutdown()
+                    tts = null
+                    scope.launch { delay(2_000); warmUp() }
+                }
+                TtsInitAction.FAIL -> {
+                    tts?.shutdown()
+                    tts = null
+                    _status.value = TtsStatus.FAILED
+                    drainPending()
+                }
             }
         }
+    }
+
+    /** User-triggered retry after a FAILED init (banner button / Settings test). */
+    fun retryInit() {
+        if (ready) return
+        initAttempts = 0
+        _status.value = TtsStatus.IDLE
+        tts = null
+        warmUp()
+    }
+
+    private fun enqueuePending(block: () -> Unit) {
+        if (pendingOnReady.size >= MAX_PENDING_UTTERANCES) pendingOnReady.removeAt(0)
+        pendingOnReady.add(block)
+    }
+
+    private fun drainPending() {
+        val toRun = pendingOnReady.toList()
+        pendingOnReady.clear()
+        toRun.forEach { it() }
     }
 
     private fun configureVoice() {
@@ -83,35 +147,35 @@ class VoiceCoach @Inject constructor(@ApplicationContext private val context: Co
     private fun installListener() {
         tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {}
-            override fun onDone(utteranceId: String?) {
-                if (utteranceCount.decrementAndGet() <= 0) abandonFocus()
-            }
+            override fun onDone(utteranceId: String?) = onUtteranceFinished()
 
             @Deprecated("Deprecated in API level 21")
-            override fun onError(utteranceId: String?) {
-                if (utteranceCount.decrementAndGet() <= 0) abandonFocus()
-            }
+            override fun onError(utteranceId: String?) = onUtteranceFinished()
 
-            override fun onError(utteranceId: String?, errorCode: Int) {
-                if (utteranceCount.decrementAndGet() <= 0) abandonFocus()
-            }
+            override fun onError(utteranceId: String?, errorCode: Int) = onUtteranceFinished()
         })
+    }
+
+    /** Clamped at zero: a stale onDone racing stopSpeaking must never drive the count negative. */
+    internal fun onUtteranceFinished() {
+        if (utteranceCount.updateAndGet { (it - 1).coerceAtLeast(0) } == 0) abandonFocus()
     }
 
     /** Queues a spoken cue. Cues never overlap; focus ducks other audio while speaking. */
     fun speak(text: String, flush: Boolean = false) {
         if (text.isBlank()) return
+        if (_status.value == TtsStatus.FAILED) return
         val engine = tts ?: run { warmUp { speak(text, flush) }; return }
-        if (!ready) { pendingOnReady.add { speak(text, flush) }; return }
+        if (!ready) { enqueuePending { speak(text, flush) }; return }
 
         engine.setSpeechRate(settings.speechRate.coerceIn(0.5f, 2.0f))
         requestFocus()
-        utteranceCount.incrementAndGet()
         val params = Bundle().apply {
             putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, settings.volume.coerceIn(0f, 1f))
         }
         val mode = if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
-        if (flush) utteranceCount.set(1)
+        if (flush) utteranceCount.set(0)
+        utteranceCount.incrementAndGet()
         engine.speak(text, mode, params, "kinetiq-${utteranceSeq++}")
     }
 
@@ -174,5 +238,14 @@ class VoiceCoach @Inject constructor(@ApplicationContext private val context: Co
         tts?.shutdown()
         tts = null
         ready = false
+        if (_status.value != TtsStatus.FAILED) _status.value = TtsStatus.IDLE
+    }
+
+    companion object {
+        /** Init retries before giving up and surfacing FAILED (first attempt + one retry). */
+        const val MAX_INIT_ATTEMPTS = 2
+
+        /** Cap on cues queued while the engine is still initializing. */
+        const val MAX_PENDING_UTTERANCES = 16
     }
 }

@@ -78,10 +78,19 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val voiceStatus = voiceCoach.status
+
     fun testVoice() {
         viewModelScope.launch {
             voiceCoach.settings = settings.value.voice
+            if (voiceCoach.status.value == au.mark.kinetiq.voice.TtsStatus.FAILED) voiceCoach.retryInit()
             voiceCoach.warmUp { voiceCoach.speak("G'day! This is your Kinetiq coach. Standing climb — resistance 8, around 65 r p m.") }
+            kotlinx.coroutines.delay(3_000)
+            ioMessage.value = if (voiceCoach.status.value == au.mark.kinetiq.voice.TtsStatus.FAILED) {
+                "Voice engine failed to start. Cues will be silent — open System TTS settings below."
+            } else {
+                "Voice test played. If you heard nothing, check media volume and the offline voice data."
+            }
         }
     }
 
@@ -155,6 +164,14 @@ fun SettingsScreen(
         Text("Speech rate: ${"%.1f".format(voice.speechRate)}×", style = MaterialTheme.typography.bodyMedium)
         Slider(value = voice.speechRate, valueRange = 0.5f..1.8f, onValueChange = { v -> viewModel.set { setVoice(voice.copy(speechRate = v)) } })
         OutlinedButton(onClick = viewModel::testVoice) { Text("Test voice") }
+        val voiceStatus by viewModel.voiceStatus.collectAsState()
+        if (voiceStatus == au.mark.kinetiq.voice.TtsStatus.FAILED) {
+            Text(
+                "Voice engine unavailable — cues will be silent. Try the system TTS settings below.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         OutlinedButton(onClick = {
             runCatching { context.startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }) { Text("System TTS settings (download offline en-AU voice data)") }
