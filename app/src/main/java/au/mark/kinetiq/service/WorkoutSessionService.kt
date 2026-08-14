@@ -11,6 +11,7 @@ import android.os.SystemClock
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import au.mark.kinetiq.KinetiqApp
@@ -39,6 +40,9 @@ enum class StopDecision { ARM, FINISH }
 
 internal fun stopArmDecision(nowMs: Long, armedUntilMs: Long): StopDecision =
     if (nowMs < armedUntilMs) StopDecision.FINISH else StopDecision.ARM
+
+/** A start command must never clobber a live (unfinished) session. */
+internal fun shouldIgnoreStart(currentFinished: Boolean?): Boolean = currentFinished == false
 
 /**
  * Foreground service that runs the workout: an elapsed-realtime-based timer (accurate across
@@ -80,9 +84,13 @@ class WorkoutSessionService : LifecycleService() {
         super.onStartCommand(intent, flags, startId)
         when (intent?.action) {
             ACTION_START -> {
-                val payload = intent.getStringExtra(EXTRA_SESSION_JSON)
-                val name = intent.getStringExtra(EXTRA_SESSION_NAME) ?: "Workout"
-                if (payload != null) startSession(json.decodeFromString(GeneratedSession.serializer(), payload), name)
+                if (shouldIgnoreStart(stateHolder.state.value?.finished)) {
+                    updateNotification() // live session: refresh, never clobber
+                } else {
+                    val payload = intent.getStringExtra(EXTRA_SESSION_JSON)
+                    val name = intent.getStringExtra(EXTRA_SESSION_NAME) ?: "Workout"
+                    if (payload != null) startSession(json.decodeFromString(GeneratedSession.serializer(), payload), name)
+                }
             }
             ACTION_RESUME_SNAPSHOT -> restoreFromSnapshot()
             ACTION_RESUME_STOPPED -> restoreFromSnapshot(fromStopped = true)
@@ -470,6 +478,9 @@ class WorkoutSessionService : LifecycleService() {
                         session = state.session,
                     )
                 }.getOrElse { -1L }
+
+                // Keep the home-screen widget's "Repeat: <name>" and streak current.
+                runCatching { au.mark.kinetiq.widget.KinetiqWidget().updateAll(this@WorkoutSessionService) }
 
                 stateHolder.completed(
                     CompletedSummary(

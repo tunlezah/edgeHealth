@@ -21,7 +21,7 @@ the work is not done. See IMPLEMENTATION_PLAN.md for rules.
 - [x] P1-1 Get-ready prepare phase (10 s; tap-to-skip to 3 s; 3 s resume countdown; PrepareView; notification state)
 - [x] P1-3 Summary: sessionId identity, global navigate-once, Home summary card, PlayerScreen simplification
 - [x] P1-2 Stop confirmation (dialog + two-stage notification) + 10-min stopped-snapshot recovery
-- [ ] P1-4 Widget/start guards + widget updateAll on finish
+- [x] P1-4 Widget/start guards + widget updateAll on finish
 - [ ] P1-8 Health Connect: permission pre-check, per-timestamp zone offsets, autoRecorded metadata + clientRecordId, retry actions (Summary + History), markHcWritten wired
 
 ## Phase 2 — Rest model, player, themes (PHASE2_REST_PLAYER_THEMES.md)

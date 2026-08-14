@@ -41,6 +41,11 @@ class MainViewModel @Inject constructor(
     val pendingPlayerLaunch = MutableStateFlow(false)
 
     fun repeatLastWorkout(context: android.content.Context) {
+        // A live session must never be clobbered by a widget tap — just open the player.
+        if (sessionStateHolder.state.value != null) {
+            pendingPlayerLaunch.value = true
+            return
+        }
         viewModelScope.launch {
             val last = workoutRepository.lastSession() ?: return@launch
             val session = last.session ?: return@launch
