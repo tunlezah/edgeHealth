@@ -252,6 +252,26 @@ fun SettingsScreen(
             )
         }
 
+        SectionHeader("Workout defaults")
+        Text("Rest between exercises (new workouts)", style = MaterialTheme.typography.bodyMedium)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            au.mark.kinetiq.data.model.RestMode.entries.forEach { mode ->
+                FilterChip(
+                    selected = settings.defaultRestMode == mode,
+                    onClick = { viewModel.set { setDefaultRestMode(mode) } },
+                    label = {
+                        Text(
+                            when (mode) {
+                                au.mark.kinetiq.data.model.RestMode.STANDARD -> "Standard"
+                                au.mark.kinetiq.data.model.RestMode.RECOVERY -> "Recovery"
+                                au.mark.kinetiq.data.model.RestMode.CONTINUOUS -> "Continuous"
+                            }
+                        )
+                    },
+                )
+            }
+        }
+
         SectionHeader("Workout reminders")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("Mon" to 1, "Tue" to 2, "Wed" to 3, "Thu" to 4, "Fri" to 5, "Sat" to 6, "Sun" to 7).forEach { (label, day) ->

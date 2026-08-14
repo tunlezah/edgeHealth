@@ -26,7 +26,7 @@ the work is not done. See IMPLEMENTATION_PLAN.md for rules.
 
 ## Phase 2 — Rest model, player, themes (PHASE2_REST_PLAYER_THEMES.md)
 
-- [ ] P2-A1 RestMode enum + GeneratorConfig field (workRestRatio deprecated, kept) + settings keys + Builder chips + continuous notice + Settings default row
+- [x] P2-A1 RestMode enum + GeneratorConfig field (workRestRatio deprecated, kept) + settings keys + Builder chips + continuous notice + Settings default row
 - [x] P2-A4 Mode-driven rests in generator (setupChange, recoveryRestSec, restBetween), new solver, continuous next-up cue + RestModeTest
 - [ ] P2-A2 Skippable rests (tap-anywhere + button)
 - [x] P2-A3 Trailing-rest regression test
@@ -46,7 +46,7 @@ the work is not done. See IMPLEMENTATION_PLAN.md for rules.
 - [ ] P2-B10i Tab highlight on nested routes
 - [ ] P2-B10j Calendar day semantics + Mon/Tue headers
 - [ ] P2-B10k Slider semantics + volume % readout
-- [ ] P2-B10l Builder preview edit protection (banner + regenerate confirm)
+- [x] P2-B10l Builder preview edit protection (banner + regenerate confirm)
 - [ ] P2-B10m rememberSaveable (Summary name, History month, manual entry)
 - [ ] P2-B10n PlanScreen goal-aware copy; drop “See RESEARCH.md”
 - [ ] P2-B10o Summary re-save on rename

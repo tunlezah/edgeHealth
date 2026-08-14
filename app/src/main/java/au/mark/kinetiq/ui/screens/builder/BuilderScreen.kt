@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -36,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import au.mark.kinetiq.data.model.Category
+import au.mark.kinetiq.data.model.displayName
 import au.mark.kinetiq.data.model.GeneratedSession
 import au.mark.kinetiq.data.model.GeneratorConfig
 import au.mark.kinetiq.data.model.Intensity
@@ -52,6 +54,7 @@ import au.mark.kinetiq.ui.components.SectionHeader
 import au.mark.kinetiq.ui.components.formatSec
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -61,6 +64,11 @@ data class BuilderUiState(
     val preview: GeneratedSession? = null,
     val warnings: List<GeneratorWarning> = emptyList(),
     val generating: Boolean = false,
+    /** Config changed since the preview was generated — preview kept, banner shown. */
+    val configChanged: Boolean = false,
+    /** The user hand-edited the preview (reorder/swap/remove). */
+    val edited: Boolean = false,
+    val showContinuousNotice: Boolean = false,
 )
 
 @HiltViewModel
@@ -74,19 +82,42 @@ class BuilderViewModel @Inject constructor(
     val uiState = MutableStateFlow(BuilderUiState())
 
     init {
-        // Start from the last used config when one exists.
+        // Start from the last used config when one exists; otherwise seed the settings default.
         viewModelScope.launch {
-            settingsRepository.lastConfigJson.collect { raw ->
-                if (raw != null && uiState.value.preview == null) {
-                    runCatching { json.decodeFromString(GeneratorConfig.serializer(), raw) }
-                        .onSuccess { cfg -> uiState.value = uiState.value.copy(config = cfg) }
+            val raw = settingsRepository.lastConfigJson.first()
+            val restored = raw?.let {
+                runCatching { json.decodeFromString(GeneratorConfig.serializer(), it) }.getOrNull()
+            }
+            uiState.value = uiState.value.copy(
+                config = restored
+                    ?: uiState.value.config.copy(restMode = settingsRepository.current().defaultRestMode),
+            )
+        }
+    }
+
+    /** Keeps a stale preview visible (banner) instead of silently discarding hand edits. */
+    fun updateConfig(transform: (GeneratorConfig) -> GeneratorConfig) {
+        val hadPreview = uiState.value.preview != null
+        uiState.value = uiState.value.copy(
+            config = transform(uiState.value.config),
+            configChanged = hadPreview,
+        )
+    }
+
+    fun selectRestMode(mode: au.mark.kinetiq.data.model.RestMode) {
+        updateConfig { it.copy(restMode = mode) }
+        if (mode == au.mark.kinetiq.data.model.RestMode.CONTINUOUS) {
+            viewModelScope.launch {
+                if (!settingsRepository.current().continuousNoticeSeen) {
+                    uiState.value = uiState.value.copy(showContinuousNotice = true)
                 }
             }
         }
     }
 
-    fun updateConfig(transform: (GeneratorConfig) -> GeneratorConfig) {
-        uiState.value = uiState.value.copy(config = transform(uiState.value.config), preview = null, warnings = emptyList())
+    fun dismissContinuousNotice() {
+        viewModelScope.launch { settingsRepository.setContinuousNoticeSeen(true) }
+        uiState.value = uiState.value.copy(showContinuousNotice = false)
     }
 
     fun generate() {
@@ -111,6 +142,7 @@ class BuilderViewModel @Inject constructor(
             settingsRepository.setLastConfigJson(json.encodeToString(GeneratorConfig.serializer(), uiState.value.config))
             uiState.value = uiState.value.copy(
                 preview = result.session, warnings = result.warnings, generating = false,
+                configChanged = false, edited = false,
             )
         }
     }
@@ -164,13 +196,14 @@ class BuilderViewModel @Inject constructor(
         val newSteps = transform(session.plan.steps)
         uiState.value = uiState.value.copy(
             preview = session.copy(plan = session.plan.copy(steps = newSteps, totalSec = newSteps.sumOf { it.durationSec })),
+            edited = true,
         )
     }
 
     fun start(context: android.content.Context) {
         val session = uiState.value.preview ?: return
         val name = "${session.config.totalDurationMin} min " +
-            session.config.categories.joinToString("+") { it.name.lowercase().replaceFirstChar(Char::uppercase) }
+            session.config.categories.joinToString("+") { it.displayName() }
         WorkoutSessionService.start(context, json.encodeToString(GeneratedSession.serializer(), session), name)
     }
 }
@@ -181,6 +214,41 @@ fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderV
     val state by viewModel.uiState.collectAsState()
     val config = state.config
     val context = LocalContext.current
+    var confirmRegenerate by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    if (state.showContinuousNotice) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = viewModel::dismissContinuousNotice,
+            title = { Text("Continuous mode") },
+            text = {
+                Text(
+                    "Continuous mode removes rests entirely. The next exercise is announced during " +
+                        "the last 5 seconds of the current one. A short 10-second pause is still inserted " +
+                        "when you need to change equipment or springs. Skip any step from the player if " +
+                        "you need a breather."
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = viewModel::dismissContinuousNotice) { Text("Got it") }
+            },
+        )
+    }
+    if (confirmRegenerate) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmRegenerate = false },
+            title = { Text("Regenerate preview?") },
+            text = { Text("Regenerating discards your manual edits to the preview.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    confirmRegenerate = false
+                    viewModel.generate()
+                }) { Text("Regenerate") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { confirmRegenerate = false }) { Text("Keep edits") }
+            },
+        )
+    }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -210,7 +278,7 @@ fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderV
                                 it.copy(categories = if (selected) it.categories - cat else it.categories + cat)
                             }
                         },
-                        label = { Text(if (selected) "$order. ${cat.name.lowercase()}" else cat.name.lowercase()) },
+                        label = { Text(if (selected) "$order. ${cat.displayName()}" else cat.displayName()) },
                     )
                 }
             }
@@ -226,11 +294,32 @@ fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderV
             )
         }
         item {
-            SectionHeader("Work : rest ratio — ${"%.1f".format(config.workRestRatio)} : 1")
-            Slider(
-                value = config.workRestRatio,
-                onValueChange = { v -> viewModel.updateConfig { it.copy(workRestRatio = v) } },
-                valueRange = 1f..4f,
+            SectionHeader("Rest between exercises")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                au.mark.kinetiq.data.model.RestMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = config.restMode == mode,
+                        onClick = { viewModel.selectRestMode(mode) },
+                        label = {
+                            Text(
+                                when (mode) {
+                                    au.mark.kinetiq.data.model.RestMode.STANDARD -> "Standard"
+                                    au.mark.kinetiq.data.model.RestMode.RECOVERY -> "Recovery"
+                                    au.mark.kinetiq.data.model.RestMode.CONTINUOUS -> "Continuous"
+                                }
+                            )
+                        },
+                    )
+                }
+            }
+            Text(
+                when (config.restMode) {
+                    au.mark.kinetiq.data.model.RestMode.STANDARD -> "15–20 s transitions between exercises"
+                    au.mark.kinetiq.data.model.RestMode.RECOVERY -> "30–45 s rests, scaled to intensity"
+                    au.mark.kinetiq.data.model.RestMode.CONTINUOUS -> "No rests — the next exercise is announced over the last 5 s"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         item {
@@ -257,10 +346,25 @@ fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderV
         }
         item {
             Button(
-                onClick = viewModel::generate,
+                onClick = { if (state.edited) confirmRegenerate = true else viewModel.generate() },
                 enabled = config.categories.isNotEmpty() && !state.generating,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(if (state.preview == null) "Generate session" else "Regenerate") }
+        }
+        if (state.configChanged && state.preview != null) {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(
+                            "Settings changed — this preview no longer matches.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        OutlinedButton(onClick = {
+                            if (state.edited) confirmRegenerate = true else viewModel.generate()
+                        }) { Text("Regenerate") }
+                    }
+                }
+            }
         }
         items(state.warnings.size) { i ->
             val warning = state.warnings[i]
