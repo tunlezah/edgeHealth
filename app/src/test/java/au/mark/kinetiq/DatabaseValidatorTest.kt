@@ -135,4 +135,51 @@ class DatabaseValidatorTest {
         val result = DatabaseValidator.validate(db, AnimationRegistry.ids)
         assertThat(result.problems.any { it.contains("does not resolve") }).isTrue()
     }
+
+    @Test
+    fun `reference year bound tracks the current year`() {
+        fun withYear(year: Int) = ExerciseDatabaseFile(
+            1,
+            listOf(
+                syntheticExercise().copy(
+                    references = listOf(
+                        au.mark.kinetiq.data.model.Reference(
+                            "A real title", "Someone A", year, "A Journal", "10.1000/x", "A finding.",
+                        )
+                    )
+                )
+            ),
+            emptyList(),
+        )
+        val nextYear = java.time.Year.now().value + 1
+        val okResult = DatabaseValidator.validate(withYear(nextYear), AnimationRegistry.ids)
+        assertThat(okResult.problems.filter { it.contains("implausible year") }).isEmpty()
+        val badResult = DatabaseValidator.validate(withYear(nextYear + 1), AnimationRegistry.ids)
+        assertThat(badResult.problems.any { it.contains("implausible year") }).isTrue()
+    }
+
+    @Test
+    fun `cadence bounds are symmetric`() {
+        fun spinWithCadence(low: Int, high: Int) = ExerciseDatabaseFile(
+            1,
+            listOf(
+                syntheticExercise().copy(
+                    category = Category.SPIN,
+                    kind = ExerciseKind.INTERVAL_SEGMENT,
+                    machine = au.mark.kinetiq.data.model.MachineCue(
+                        spin = au.mark.kinetiq.data.model.SpinCue(
+                            resistanceLow = 0.4f, resistanceHigh = 0.5f,
+                            cadenceRpmLow = low, cadenceRpmHigh = high,
+                            position = "seated flat",
+                        )
+                    ),
+                )
+            ),
+            emptyList(),
+        )
+        val highRange = DatabaseValidator.validate(spinWithCadence(135, 138), AnimationRegistry.ids)
+        assertThat(highRange.problems.filter { it.contains("implausible cadence") }).isEmpty()
+        val tooLow = DatabaseValidator.validate(spinWithCadence(30, 60), AnimationRegistry.ids)
+        assertThat(tooLow.problems.any { it.contains("implausible cadence") }).isTrue()
+    }
 }

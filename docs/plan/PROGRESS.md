@@ -5,7 +5,7 @@ the work is not done. See IMPLEMENTATION_PLAN.md for rules.
 
 ## Phase 1 — Trust & safety (PHASE1_TRUST_SAFETY.md)
 
-- [ ] P1-9 DatabaseValidator bounds (year dynamic, cadence symmetric)
+- [x] P1-9 DatabaseValidator bounds (year dynamic, cadence symmetric)
 - [ ] P1-5 Generator time-math: redistribute(), routine-fit guard, budget warnings, plannedTotalSec, minViableDurationMin, high-adiposity reorder
 - [ ] P1-5T WorkoutGeneratorTimeBudgetTest (full config matrix ±5%)
 - [ ] P1-7 VoiceCoach: TtsStatus flow, retry, bounded queue, counter clamp, Player/Settings banners + VoiceCoachStatusTest
