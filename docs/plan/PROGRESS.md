@@ -28,13 +28,13 @@ the work is not done. See IMPLEMENTATION_PLAN.md for rules.
 
 - [x] P2-A1 RestMode enum + GeneratorConfig field (workRestRatio deprecated, kept) + settings keys + Builder chips + continuous notice + Settings default row
 - [x] P2-A4 Mode-driven rests in generator (setupChange, recoveryRestSec, restBetween), new solver, continuous next-up cue + RestModeTest
-- [ ] P2-A2 Skippable rests (tap-anywhere + button)
+- [x] P2-A2 Skippable rests (tap-anywhere + button)
 - [x] P2-A3 Trailing-rest regression test
-- [ ] P2-B5 Machine cue prominence (titleLarge/onSurface; name headlineLarge)
-- [ ] P2-B6 Time-weighted progress + minutes-left caption
-- [ ] P2-B7 Auto-pause on call / audio-becoming-noisy
-- [ ] P2-B8 Keep-screen-on saveable + persisted + cleared while paused
-- [ ] P2-B9 “+30” control legibility
+- [x] P2-B5 Machine cue prominence (titleLarge/onSurface; name headlineLarge)
+- [x] P2-B6 Time-weighted progress + minutes-left caption
+- [x] P2-B7 Auto-pause on call / audio-becoming-noisy
+- [x] P2-B8 Keep-screen-on saveable + persisted + cleared while paused
+- [x] P2-B9 "+30" control legibility
 - [ ] P2-B10a Numeric keyboards (all number fields)
 - [ ] P2-B10b isError + supporting text on range-validated fields
 - [ ] P2-B10c Delete confirmations (History, Home saved workouts)

@@ -225,7 +225,47 @@ class WorkoutSessionService : LifecycleService() {
         }
     }
 
+    private var noisyReceiver: android.content.BroadcastReceiver? = null
+    private var audioModeListener: android.media.AudioManager.OnModeChangedListener? = null
+
+    /**
+     * A timed workout that keeps counting through a phone call effectively destroys the session —
+     * auto-pause on incoming/active calls and on headphone disconnects. Resume stays manual
+     * (and gets the 3-2-1 countdown).
+     */
+    private fun registerAutoPause() {
+        if (noisyReceiver != null) return
+        noisyReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: Context?, i: Intent?) = autoPause()
+        }.also {
+            registerReceiver(it, android.content.IntentFilter(android.media.AudioManager.ACTION_AUDIO_BECOMING_NOISY))
+        }
+        val am = getSystemService(android.media.AudioManager::class.java)
+        audioModeListener = android.media.AudioManager.OnModeChangedListener { mode ->
+            if (mode == android.media.AudioManager.MODE_RINGTONE ||
+                mode == android.media.AudioManager.MODE_IN_CALL ||
+                mode == android.media.AudioManager.MODE_IN_COMMUNICATION
+            ) autoPause()
+        }.also { am.addOnModeChangedListener(mainExecutor, it) }
+    }
+
+    private fun unregisterAutoPause() {
+        noisyReceiver?.let { runCatching { unregisterReceiver(it) } }
+        noisyReceiver = null
+        audioModeListener?.let {
+            runCatching { getSystemService(android.media.AudioManager::class.java).removeOnModeChangedListener(it) }
+        }
+        audioModeListener = null
+    }
+
+    private fun autoPause() {
+        val state = stateHolder.state.value ?: return
+        if (state.paused || state.finished) return
+        setPaused(true)
+    }
+
     private fun goForeground() {
+        registerAutoPause()
         val notification = buildNotification()
         val hasActivityRecognition = checkSelfPermission(android.Manifest.permission.ACTIVITY_RECOGNITION) ==
             PackageManager.PERMISSION_GRANTED
@@ -636,6 +676,7 @@ class WorkoutSessionService : LifecycleService() {
 
     override fun onDestroy() {
         tickerJob?.cancel()
+        unregisterAutoPause()
         wakeLock?.let { if (it.isHeld) it.release() }
         mediaSession?.release()
         voice.stopSpeaking()

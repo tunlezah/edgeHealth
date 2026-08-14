@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreTime
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RecordVoiceOver
@@ -44,6 +44,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import au.mark.kinetiq.anim.ExerciseAnimationView
 import au.mark.kinetiq.data.model.StepType
 import au.mark.kinetiq.data.repo.ExerciseRepository
@@ -52,6 +53,7 @@ import au.mark.kinetiq.service.WorkoutSessionService
 import au.mark.kinetiq.ui.components.SettingSwitchRow
 import au.mark.kinetiq.voice.TtsStatus
 import au.mark.kinetiq.voice.VoiceCoach
+import kotlinx.coroutines.launch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
@@ -60,10 +62,15 @@ class PlayerViewModel @Inject constructor(
     val stateHolder: SessionStateHolder,
     private val voice: VoiceCoach,
     private val exerciseRepository: ExerciseRepository,
+    private val settingsRepository: au.mark.kinetiq.data.repo.SettingsRepository,
 ) : ViewModel() {
     val voiceStatus = voice.status
 
     fun retryVoice() = voice.retryInit()
+
+    fun persistKeepScreenOn(v: Boolean) {
+        viewModelScope.launch { settingsRepository.setKeepScreenOn(v) }
+    }
 
     suspend fun explainAgain() {
         val state = stateHolder.state.value ?: return
@@ -81,7 +88,7 @@ fun PlayerScreen(
     val state by viewModel.stateHolder.state.collectAsState()
     val context = LocalContext.current
     val activity = LocalActivity.current
-    var keepScreenOn by remember { mutableStateOf(keepScreenOnDefault) }
+    var keepScreenOn by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(keepScreenOnDefault) }
     var explainRequested by remember { mutableStateOf(0) }
     var showStopConfirm by remember { mutableStateOf(false) }
 
@@ -102,10 +109,11 @@ fun PlayerScreen(
         )
     }
 
-    // FLAG_KEEP_SCREEN_ON while the player is visible (toggleable).
-    DisposableEffect(keepScreenOn) {
+    // FLAG_KEEP_SCREEN_ON while the player is visible and running; the screen may sleep on pause.
+    val isPaused = state?.paused == true
+    DisposableEffect(keepScreenOn, isPaused) {
         val window = activity?.window
-        if (keepScreenOn) window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        if (keepScreenOn && !isPaused) window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         else window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
@@ -131,22 +139,34 @@ fun PlayerScreen(
         return
     }
     val remainingSec = (s.stepRemainingMs / 1000).toInt()
-    val progress = if (step.durationSec > 0)
-        1f - (s.stepRemainingMs.toFloat() / (step.durationSec * 1000f)) else 0f
 
     Column(
         Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Block progress
+        // Time-weighted overall progress: a 5-minute segment and a 15-second rest no longer
+        // advance the bar equally. Estimated against the planned totals — +30s extensions and
+        // skips make it approximate; clamping absorbs any overrun.
+        val plan = s.session.plan
+        val elapsedInStep = (step.durationSec - remainingSec).coerceAtLeast(0)
+        val elapsedSec = remember(s.stepIndex, plan) {
+            plan.steps.take(s.stepIndex).sumOf { it.durationSec }
+        } + elapsedInStep
+        val planTotalSec = plan.totalSec.coerceAtLeast(1)
+        val minutesLeft = ((planTotalSec - elapsedSec).coerceAtLeast(0) + 59) / 60
         Text(
             "${s.sessionName} · step ${s.stepIndex + 1} of ${s.totalSteps}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         LinearProgressIndicator(
-            progress = { (s.stepIndex + progress.coerceIn(0f, 1f)) / s.totalSteps },
+            progress = { (elapsedSec.toFloat() / planTotalSec).coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        )
+        Text(
+            "~$minutesLeft min left",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         val voiceStatus by viewModel.voiceStatus.collectAsState()
@@ -171,49 +191,79 @@ fun PlayerScreen(
 
         Text(
             step.exerciseName,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.primary,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         step.machineCueText?.let {
-            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-
-        // Big timer
-        Text(
-            "%d:%02d".format(remainingSec / 60, remainingSec % 60),
-            style = MaterialTheme.typography.displayLarge,
-            modifier = Modifier
-                .padding(vertical = 4.dp)
-                .semantics { contentDescription = "$remainingSec seconds remaining" },
-        )
-
-        // Animation — large
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-            ExerciseAnimationView(
-                animationId = step.animationId,
-                modifier = Modifier.fillMaxWidth().aspectRatio(1.05f),
-                contentDesc = "Animation of ${step.exerciseName}",
-                paused = s.paused,
+            // The machine cue is what the user reads from across the room — keep it big and
+            // high-contrast, never a muted caption.
+            Text(
+                it,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 8.dp),
             )
         }
 
-        // Next up preview during rests/transitions
-        val next = s.nextStep
-        if (next != null && (step.type == StepType.REST || step.type == StepType.TRANSITION)) {
-            Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ExerciseAnimationView(
-                        animationId = next.animationId,
-                        modifier = Modifier.size(84.dp),
-                        contentDesc = "Next: ${next.exerciseName}",
-                    )
-                    Column(Modifier.padding(start = 10.dp)) {
-                        Text("Next up", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(next.exerciseName, style = MaterialTheme.typography.titleMedium)
+        val isRestStep = step.type == StepType.REST || step.type == StepType.TRANSITION
+        // Tap-anywhere-to-skip applies to the content region only (timer, animation, next-up) —
+        // the control buttons below keep their own touch handling.
+        Column(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .then(
+                    if (isRestStep) Modifier.clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClickLabel = "Skip rest",
+                    ) { WorkoutSessionService.command(context, WorkoutSessionService.ACTION_SKIP) }
+                    else Modifier
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // Big timer
+            Text(
+                "%d:%02d".format(remainingSec / 60, remainingSec % 60),
+                style = MaterialTheme.typography.displayLarge,
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .semantics { contentDescription = "$remainingSec seconds remaining" },
+            )
+
+            // Animation — large
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                ExerciseAnimationView(
+                    animationId = step.animationId,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(1.05f),
+                    contentDesc = "Animation of ${step.exerciseName}",
+                    paused = s.paused,
+                )
+            }
+
+            // Next up preview during rests/transitions
+            val next = s.nextStep
+            if (next != null && isRestStep) {
+                Card(Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ExerciseAnimationView(
+                            animationId = next.animationId,
+                            modifier = Modifier.size(84.dp),
+                            contentDesc = "Next: ${next.exerciseName}",
+                        )
+                        Column(Modifier.padding(start = 10.dp)) {
+                            Text("Next up", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(next.exerciseName, style = MaterialTheme.typography.titleMedium)
+                        }
                     }
                 }
+                androidx.compose.material3.TextButton(
+                    onClick = { WorkoutSessionService.command(context, WorkoutSessionService.ACTION_SKIP) },
+                ) { Text("Skip rest — tap anywhere") }
+                Spacer(Modifier.height(4.dp))
             }
-            Spacer(Modifier.height(8.dp))
         }
 
         // Controls — min 56dp touch targets, TalkBack labels
@@ -235,7 +285,7 @@ fun PlayerScreen(
             FilledIconButton(
                 onClick = { WorkoutSessionService.command(context, WorkoutSessionService.ACTION_EXTEND) },
                 modifier = Modifier.size(56.dp),
-            ) { Icon(Icons.Filled.Add, contentDescription = "Add 30 seconds") }
+            ) { Icon(Icons.Filled.MoreTime, contentDescription = "Add 30 seconds") }
             FilledIconButton(
                 onClick = { showStopConfirm = true },
                 modifier = Modifier.size(56.dp),
@@ -249,7 +299,7 @@ fun PlayerScreen(
         SettingSwitchRow(
             title = "Keep screen on",
             checked = keepScreenOn,
-            onCheckedChange = { keepScreenOn = it },
+            onCheckedChange = { keepScreenOn = it; viewModel.persistKeepScreenOn(it) },
         )
     }
 }
