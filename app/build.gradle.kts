@@ -81,6 +81,8 @@ androidComponents {
     }
 }
 
+val robolectricAndroidAll: Configuration by configurations.creating
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -115,10 +117,28 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.truth)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Robolectric's android-all runtime jar, resolved by Gradle (and therefore cached on CI)
+    // instead of Robolectric's own Maven fetcher, which has no network on CI runners.
+    robolectricAndroidAll("org.robolectric:android-all-instrumented:15-robolectric-12650502-i7")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+val prepareRobolectricJars by tasks.registering(Copy::class) {
+    from(robolectricAndroidAll)
+    into(layout.buildDirectory.dir("robolectric-android-all"))
+}
+
+tasks.withType<Test>().configureEach {
+    dependsOn(prepareRobolectricJars)
+    systemProperty("robolectric.offlineMode", "true")
+    systemProperty(
+        "robolectric.dependency.dir",
+        layout.buildDirectory.dir("robolectric-android-all").get().asFile.absolutePath,
+    )
 }

@@ -20,6 +20,10 @@ import javax.inject.Singleton
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "kinetiq_settings")
 
 enum class ThemeMode { LIGHT, DARK, AMOLED, SYSTEM }
+
+/** Accent color palette, orthogonal to [ThemeMode]. MINT is the original Kinetiq look. */
+enum class ThemePalette { MINT, OCEAN, EMBER, VIOLET, CITRUS, ROSE, SLATE }
+
 enum class SpringNotation { GENERIC, COUNT }
 
 data class VoiceSettings(
@@ -47,6 +51,7 @@ data class AppSettings(
     val voice: VoiceSettings = VoiceSettings(),
     val machines: MachineSettings = MachineSettings(),
     val theme: ThemeMode = ThemeMode.SYSTEM,
+    val palette: ThemePalette = ThemePalette.MINT,
     val includeLowEvidence: Boolean = false,
     val healthConnectEnabled: Boolean = false,
     val healthConnectWriteback: Boolean = true,
@@ -60,6 +65,10 @@ data class AppSettings(
     val reminderHour: Int = 7,
     val reminderMinute: Int = 0,
     val visceralFatGoal: Boolean = true,
+    /** Default rest model seeded into the Builder for new configs. */
+    val defaultRestMode: au.mark.kinetiq.data.model.RestMode = au.mark.kinetiq.data.model.RestMode.STANDARD,
+    /** One-time "continuous mode removes rests" notice acknowledged. */
+    val continuousNoticeSeen: Boolean = false,
 )
 
 @Singleton
@@ -82,6 +91,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val ellipticalMax = intPreferencesKey("elliptical_max")
         val springNotation = stringPreferencesKey("spring_notation")
         val theme = stringPreferencesKey("theme")
+        val palette = stringPreferencesKey("theme_palette")
         val lowEvidence = booleanPreferencesKey("low_evidence")
         val hcEnabled = booleanPreferencesKey("hc_enabled")
         val hcWriteback = booleanPreferencesKey("hc_writeback")
@@ -95,6 +105,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val reminderMinute = intPreferencesKey("reminder_minute")
         val visceralGoal = booleanPreferencesKey("visceral_goal")
         val lastConfig = stringPreferencesKey("last_config")
+        val restMode = stringPreferencesKey("rest_mode")
+        val continuousNoticeSeen = booleanPreferencesKey("continuous_notice_seen")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -120,6 +132,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
                     ?: SpringNotation.GENERIC,
             ),
             theme = p[Keys.theme]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
+            palette = p[Keys.palette]?.let { runCatching { ThemePalette.valueOf(it) }.getOrNull() } ?: ThemePalette.MINT,
             includeLowEvidence = p[Keys.lowEvidence] ?: false,
             healthConnectEnabled = p[Keys.hcEnabled] ?: false,
             healthConnectWriteback = p[Keys.hcWriteback] ?: true,
@@ -132,6 +145,10 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             reminderHour = p[Keys.reminderHour] ?: 7,
             reminderMinute = p[Keys.reminderMinute] ?: 0,
             visceralFatGoal = p[Keys.visceralGoal] ?: true,
+            defaultRestMode = p[Keys.restMode]?.let {
+                runCatching { au.mark.kinetiq.data.model.RestMode.valueOf(it) }.getOrNull()
+            } ?: au.mark.kinetiq.data.model.RestMode.STANDARD,
+            continuousNoticeSeen = p[Keys.continuousNoticeSeen] ?: false,
         )
     }
 
@@ -156,6 +173,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         it[Keys.springNotation] = m.springNotation.name
     }
     suspend fun setTheme(v: ThemeMode) = edit { it[Keys.theme] = v.name }
+    suspend fun setPalette(v: ThemePalette) = edit { it[Keys.palette] = v.name }
     suspend fun setIncludeLowEvidence(v: Boolean) = edit { it[Keys.lowEvidence] = v }
     suspend fun setHealthConnectEnabled(v: Boolean) = edit { it[Keys.hcEnabled] = v }
     suspend fun setHealthConnectWriteback(v: Boolean) = edit { it[Keys.hcWriteback] = v }
@@ -170,6 +188,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         it[Keys.reminderMinute] = minute
     }
     suspend fun setVisceralGoal(v: Boolean) = edit { it[Keys.visceralGoal] = v }
+    suspend fun setDefaultRestMode(v: au.mark.kinetiq.data.model.RestMode) = edit { it[Keys.restMode] = v.name }
+    suspend fun setContinuousNoticeSeen(v: Boolean) = edit { it[Keys.continuousNoticeSeen] = v }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit(block)

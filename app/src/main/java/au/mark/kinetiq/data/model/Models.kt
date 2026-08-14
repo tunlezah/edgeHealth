@@ -10,6 +10,15 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class Category { FLOOR, REFORMER, SPIN, ELLIPTICAL, BACK }
 
+/** Human-readable category name for chips and labels — never show raw enum spellings. */
+fun Category.displayName(): String = when (this) {
+    Category.FLOOR -> "Floor"
+    Category.REFORMER -> "Reformer"
+    Category.SPIN -> "Spin bike"
+    Category.ELLIPTICAL -> "Elliptical"
+    Category.BACK -> "Back care"
+}
+
 /** DISCRETE = timed exercise with rests; INTERVAL_SEGMENT = coached machine interval. */
 @Serializable
 enum class ExerciseKind { DISCRETE, INTERVAL_SEGMENT }

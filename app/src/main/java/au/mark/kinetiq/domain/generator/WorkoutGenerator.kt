@@ -9,6 +9,7 @@ import au.mark.kinetiq.data.model.GeneratedSession
 import au.mark.kinetiq.data.model.GeneratorConfig
 import au.mark.kinetiq.data.model.Intensity
 import au.mark.kinetiq.data.model.NamedRoutine
+import au.mark.kinetiq.data.model.RestMode
 import au.mark.kinetiq.data.model.SessionBlock
 import au.mark.kinetiq.data.model.SessionStep
 import au.mark.kinetiq.data.model.StepType
@@ -27,6 +28,8 @@ data class GeneratorWarning(
     val message: String,
     val fixLabel: String? = null,
     val fixedConfig: GeneratorConfig? = null,
+    /** Set whenever the plan intentionally deviates from the requested duration. */
+    val plannedTotalSec: Int? = null,
 )
 
 data class GeneratorResult(
@@ -87,12 +90,18 @@ class WorkoutGenerator(
         val cooldownSec = if (config.cooldown) warmCoolSlice(totalSec) else 0
         var mainSec = totalSec - transitionsSec - warmupSec - cooldownSec
         if (mainSec < 5 * 60 * categories.size) {
+            val flooredMain = max(mainSec, 4 * 60 * categories.size)
+            val plannedTotal = flooredMain + warmupSec + cooldownSec + transitionsSec
+            val fixMin = minViableDurationMin(config, categories.size)
             warnings += GeneratorWarning(
-                message = "That leaves under 5 minutes of work per category. Consider a longer session or fewer categories.",
-                fixLabel = "Set ${(5 * categories.size) + ((warmupSec + cooldownSec + transitionsSec) / 60) + 1} min",
-                fixedConfig = config.copy(totalDurationMin = (5 * categories.size) + ((warmupSec + cooldownSec + transitionsSec) / 60) + 1),
+                message = "That leaves under 5 minutes of work per category, so this plan will run " +
+                    "about ${(plannedTotal + 30) / 60} min instead of the ${config.totalDurationMin} min requested. " +
+                    "Consider a longer session or fewer categories.",
+                fixLabel = "Set $fixMin min",
+                fixedConfig = config.copy(totalDurationMin = fixMin),
+                plannedTotalSec = plannedTotal,
             )
-            mainSec = max(mainSec, 4 * 60 * categories.size)
+            mainSec = flooredMain
         }
 
         // --- Split main time across categories by weight ---
@@ -104,7 +113,9 @@ class WorkoutGenerator(
         val steps = mutableListOf<SessionStep>()
         val blocks = mutableListOf<SessionBlock>()
 
-        if (warmupSec > 0) steps += warmupSteps(categories.first(), warmupSec, profile, blockIndex = 0)
+        // Warm-up/cool-down carry sentinel block indices so their minutes never pollute the
+        // first/last block's history and Health Connect records.
+        if (warmupSec > 0) steps += warmupSteps(categories.first(), warmupSec, profile, blockIndex = WARMUP_BLOCK_INDEX)
 
         categories.forEachIndexed { index, cat ->
             if (index > 0) {
@@ -132,7 +143,7 @@ class WorkoutGenerator(
             }
         }
 
-        if (cooldownSec > 0) steps += cooldownSteps(categories.last(), cooldownSec, profile, blockIndex = categories.size - 1)
+        if (cooldownSec > 0) steps += cooldownSteps(categories.last(), cooldownSec, profile, blockIndex = COOLDOWN_BLOCK_INDEX)
 
         // Visceral-fat goal check: >= 50% of WORK time should be MODERATE+ cardio-targeted.
         if (profile.visceralFatGoal && config.useHealthData) {
@@ -153,6 +164,20 @@ class WorkoutGenerator(
                     fixedConfig = cardioCats.firstOrNull()?.let { config.copy(categories = categories + it) },
                 )
             }
+        }
+
+        // Invariant: the plan either lands within 5% of the request, or a warning says exactly
+        // what it will run instead. Never silently off budget.
+        val planTotal = steps.sumOf { it.durationSec }
+        val explained = warnings.any { w ->
+            w.plannedTotalSec?.let { kotlin.math.abs(planTotal - it) <= max(1, planTotal / 20) } == true
+        }
+        if (kotlin.math.abs(planTotal - totalSec) > totalSec / 20 && !explained) {
+            warnings += GeneratorWarning(
+                message = "This plan runs about ${(planTotal + 30) / 60} min instead of the requested " +
+                    "${config.totalDurationMin} min (exercise time limits).",
+                plannedTotalSec = planTotal,
+            )
         }
 
         val plan = WorkoutPlan(steps = steps, blocks = blocks)
@@ -200,54 +225,74 @@ class WorkoutGenerator(
             GeneratorWarning("No ${stationName(cat)} exercises match your constraints — block skipped.")
         )
 
-        // Duration/count solver: how many exercises fit with sensible work+rest times?
-        val ratio = config.workRestRatio.coerceIn(0.5f, 6f)
-        val requested = config.exercisesPerCategory
-        val count: Int
-        var workSec: Int
-        if (requested != null && requested > 0) {
-            count = requested
-            workSec = solveWorkSec(blockSec, count, ratio)
-            if (workSec < 20) {
-                val fixedCount = max(1, countFor(blockSec, 30, ratio))
-                warnings += GeneratorWarning(
-                    message = "$requested exercises in ${blockSec / 60} min leaves only ${workSec}s each — too short to be useful.",
-                    fixLabel = "Use $fixedCount exercises",
-                    fixedConfig = config.copy(exercisesPerCategory = fixedCount),
-                )
-                workSec = max(workSec, 15)
-            }
-        } else {
-            count = countFor(blockSec, defaultWork = 40, ratio = ratio).coerceIn(3, 12)
-            workSec = solveWorkSec(blockSec, count, ratio)
+        // Duration/count solver: how many exercises fit with sensible work + transition times?
+        val nominalRest = when (config.restMode) {
+            RestMode.STANDARD -> 15
+            RestMode.RECOVERY -> recoveryRestSec(config.intensity)
+            RestMode.CONTINUOUS -> 0
         }
+        val requested = config.exercisesPerCategory
+        val count: Int = if (requested != null && requested > 0) requested
+        else countFor(blockSec, defaultWork = 40, restSec = nominalRest).coerceIn(3, 12)
 
         val picked = pickBalanced(candidates, count, highAdiposity)
+        // High-adiposity users get VERY_HIGH work pushed to the back half; a permutation, never a duplicate.
+        val ordered = if (highAdiposity) {
+            val (veryHigh, milder) = picked.partition { it.intensity == Intensity.VERY_HIGH }
+            milder + veryHigh
+        } else picked
+
+        // Rests are per-gap: a setup change (springs, machine, position) earns extra seconds.
+        val rests = ordered.zipWithNext().map { (a, b) -> restBetween(config.restMode, config.intensity, a, b) }
+        val workBudget = (blockSec - rests.sum()).coerceAtLeast(0)
+        val workSec = solveWorkSec(blockSec, ordered.size, rests.sum())
+
+        if (requested != null && requested > 0 && workSec < 20) {
+            val fixedCount = max(1, countFor(blockSec, 30, nominalRest))
+            warnings += GeneratorWarning(
+                message = "$requested exercises in ${blockSec / 60} min leaves only ${workSec}s each — too short to be useful.",
+                fixLabel = "Use $fixedCount exercises",
+                fixedConfig = config.copy(exercisesPerCategory = fixedCount),
+            )
+        }
+
+        // Per-exercise clamps can destroy the solved budget; redistribute the residual.
+        val works = redistribute(
+            initial = List(ordered.size) { workSec },
+            minBound = { i -> ordered[i].minSec },
+            maxBound = { i -> ordered[i].maxSec },
+            targetSec = workBudget,
+        )
+        val actualBlockSec = works.sum() + rests.sum()
+        if (kotlin.math.abs(actualBlockSec - blockSec) > blockSec / 20) {
+            val betterCount = max(1, countFor(blockSec, 40, nominalRest))
+            warnings += GeneratorWarning(
+                message = "Exercise time limits make this ${stationName(cat)} block run " +
+                    "${actualBlockSec / 60} min ${actualBlockSec % 60}s instead of the ${blockSec / 60} min planned.",
+                fixLabel = "Use $betterCount exercises",
+                fixedConfig = config.copy(exercisesPerCategory = betterCount),
+            )
+        }
+
         val steps = mutableListOf<SessionStep>()
-        picked.forEachIndexed { i, ex ->
-            // Cap VERY_HIGH work early in the block for high-adiposity users.
-            val effective = if (highAdiposity && i < picked.size / 2 && ex.intensity == Intensity.VERY_HIGH) {
-                picked.firstOrNull { it.intensity != Intensity.VERY_HIGH && it != ex } ?: ex
-            } else ex
-            val w = workSec.coerceIn(effective.minSec, effective.maxSec)
+        ordered.forEachIndexed { i, ex ->
             steps += SessionStep(
                 type = StepType.WORK,
                 category = cat,
-                exerciseId = effective.id,
-                exerciseName = effective.name,
-                durationSec = w,
-                machineCueText = MachineCueRenderer.renderCue(effective, machines),
-                met = effective.met,
-                animationId = effective.animationId,
+                exerciseId = ex.id,
+                exerciseName = ex.name,
+                durationSec = works[i],
+                machineCueText = MachineCueRenderer.renderCue(ex, machines),
+                met = ex.met,
+                animationId = ex.animationId,
                 blockIndex = blockIndex,
             )
-            if (i < picked.size - 1) {
-                val rest = (w / ratio).roundToInt().coerceIn(10, 90)
+            if (i < ordered.size - 1 && rests[i] > 0) {
                 steps += SessionStep(
                     type = StepType.REST,
                     category = cat,
-                    exerciseName = "Rest",
-                    durationSec = rest,
+                    exerciseName = if (config.restMode == RestMode.CONTINUOUS) "Change setup" else "Rest",
+                    durationSec = rests[i],
                     blockIndex = blockIndex,
                 )
             }
@@ -255,17 +300,95 @@ class WorkoutGenerator(
         return steps to warnings
     }
 
-    /** work = blockSec / (count + (count-1)/ratio) with the last exercise having no rest after it. */
-    internal fun solveWorkSec(blockSec: Int, count: Int, ratio: Float): Int {
-        if (count <= 0) return 0
-        val denom = count + (count - 1) / ratio
-        return (blockSec / denom).toInt()
+    /** True when moving between [a] and [b] requires re-setup (springs, machine presence, body position). */
+    internal fun setupChange(a: Exercise, b: Exercise): Boolean =
+        a.category != b.category ||
+            (a.machine == null) != (b.machine == null) ||
+            a.machine?.reformer?.springs != b.machine?.reformer?.springs ||
+            a.machine?.reformer?.bodyPosition != b.machine?.reformer?.bodyPosition
+
+    /**
+     * RECOVERY-mode rest, scaled inside the 30–45 s evidence window. Longer rests at *lower*
+     * configured intensity is deliberate: RECOVERY is picked by deconditioned users, and an
+     * easier setting means they asked for more breathing room.
+     */
+    internal fun recoveryRestSec(intensity: Intensity): Int = when (intensity) {
+        Intensity.LOW -> 45
+        Intensity.MODERATE -> 40
+        Intensity.HIGH -> 35
+        Intensity.VERY_HIGH -> 30
     }
 
-    private fun countFor(blockSec: Int, defaultWork: Int, ratio: Float): Int {
-        val slot = defaultWork + defaultWork / ratio
-        return max(1, (blockSec / slot).toInt())
+    /** Rest seconds between consecutive picks under [mode]; 0 = no rest step. */
+    internal fun restBetween(mode: RestMode, intensity: Intensity, prev: Exercise, next: Exercise): Int = when (mode) {
+        RestMode.STANDARD -> if (setupChange(prev, next)) 20 else 15
+        RestMode.RECOVERY -> maxOf(recoveryRestSec(intensity), if (setupChange(prev, next)) 20 else 0)
+        RestMode.CONTINUOUS -> if (setupChange(prev, next)) 10 else 0
     }
+
+    /**
+     * Iterative proportional redistribution: clamp each element into its bounds, then spread the
+     * residual against [targetSec] over the elements not pinned at a bound in the residual's
+     * direction. Converges in <= 6 passes or returns the closest achievable split.
+     */
+    internal fun redistribute(
+        initial: List<Int>,
+        minBound: (Int) -> Int,
+        maxBound: (Int) -> Int,
+        targetSec: Int,
+    ): List<Int> {
+        if (initial.isEmpty()) return initial
+        val out = initial.mapIndexed { i, v -> v.coerceIn(minBound(i), maxBound(i)) }.toMutableList()
+        repeat(6) {
+            val residual = targetSec - out.sum()
+            if (kotlin.math.abs(residual) <= 2) return@repeat
+            val adjustable = out.indices.filter { i ->
+                if (residual > 0) out[i] < maxBound(i) else out[i] > minBound(i)
+            }
+            if (adjustable.isEmpty()) return@repeat
+            val share = residual.toDouble() / adjustable.size
+            for (i in adjustable) {
+                out[i] = (out[i] + share).roundToInt().coerceIn(minBound(i), maxBound(i))
+            }
+        }
+        // Exact settling: hand out the last few seconds one at a time while any element has room.
+        var residual = targetSec - out.sum()
+        while (residual != 0) {
+            val i = out.indices.firstOrNull { i ->
+                if (residual > 0) out[i] < maxBound(i) else out[i] > minBound(i)
+            } ?: break
+            val step = if (residual > 0) 1 else -1
+            out[i] += step
+            residual -= step
+        }
+        return out
+    }
+
+    /**
+     * Smallest whole-minute duration whose derived warm-up/cool-down/transition slices still leave
+     * >= 5 min of main time per category. Iterates because [warmCoolSlice] depends on the total.
+     */
+    internal fun minViableDurationMin(config: GeneratorConfig, categoryCount: Int): Int {
+        var m = config.totalDurationMin
+        repeat(60) {
+            val total = m * 60
+            val wc = (if (config.warmup) warmCoolSlice(total) else 0) +
+                (if (config.cooldown) warmCoolSlice(total) else 0)
+            val trans = if (categoryCount > 1) (categoryCount - 1) * config.transitionSec else 0
+            if (total - wc - trans >= 5 * 60 * categoryCount) return m
+            m += 1
+        }
+        return m
+    }
+
+    /** work = (blockSec - totalRestSec) / count, with no rest after the final exercise. */
+    internal fun solveWorkSec(blockSec: Int, count: Int, totalRestSec: Int): Int {
+        if (count <= 0) return 0
+        return ((blockSec - totalRestSec).coerceAtLeast(0)) / count
+    }
+
+    private fun countFor(blockSec: Int, defaultWork: Int, restSec: Int): Int =
+        max(1, blockSec / (defaultWork + restSec))
 
     /** Prefer covering distinct targets; shuffle for variety; bias low impact when asked. */
     private fun pickBalanced(candidates: List<Exercise>, count: Int, lowImpactBias: Boolean): List<Exercise> {
@@ -310,9 +433,11 @@ class WorkoutGenerator(
             intensityRank(config.intensity) >= intensityRank(Intensity.HIGH) &&
             profile.visceralFatGoal
 
-        // Prefer a named routine that fits the block, scaled proportionally.
+        // Prefer a named routine that fits the block, scaled proportionally. Routines whose
+        // length is grossly mismatched (scale outside [0.5, 2]) fall through to segment assembly.
         val fitting = routines.filter { r ->
             r.category == cat &&
+                blockSec.toDouble() / r.totalSec in 0.5..2.0 &&
                 r.steps.all { s -> byId[s.exerciseId]?.contraindications?.none { it in profile.constraints } != false } &&
                 (profile.includeLowEvidence || r.steps.all { s -> byId[s.exerciseId]?.evidenceTier != EvidenceTier.LIMITED }) &&
                 intensityRank(r.intensity) <= intensityRank(config.intensity) + 1 &&
@@ -326,15 +451,23 @@ class WorkoutGenerator(
         if (routine != null) {
             val scale = blockSec.toDouble() / routine.totalSec
             val isHiit = intensityRank(routine.intensity) >= intensityRank(Intensity.HIGH)
-            val steps = routine.steps.mapNotNull { s ->
-                val ex = byId[s.exerciseId] ?: return@mapNotNull null
-                val dur = max(ex.minSec, min(ex.maxSec * 3, (s.durationSec * scale).roundToInt()))
+            // Scale, clamp per step, then redistribute the clamp residual so the block still sums
+            // to its budget (short blocks used to overrun when step floors dominated).
+            val resolved = routine.steps.mapNotNull { s -> byId[s.exerciseId]?.let { it to s } }
+            val scaled = resolved.map { (_, s) -> (s.durationSec * scale).roundToInt() }
+            val durations = redistribute(
+                initial = scaled,
+                minBound = { i -> resolved[i].first.minSec },
+                maxBound = { i -> resolved[i].first.maxSec * 3 },
+                targetSec = blockSec,
+            )
+            val steps = resolved.mapIndexed { i, (ex, _) ->
                 SessionStep(
                     type = StepType.WORK,
                     category = cat,
                     exerciseId = ex.id,
                     exerciseName = ex.name,
-                    durationSec = dur,
+                    durationSec = durations[i],
                     machineCueText = MachineCueRenderer.renderCue(ex, machines),
                     met = ex.met,
                     animationId = ex.animationId,
@@ -416,6 +549,10 @@ class WorkoutGenerator(
     }
 
     companion object {
+        /** Sentinel block indices: warm-up/cool-down time is excluded from per-block records. */
+        const val WARMUP_BLOCK_INDEX = -1
+        const val COOLDOWN_BLOCK_INDEX = -2
+
         fun stationName(cat: Category): String = when (cat) {
             Category.FLOOR -> "the mat"
             Category.REFORMER -> "the reformer"

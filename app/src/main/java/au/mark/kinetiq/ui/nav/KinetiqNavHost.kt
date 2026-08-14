@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,6 +82,10 @@ private data class Tab(
     val unselectedIcon: ImageVector,
 )
 
+/** Navigate to the summary once per finished session, wherever the user happens to be. */
+internal fun shouldNavigateToSummary(summaryId: String?, consumedId: String?): Boolean =
+    summaryId != null && summaryId != consumedId
+
 @Composable
 fun KinetiqApp(mainViewModel: MainViewModel) {
     val navController: NavHostController = rememberNavController()
@@ -96,6 +101,24 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
         }
     }
 
+    // A finished session always reaches its summary, no matter which screen is open —
+    // and only once per sessionId, so leaving the summary via a tab doesn't yank the
+    // user back and a republished summary doesn't re-navigate.
+    val lastCompleted by mainViewModel.sessionStateHolder.lastCompleted.collectAsState()
+    var consumedSummaryId by androidx.compose.runtime.saveable.rememberSaveable {
+        androidx.compose.runtime.mutableStateOf<String?>(null)
+    }
+    LaunchedEffect(lastCompleted) {
+        val completed = lastCompleted ?: return@LaunchedEffect
+        if (shouldNavigateToSummary(completed.sessionId, consumedSummaryId)) {
+            consumedSummaryId = completed.sessionId
+            navController.navigate(Routes.SUMMARY) {
+                launchSingleTop = true
+                popUpTo(Routes.HOME)
+            }
+        }
+    }
+
     val tabs = listOf(
         Tab(Routes.HOME, "Home", Icons.Filled.Home, Icons.Outlined.Home),
         Tab(Routes.HISTORY, "History", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
@@ -106,6 +129,16 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
 
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
+    // Nested routes highlight their parent tab instead of leaving the bar unselected.
+    val parentTab = mapOf(
+        Routes.BUILDER to Routes.HOME,
+        Routes.PLAYER to Routes.HOME,
+        Routes.SUMMARY to Routes.HOME,
+        Routes.LIBRARY_DETAIL to Routes.LIBRARY,
+        Routes.HEALTH to Routes.SETTINGS,
+        Routes.DEBUG_ANIM to Routes.SETTINGS,
+    )
+    val selectedTab = parentTab[currentRoute] ?: currentRoute
     // The bar is permanent everywhere except onboarding, so navigation is always one tap away.
     val showBottomBar = currentRoute != Routes.ONBOARDING
 
@@ -114,7 +147,7 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
             if (showBottomBar) {
                 KinetiqBottomBar(
                     tabs = tabs,
-                    currentRoute = currentRoute,
+                    currentRoute = selectedTab,
                     onSelect = { route ->
                         navController.navigate(route) {
                             popUpTo(Routes.HOME) { saveState = true }
@@ -141,6 +174,7 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
                     onStartBuilder = { navController.navigate(Routes.BUILDER) },
                     onOpenPlayer = { navController.navigate(Routes.PLAYER) },
                     onOpenHealth = { navController.navigate(Routes.HEALTH) },
+                    onOpenSummary = { navController.navigate(Routes.SUMMARY) { launchSingleTop = true } },
                 )
             }
             composable(Routes.BUILDER) {
@@ -152,12 +186,14 @@ fun KinetiqApp(mainViewModel: MainViewModel) {
             composable(Routes.PLAYER) {
                 PlayerScreen(
                     keepScreenOnDefault = settings.keepScreenOn,
-                    onFinished = { navController.navigate(Routes.SUMMARY) { popUpTo(Routes.HOME) } },
                     onExit = { navController.popBackStack(Routes.HOME, inclusive = false) },
                 )
             }
             composable(Routes.SUMMARY) {
-                SummaryScreen(onDone = { navController.popBackStack(Routes.HOME, inclusive = false) })
+                SummaryScreen(
+                    onDone = { navController.popBackStack(Routes.HOME, inclusive = false) },
+                    onResume = { navController.navigate(Routes.PLAYER) { launchSingleTop = true; popUpTo(Routes.HOME) } },
+                )
             }
             composable(Routes.HISTORY) { HistoryScreen() }
             composable(Routes.LIBRARY) {

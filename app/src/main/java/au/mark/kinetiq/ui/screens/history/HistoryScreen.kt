@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +30,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -60,12 +63,14 @@ data class HistoryUiState(
     val sessionsPerWeek: Float = 0f,
     val minutesPerWeek: Int = 0,
     val caloriesPerWeek: Int = 0,
+    val hcEnabled: Boolean = false,
 )
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
     settingsRepository: SettingsRepository,
+    private val healthConnect: au.mark.kinetiq.health.HealthConnectManager,
 ) : ViewModel() {
 
     val uiState = combine(workoutRepository.history(), settingsRepository.settings) { history, settings ->
@@ -86,18 +91,49 @@ class HistoryViewModel @Inject constructor(
             sessionsPerWeek = recent.size / 4f,
             minutesPerWeek = recent.sumOf { it.totalActiveSec } / 60 / 4,
             caloriesPerWeek = recent.sumOf { it.calories }.toInt() / 4,
+            hcEnabled = settings.healthConnectEnabled && settings.healthConnectWriteback,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HistoryUiState())
 
     fun delete(id: Long) {
         viewModelScope.launch { workoutRepository.deleteHistory(id) }
     }
+
+    /** Back-fill a session that failed its Health Connect write; upsert-safe via clientRecordIds. */
+    fun retryHcWrite(entry: HistoryEntry) {
+        viewModelScope.launch {
+            val result = healthConnect.writeSession(
+                entry.name, entry.blocks, entry.calories, entry.startedAtEpochMs, entry.endedAtEpochMs,
+            )
+            if (result.isSuccess) workoutRepository.markHcWritten(entry.id)
+        }
+    }
 }
 
 @Composable
 fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
-    var month by remember { mutableStateOf(YearMonth.now()) }
+    // YearMonth isn't Bundle-saveable; keep the ISO string so rotation preserves the view.
+    var monthIso by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
+    val month = YearMonth.parse(monthIso)
+    var pendingDelete by remember { mutableStateOf<au.mark.kinetiq.data.repo.HistoryEntry?>(null) }
+
+    pendingDelete?.let { entry ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Delete this session?") },
+            text = { Text("\"${entry.name}\" will be removed from history. This can't be undone and may shorten your streak.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    viewModel.delete(entry.id)
+                    pendingDelete = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
+            },
+        )
+    }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -123,11 +159,21 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
             CalendarMonth(
                 month = month,
                 workoutDays = state.workoutDays,
-                onPrev = { month = month.minusMonths(1) },
-                onNext = { month = month.plusMonths(1) },
+                onPrev = { monthIso = month.minusMonths(1).toString() },
+                onNext = { monthIso = month.plusMonths(1).toString() },
             )
         }
         item { SectionHeader("Sessions") }
+        if (state.entries.isEmpty()) {
+            item {
+                Text(
+                    "No sessions yet — your finished workouts appear here.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 24.dp),
+                )
+            }
+        }
         items(state.entries, key = { it.id }) { entry ->
             val formatter = remember { DateTimeFormatter.ofPattern("EEE d MMM, HH:mm") }
             Card(Modifier.fillMaxWidth()) {
@@ -142,7 +188,15 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    IconButton(onClick = { viewModel.delete(entry.id) }) {
+                    if (state.hcEnabled && !entry.healthConnectWritten && entry.blocks.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.retryHcWrite(entry) }) {
+                            Icon(
+                                Icons.Filled.Sync,
+                                contentDescription = "Write ${entry.name} to Health Connect",
+                            )
+                        }
+                    }
+                    IconButton(onClick = { pendingDelete = entry }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Delete session ${entry.name}")
                     }
                 }
@@ -171,7 +225,7 @@ private fun CalendarMonth(
                 IconButton(onClick = onNext) { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next month") }
             }
             Row(Modifier.fillMaxWidth()) {
-                listOf("M", "T", "W", "T", "F", "S", "S").forEach {
+                listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun").forEach {
                     Text(
                         it, modifier = Modifier.weight(1f), textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -197,7 +251,11 @@ private fun CalendarMonth(
                                         .background(
                                             if (done) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent,
                                             CircleShape,
-                                        ),
+                                        )
+                                        .semantics {
+                                            contentDescription = "${date.format(DateTimeFormatter.ofPattern("d MMMM"))}, " +
+                                                if (done) "workout completed" else "no workout"
+                                        },
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(

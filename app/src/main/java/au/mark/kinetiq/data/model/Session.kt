@@ -45,6 +45,15 @@ data class WorkoutPlan(
     val totalSec: Int = steps.sumOf { it.durationSec },
 )
 
+/**
+ * How rests between discrete exercises are computed (v1.2, evidence-based):
+ * STANDARD = 15 s transitions (20 s on a setup change) per circuit-training convention;
+ * RECOVERY = 30–45 s scaled to intensity; CONTINUOUS = back-to-back with a forced 10 s
+ * pause only when equipment/position changes.
+ */
+@Serializable
+enum class RestMode { STANDARD, RECOVERY, CONTINUOUS }
+
 /** Generator inputs (Section 5 of the spec). */
 @Serializable
 data class GeneratorConfig(
@@ -54,7 +63,9 @@ data class GeneratorConfig(
     val categories: List<Category> = listOf(Category.FLOOR),
     /** Per-category time weights; missing category = 1.0. */
     val categoryWeights: Map<Category, Float> = emptyMap(),
-    /** Work:rest ratio expressed as rest = work / ratio, e.g. 2.0 → rest is half of work. */
+    /** Rest model between discrete exercises. Pre-1.2 configs deserialize to STANDARD. */
+    val restMode: RestMode = RestMode.STANDARD,
+    @Deprecated("Superseded by restMode in v1.2; retained only for serialization compatibility with saved workouts, history and exports. No longer read by the generator or UI.")
     val workRestRatio: Float = 2.0f,
     val warmup: Boolean = true,
     val cooldown: Boolean = true,

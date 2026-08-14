@@ -12,6 +12,7 @@
     <string name="notif_action_resume">Resume</string>
     <string name="notif_action_skip">Skip</string>
     <string name="notif_action_stop">Stop</string>
+    <string name="notif_action_confirm_stop">Tap again to stop</string>
 
     <string name="reminder_title">Time to move</string>
     <string name="reminder_text">Your scheduled workout is ready. One tap to start.</string>

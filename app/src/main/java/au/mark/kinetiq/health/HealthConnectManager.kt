@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -102,9 +103,12 @@ class HealthConnectManager @Inject constructor(
         }
     }
 
+
     /**
      * Writes one ExerciseSessionRecord per completed block (correct type per category, HIIT when
      * the block was HIIT-structured) plus a single TotalCaloriesBurnedRecord for the session.
+     * Records are app-recorded (not manual entry) and carry stable clientRecordIds so a retry
+     * after a partial failure upserts instead of duplicating.
      */
     suspend fun writeSession(
         sessionName: String,
@@ -115,17 +119,23 @@ class HealthConnectManager @Inject constructor(
     ): Result<Unit> = runCatching {
         val client = client() ?: error("Health Connect is not available on this device")
         require(blocks.isNotEmpty()) { "No completed blocks to write" }
+        if (!hasWritePermissions()) {
+            error("Health Connect write permission not granted — grant it from the Health screen")
+        }
 
-        val zone: ZoneOffset = ZoneId.systemDefault().rules.getOffset(Instant.ofEpochMilli(startEpochMs))
+        val device = Device(type = Device.TYPE_PHONE)
         val records = buildList {
-            blocks.filter { it.endedAtEpochMs > it.startedAtEpochMs }.forEach { block ->
+            blocks.filter { it.endedAtEpochMs > it.startedAtEpochMs }.forEachIndexed { i, block ->
                 add(
                     ExerciseSessionRecord(
                         startTime = Instant.ofEpochMilli(block.startedAtEpochMs),
-                        startZoneOffset = zone,
+                        startZoneOffset = offsetAt(block.startedAtEpochMs),
                         endTime = Instant.ofEpochMilli(block.endedAtEpochMs),
-                        endZoneOffset = zone,
-                        metadata = Metadata.manualEntry(),
+                        endZoneOffset = offsetAt(block.endedAtEpochMs),
+                        metadata = Metadata.autoRecorded(
+                            device = device,
+                            clientRecordId = clientRecordIdFor(startEpochMs, "block", i),
+                        ),
                         exerciseType = exerciseTypeFor(block),
                         title = "$sessionName — ${block.category.lowercase().replaceFirstChar { it.uppercase() }}",
                     )
@@ -135,11 +145,14 @@ class HealthConnectManager @Inject constructor(
                 add(
                     TotalCaloriesBurnedRecord(
                         startTime = Instant.ofEpochMilli(startEpochMs),
-                        startZoneOffset = zone,
+                        startZoneOffset = offsetAt(startEpochMs),
                         endTime = Instant.ofEpochMilli(endEpochMs),
-                        endZoneOffset = zone,
+                        endZoneOffset = offsetAt(endEpochMs),
                         energy = Energy.kilocalories(totalCalories),
-                        metadata = Metadata.manualEntry(),
+                        metadata = Metadata.autoRecorded(
+                            device = device,
+                            clientRecordId = clientRecordIdFor(startEpochMs, "kcal"),
+                        ),
                     )
                 )
             }
@@ -153,5 +166,15 @@ class HealthConnectManager @Inject constructor(
         block.category == "ELLIPTICAL" -> ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL
         block.category == "REFORMER" -> ExerciseSessionRecord.EXERCISE_TYPE_PILATES
         else -> ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS
+    }
+
+    companion object {
+        /** Deterministic per session+record so Health Connect retries upsert, never duplicate. */
+        internal fun clientRecordIdFor(startEpochMs: Long, kind: String, index: Int = -1): String =
+            if (index >= 0) "kinetiq-$startEpochMs-$kind-$index" else "kinetiq-$startEpochMs-$kind"
+
+        /** Offset at a specific instant — correct across a DST transition mid-session. */
+        internal fun offsetAt(epochMs: Long): ZoneOffset =
+            ZoneId.systemDefault().rules.getOffset(Instant.ofEpochMilli(epochMs))
     }
 }

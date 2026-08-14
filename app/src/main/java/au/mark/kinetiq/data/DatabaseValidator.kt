@@ -82,7 +82,7 @@ object DatabaseValidator {
                 validateText(rw, "journal", ref.journal, problems)
                 validateText(rw, "doiOrPmid", ref.doiOrPmid, problems)
                 validateText(rw, "finding", ref.finding, problems)
-                if (ref.year !in 1950..2026) problem("$rw: implausible year ${ref.year}")
+                if (ref.year !in 1950..(java.time.Year.now().value + 1)) problem("$rw: implausible year ${ref.year}")
             }
 
             if (ex.defaultWorkSec <= 0) problem("$where: defaultWorkSec must be > 0")
@@ -99,7 +99,7 @@ object DatabaseValidator {
                     else {
                         if (cue.resistanceLow !in 0f..1f || cue.resistanceHigh !in 0f..1f || cue.resistanceLow > cue.resistanceHigh)
                             problem("$where: spin resistance fractions must be 0..1 and low <= high")
-                        if (cue.cadenceRpmLow !in 40..130 || cue.cadenceRpmHigh !in 40..140 || cue.cadenceRpmLow > cue.cadenceRpmHigh)
+                        if (cue.cadenceRpmLow !in 40..140 || cue.cadenceRpmHigh !in 40..140 || cue.cadenceRpmLow > cue.cadenceRpmHigh)
                             problem("$where: implausible cadence ${cue.cadenceRpmLow}-${cue.cadenceRpmHigh}")
                         validateText(where, "spin.position", cue.position, problems)
                     }
