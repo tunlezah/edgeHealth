@@ -76,12 +76,26 @@ class HomeViewModel @Inject constructor(
     /** Snapshot check is disk I/O — never during composition. Refreshed on screen entry. */
     val snapshot = kotlinx.coroutines.flow.MutableStateFlow<SnapshotInfo?>(null)
 
+    private var snapshotJob: kotlinx.coroutines.Job? = null
+
     fun refreshSnapshot() {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        // Cancel-and-replace: launching into viewModelScope means a restarted effect would
+        // otherwise leave the previous read in flight, and results could land out of order.
+        snapshotJob?.cancel()
+        snapshotJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             snapshot.value = WorkoutSessionService.readSnapshot(appContext, json)?.let {
                 SnapshotInfo(name = it.sessionName, stepIndex = it.stepIndex, totalSteps = it.session.plan.steps.size)
             }
         }
+    }
+
+    /**
+     * A live session means the on-disk snapshot describes *that* session, and the resume card only
+     * renders when there is no live session — so the parsed value could never be shown anyway.
+     */
+    fun clearSnapshot() {
+        snapshotJob?.cancel()
+        snapshot.value = null
     }
 
     init {
@@ -158,7 +172,13 @@ fun HomeScreen(
         androidx.compose.runtime.mutableStateOf<SavedWorkout?>(null)
     }
 
-    androidx.compose.runtime.LaunchedEffect(playerState) { viewModel.refreshSnapshot() }
+    // Key on presence, not on the state object: playerState is rebuilt every 200 ms by the
+    // service's ticker, which would otherwise re-read and re-parse the snapshot five times a
+    // second for the whole workout while Home is open behind the player.
+    val hasLiveSession = playerState != null
+    androidx.compose.runtime.LaunchedEffect(hasLiveSession) {
+        if (hasLiveSession) viewModel.clearSnapshot() else viewModel.refreshSnapshot()
+    }
 
     pendingDelete?.let { workout ->
         androidx.compose.material3.AlertDialog(

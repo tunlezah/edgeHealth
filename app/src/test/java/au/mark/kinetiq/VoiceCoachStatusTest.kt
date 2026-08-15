@@ -1,6 +1,7 @@
 package au.mark.kinetiq
 
 import android.speech.tts.TextToSpeech
+import android.speech.tts.Voice
 import androidx.test.core.app.ApplicationProvider
 import au.mark.kinetiq.voice.TtsInitAction
 import au.mark.kinetiq.voice.TtsStatus
@@ -11,6 +12,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35]) // Robolectric 4.14 supports up to SDK 35; app targets 36.
@@ -44,5 +48,46 @@ class VoiceCoachStatusTest {
         val coach = VoiceCoach(ApplicationProvider.getApplicationContext())
         repeat(5) { coach.onUtteranceFinished() }
         assertThat(coach.utteranceCountForTest()).isEqualTo(0)
+    }
+
+    private fun voice(name: String, locale: Locale, quality: Int, network: Boolean) =
+        Voice(name, locale, quality, Voice.LATENCY_NORMAL, network, emptySet())
+
+    @Test
+    fun `best offline voice prefers quality and never returns a network voice`() {
+        val coach = VoiceCoach(ApplicationProvider.getApplicationContext())
+        val au = Locale("en", "AU")
+        val voices = setOf(
+            voice("au-net-high", au, Voice.QUALITY_VERY_HIGH, network = true),
+            voice("au-off-low", au, Voice.QUALITY_LOW, network = false),
+            voice("au-off-high", au, Voice.QUALITY_HIGH, network = false),
+            voice("us-off-high", Locale.US, Voice.QUALITY_HIGH, network = false),
+        )
+        assertThat(coach.bestOfflineVoice(voices, au)?.name).isEqualTo("au-off-high")
+    }
+
+    @Test
+    fun `no offline voice means the engine keeps its own choice rather than going mute`() {
+        // The caller must NOT clear engine.voice when this returns null: on a device whose only
+        // en-AU voice is network-backed, doing so would silence coaching altogether.
+        val coach = VoiceCoach(ApplicationProvider.getApplicationContext())
+        val au = Locale("en", "AU")
+        assertThat(coach.bestOfflineVoice(setOf(voice("au-net", au, Voice.QUALITY_HIGH, true)), au)).isNull()
+        assertThat(coach.bestOfflineVoice(null, au)).isNull()
+    }
+
+    @Test
+    fun `audio focus request and abandon stay consistent under concurrency`() {
+        // Three writers race on focusRequest: main, the beep scope, and a binder thread delivering
+        // UtteranceProgressListener callbacks. Without the lock this check-then-act loses updates.
+        val coach = VoiceCoach(ApplicationProvider.getApplicationContext())
+        val pool = Executors.newFixedThreadPool(4)
+        repeat(4_000) { i ->
+            pool.submit { if (i % 2 == 0) coach.requestFocus() else coach.abandonFocus() }
+        }
+        pool.shutdown()
+        assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue()
+        coach.abandonFocus()
+        assertThat(coach.hasAudioFocusForTest()).isFalse()
     }
 }

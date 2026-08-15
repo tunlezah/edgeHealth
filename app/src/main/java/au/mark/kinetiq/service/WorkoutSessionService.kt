@@ -19,6 +19,7 @@ import au.mark.kinetiq.MainActivity
 import au.mark.kinetiq.R
 import au.mark.kinetiq.data.model.GeneratedSession
 import au.mark.kinetiq.data.model.StepType
+import au.mark.kinetiq.data.repo.AppSettings
 import au.mark.kinetiq.data.repo.MeasurementRepository
 import au.mark.kinetiq.data.repo.Metric
 import au.mark.kinetiq.data.repo.SettingsRepository
@@ -490,17 +491,26 @@ class WorkoutSessionService : LifecycleService() {
 
         lifecycleScope.launch {
             try {
-                val settings = settingsRepo.current()
+                // Both of these are consulted only for a couple of values, but an unguarded throw
+                // here would skip the history write entirely AND escape into lifecycleScope with no
+                // CoroutineExceptionHandler — losing the workout and crashing the process. Defaults
+                // mean healthConnectEnabled = false, so a settings failure degrades to "don't write
+                // to Health Connect", which is the safe direction. No broad catch: the `finally`
+                // must still run on cancellation, and catching Throwable would swallow
+                // CancellationException and break structured concurrency.
+                val settings = runCatching { settingsRepo.current() }.getOrDefault(AppSettings())
                 val endedAt = System.currentTimeMillis()
                 val plan = state.session.plan
 
-                val blocks = completedBlocks(
-                    plan = plan,
-                    blockActiveMs = es?.blockActiveMs ?: emptyMap(),
-                    blockBounds = es?.blockBounds ?: emptyMap(),
-                    weightKg = state.weightKg,
-                    fallbackBounds = state.startedAtEpochMs to endedAt,
-                )
+                val blocks = runCatching {
+                    completedBlocks(
+                        plan = plan,
+                        blockActiveMs = es?.blockActiveMs ?: emptyMap(),
+                        blockBounds = es?.blockBounds ?: emptyMap(),
+                        weightKg = state.weightKg,
+                        fallbackBounds = state.startedAtEpochMs to endedAt,
+                    )
+                }.getOrDefault(emptyList())
 
                 val totalActiveSec = ((es?.totalElapsedActiveMs ?: 0L) / 1000).toInt()
                 val calories = es?.caloriesSoFar ?: 0.0

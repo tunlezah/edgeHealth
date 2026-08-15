@@ -1,7 +1,6 @@
 package au.mark.kinetiq.widget
 
 import android.content.Context
-import android.content.Intent
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -31,7 +30,7 @@ import java.time.DayOfWeek
 
 /**
  * Home-screen widget (Glance): one-tap "repeat last workout" + current streak.
- * Tapping launches MainActivity with EXTRA_REPEAT_LAST, which starts the last session directly.
+ * Tapping launches MainActivity with ACTION_REPEAT_LAST, which starts the last session directly.
  */
 class KinetiqWidget : GlanceAppWidget() {
 
@@ -55,10 +54,10 @@ class KinetiqWidget : GlanceAppWidget() {
 
         provideContent {
             GlanceTheme {
-                val launchIntent = Intent(context, MainActivity::class.java).apply {
-                    action = MainActivity.ACTION_REPEAT_LAST
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
+                // Carries an origin token only this app can mint; Glance passes our Intent through
+                // verbatim (extras included) into an immutable PendingIntent it creates from our
+                // context, so the token survives to MainActivity on both cold and warm launches.
+                val launchIntent = MainActivity.repeatLastIntent(context)
                 Column(
                     modifier = GlanceModifier
                         .fillMaxSize()

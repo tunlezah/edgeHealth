@@ -14,6 +14,7 @@ import androidx.work.WorkerParameters
 import au.mark.kinetiq.KinetiqApp
 import au.mark.kinetiq.MainActivity
 import au.mark.kinetiq.R
+import au.mark.kinetiq.data.repo.AppSettings
 import au.mark.kinetiq.data.repo.SettingsRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -44,6 +45,25 @@ class ReminderScheduler @Inject constructor() {
         wm.enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.REPLACE, request)
     }
 
+    /**
+     * Self-heal: enqueue the next occurrence only if nothing is already scheduled.
+     *
+     * KEEP (never REPLACE) is load-bearing. `Application.onCreate` also runs when WorkManager
+     * starts the process to execute [ReminderWorker] itself, and REPLACE would cancel the very
+     * worker that is about to post the notification.
+     */
+    fun ensureScheduled(context: Context, days: Set<Int>, hour: Int, minute: Int) {
+        val wm = WorkManager.getInstance(context)
+        if (days.isEmpty()) {
+            wm.cancelUniqueWork(WORK_NAME)
+            return
+        }
+        val request = OneTimeWorkRequestBuilder<ReminderWorker>()
+            .setInitialDelay(delayToNext(LocalDateTime.now(), days, hour, minute))
+            .build()
+        wm.enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.KEEP, request)
+    }
+
     fun cancel(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
     }
@@ -66,6 +86,16 @@ class ReminderScheduler @Inject constructor() {
     }
 }
 
+/** What a reminder firing should do, given the settings read and the attempt count. */
+enum class ReminderOutcome { NOTIFY_AND_RESCHEDULE, DISABLED, RETRY, GIVE_UP }
+
+internal fun reminderOutcome(settings: AppSettings?, runAttemptCount: Int): ReminderOutcome = when {
+    settings == null && runAttemptCount < ReminderWorker.MAX_ATTEMPTS -> ReminderOutcome.RETRY
+    settings == null -> ReminderOutcome.GIVE_UP
+    settings.reminderDays.isEmpty() -> ReminderOutcome.DISABLED
+    else -> ReminderOutcome.NOTIFY_AND_RESCHEDULE
+}
+
 @HiltWorker
 class ReminderWorker @AssistedInject constructor(
     @Assisted context: Context,
@@ -75,12 +105,24 @@ class ReminderWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val settings = settingsRepository.current()
-        if (settings.reminderDays.isNotEmpty()) {
-            postNotification()
-            scheduler.schedule(applicationContext, settings.reminderDays, settings.reminderHour, settings.reminderMinute)
+        // This worker is the only thing that enqueues the next occurrence, so an unguarded throw
+        // from DataStore (IOException/CorruptionException — no ReplaceFileCorruptionHandler is
+        // configured) would end reminders permanently, with the user's only recovery being to
+        // re-toggle a setting they have no way of knowing is broken.
+        val settings = runCatching { settingsRepository.current() }.getOrNull()
+        return when (reminderOutcome(settings, runAttemptCount)) {
+            ReminderOutcome.RETRY -> Result.retry()
+            // Hand off to KinetiqApp's re-arm on the next process start rather than retrying forever.
+            ReminderOutcome.GIVE_UP -> Result.success()
+            ReminderOutcome.DISABLED -> Result.success()
+            ReminderOutcome.NOTIFY_AND_RESCHEDULE -> {
+                postNotification()
+                scheduler.schedule(
+                    applicationContext, settings!!.reminderDays, settings.reminderHour, settings.reminderMinute,
+                )
+                Result.success()
+            }
         }
-        return Result.success()
     }
 
     private fun postNotification() {
@@ -100,5 +142,10 @@ class ReminderWorker @AssistedInject constructor(
         runCatching {
             context.getSystemService(NotificationManager::class.java).notify(7, notification)
         }
+    }
+
+    companion object {
+        /** Backoff attempts before handing off to the app-start re-arm. */
+        const val MAX_ATTEMPTS = 4
     }
 }

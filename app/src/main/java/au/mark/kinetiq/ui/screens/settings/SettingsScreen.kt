@@ -69,6 +69,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** The only implicit intent in the app; pinned to the system Settings package where possible. */
+private const val TTS_SETTINGS_ACTION = "com.android.settings.TTS_SETTINGS"
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repo: SettingsRepository,
@@ -92,6 +95,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     val voiceStatus = voiceCoach.status
+    val usingNetworkVoice = voiceCoach.usingNetworkVoice
 
     fun testVoice() {
         viewModelScope.launch {
@@ -194,8 +198,24 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.error,
             )
         }
+        val usingNetworkVoice by viewModel.usingNetworkVoice.collectAsState()
+        if (voiceStatus != au.mark.kinetiq.voice.TtsStatus.FAILED && usingNetworkVoice) {
+            Text(
+                "Your speech engine picked a voice that needs a network connection. Kinetiq never " +
+                    "goes online, but the engine might — install the offline English (Australia) " +
+                    "voice below to keep coaching fully offline.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         OutlinedButton(onClick = {
-            runCatching { context.startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            // Pin to the system Settings package so an installed app declaring the same action
+            // cannot intercept the tap — but fall back to the implicit form, because on a device
+            // whose Settings app is not com.android.settings a bare setPackage would throw, be
+            // swallowed by runCatching, and silently leave this button doing nothing.
+            fun open(intent: Intent) = context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            runCatching { open(Intent(TTS_SETTINGS_ACTION).setPackage("com.android.settings")) }
+                .recoverCatching { open(Intent(TTS_SETTINGS_ACTION)) }
         }) { Text("System TTS settings (download offline en-AU voice data)") }
 
         SectionHeader("Theme")

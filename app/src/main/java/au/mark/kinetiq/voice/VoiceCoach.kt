@@ -8,6 +8,7 @@ import android.media.ToneGenerator
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
 import au.mark.kinetiq.data.repo.VoiceSettings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -64,8 +65,19 @@ class VoiceCoach @Inject constructor(@ApplicationContext private val context: Co
 
     private val audioManager = context.getSystemService(AudioManager::class.java)
     private val utteranceCount = AtomicInteger(0)
-    private var focusRequest: AudioFocusRequest? = null
+    private val focusLock = Any()
+    private var focusRequest: AudioFocusRequest? = null // guarded by focusLock
     private var utteranceSeq = 0
+
+    private val _usingNetworkVoice = MutableStateFlow(false)
+
+    /**
+     * True when the engine settled on a voice that needs a network connection. Kinetiq itself
+     * declares no INTERNET permission — any egress would be the user's chosen TTS engine, under
+     * its own permissions, as for every Android app using [TextToSpeech] — but the user should be
+     * told so they can install offline voice data.
+     */
+    val usingNetworkVoice: StateFlow<Boolean> = _usingNetworkVoice.asStateFlow()
 
     internal val pendingCountForTest: Int get() = pendingOnReady.size
     internal fun utteranceCountForTest(): Int = utteranceCount.get()
@@ -110,6 +122,11 @@ class VoiceCoach @Inject constructor(@ApplicationContext private val context: Co
         if (ready) return
         initAttempts = 0
         _status.value = TtsStatus.IDLE
+        // Symmetric with warmUp's RETRY/FAIL branches: never drop a TextToSpeech reference without
+        // shutting it down, or its binding to the engine process leaks along with a live onInit
+        // callback that would then reconfigure the *replacement* engine. A no-op today — both call
+        // sites are gated on FAILED, where tts was already nulled — but the next caller would leak.
+        tts?.shutdown()
         tts = null
         warmUp()
     }
@@ -129,15 +146,26 @@ class VoiceCoach @Inject constructor(@ApplicationContext private val context: Co
         val engine = tts ?: return
         val auLocale = Locale("en", "AU")
         val result = engine.setLanguage(auLocale)
-        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+        val selected = if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
             engine.setLanguage(Locale.getDefault())
+            Locale.getDefault()
+        } else {
+            auLocale
         }
-        // Prefer a higher-quality en-AU voice when one is installed.
-        engine.voices?.filter { it.locale == auLocale && !it.isNetworkConnectionRequired }
-            ?.maxByOrNull { it.quality }
-            ?.let { engine.voice = it }
+        // Prefer the best offline voice for whichever locale we actually landed on — previously
+        // this preference was applied only on the en-AU path. If no offline voice exists we keep
+        // the engine's own choice: a network-backed voice still speaks, and going silent would
+        // break coaching outright. We only report it.
+        bestOfflineVoice(engine.voices, selected)?.let { engine.voice = it }
+        _usingNetworkVoice.value = engine.voice?.isNetworkConnectionRequired == true
         engine.setAudioAttributes(speechAttributes)
     }
+
+    /** Pure so it is testable: highest-quality voice for [preferred] that needs no network. */
+    internal fun bestOfflineVoice(voices: Set<Voice>?, preferred: Locale): Voice? =
+        voices.orEmpty()
+            .filter { it.locale == preferred && !it.isNetworkConnectionRequired }
+            .maxByOrNull { it.quality }
 
     private val speechAttributes = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
@@ -219,7 +247,15 @@ class VoiceCoach @Inject constructor(@ApplicationContext private val context: Co
         }
     }
 
-    private fun requestFocus() {
+    /**
+     * Audio focus has three writers — speak()/stopSpeaking() on main, countdownBeeps() on the main
+     * scope, and onUtteranceFinished() on a *binder* thread. A lock rather than @Volatile, because
+     * the guard below is a check-then-act, not just a read: without it a stale non-null read makes
+     * requestFocus() take the early exit and that cue fails to duck the user's music. Both bodies
+     * are short non-blocking AudioManager IPCs and neither re-enters VoiceCoach, so this cannot
+     * deadlock.
+     */
+    internal fun requestFocus() = synchronized(focusLock) {
         if (focusRequest != null) return
         val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
             .setAudioAttributes(speechAttributes)
@@ -228,16 +264,26 @@ class VoiceCoach @Inject constructor(@ApplicationContext private val context: Co
         focusRequest = request
     }
 
-    private fun abandonFocus() {
+    internal fun abandonFocus() = synchronized(focusLock) {
         focusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
         focusRequest = null
     }
 
+    internal fun hasAudioFocusForTest(): Boolean = synchronized(focusLock) { focusRequest != null }
+
+    /**
+     * Releases the TTS engine. Deliberately **not** wired to any lifecycle hook: [VoiceCoach] is a
+     * process-scoped `@Singleton` shared by the session service, the player and Settings, and its
+     * retention is one engine binding plus one scope — bounded and constant, not a leak. Tearing it
+     * down when the workout service is destroyed would cost 2–3 s of silence at the start of the
+     * next session. Kept for tests and for a possible "release the voice engine" setting.
+     */
     fun shutdown() {
         stopSpeaking()
         tts?.shutdown()
         tts = null
         ready = false
+        _usingNetworkVoice.value = false
         if (_status.value != TtsStatus.FAILED) _status.value = TtsStatus.IDLE
     }
 
