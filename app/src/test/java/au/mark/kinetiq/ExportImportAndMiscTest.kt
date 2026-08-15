@@ -9,10 +9,13 @@ import au.mark.kinetiq.data.model.GeneratedSession
 import au.mark.kinetiq.data.model.GeneratorConfig
 import au.mark.kinetiq.data.model.SessionStep
 import au.mark.kinetiq.data.model.StepType
+import au.mark.kinetiq.data.model.ExerciseDatabaseFile
 import au.mark.kinetiq.data.model.WorkoutPlan
+import au.mark.kinetiq.domain.generator.WorkoutGenerator
 import au.mark.kinetiq.domain.plan.StreakCalculator
 import au.mark.kinetiq.reminders.ReminderScheduler
 import com.google.common.truth.Truth.assertThat
+import kotlinx.serialization.json.Json
 import org.junit.Test
 import java.io.File
 import java.time.DayOfWeek
@@ -116,5 +119,98 @@ class ExportImportAndMiscTest {
     fun `no INTERNET permission anywhere in the manifest`() {
         val manifest = File("src/main/AndroidManifest.xml").readText()
         assertThat(manifest).doesNotContain("android.permission.INTERNET")
+    }
+
+    @Test
+    fun `cloud backup is skipped on devices with no encryption capabilities`() {
+        val rules = File("src/main/res/xml/data_extraction_rules.xml").readText()
+        assertThat(rules).contains("<cloud-backup disableIfNoEncryptionCapabilities=\"true\">")
+        // device-transfer must NOT carry it — D2D never reaches a server.
+        assertThat(rules.substringAfter("<device-transfer")).doesNotContain("disableIfNoEncryptionCapabilities")
+    }
+
+    private val now = 1_800_000_000_000L
+
+    @Test
+    fun `history entry with an empty plan is rejected`() {
+        // The concrete cause of the foreground-service watchdog crash: repeat-last hands the
+        // service a plan it cannot start, and it bails before calling startForeground.
+        val empty = sampleSession().copy(plan = WorkoutPlan(steps = emptyList(), blocks = emptyList()))
+        val file = ExportFile(
+            exportedAtEpochMs = now,
+            savedWorkouts = emptyList(),
+            history = listOf(ExportedHistoryEntry(now - 1_800_000, now, "Crafted", 10, 1.0, emptyList(), empty)),
+        )
+        val result = ExportImportCodec.decodeAndValidate(ExportImportCodec.encode(file), nowEpochMs = now)
+        assertThat(result).isInstanceOf(ExportImportCodec.ImportResult.Failure::class.java)
+        assertThat((result as ExportImportCodec.ImportResult.Failure).problems.any { it.contains("no steps") })
+            .isTrue()
+    }
+
+    @Test
+    fun `history entry with no stored session is still accepted`() {
+        // importHistory writes an empty sessionJson for these, and it decodes back to null —
+        // rejecting them would break re-importing previously imported data.
+        val file = ExportFile(
+            exportedAtEpochMs = now,
+            savedWorkouts = emptyList(),
+            history = listOf(ExportedHistoryEntry(now - 1_800_000, now, "Legacy", 1500, 180.0, emptyList(), null)),
+        )
+        assertThat(ExportImportCodec.decodeAndValidate(ExportImportCodec.encode(file), nowEpochMs = now))
+            .isInstanceOf(ExportImportCodec.ImportResult.Success::class.java)
+    }
+
+    @Test
+    fun `implausible history timestamps are rejected`() {
+        val future = ExportFile(
+            exportedAtEpochMs = now,
+            savedWorkouts = emptyList(),
+            history = listOf(
+                ExportedHistoryEntry(
+                    now + 400L * 24 * 3600 * 1000, now + 401L * 24 * 3600 * 1000,
+                    "Future", 10, 1.0, emptyList(), sampleSession(),
+                ),
+            ),
+        )
+        val futureResult = ExportImportCodec.decodeAndValidate(ExportImportCodec.encode(future), nowEpochMs = now)
+        assertThat((futureResult as ExportImportCodec.ImportResult.Failure).problems.any { it.contains("in the future") })
+            .isTrue()
+
+        val ancient = ExportFile(
+            exportedAtEpochMs = now,
+            savedWorkouts = emptyList(),
+            history = listOf(ExportedHistoryEntry(1_000L, 2_000L, "Ancient", 10, 1.0, emptyList(), sampleSession())),
+        )
+        val ancientResult = ExportImportCodec.decodeAndValidate(ExportImportCodec.encode(ancient), nowEpochMs = now)
+        assertThat((ancientResult as ExportImportCodec.ImportResult.Failure).problems.any { it.contains("before 2020") })
+            .isTrue()
+    }
+
+    @Test
+    fun `a freshly generated session survives import validation unchanged`() {
+        // The real safety net: the new rules must never reject what buildExport() can actually
+        // produce, sentinel warm-up/cool-down block indices included.
+        val db = Json { ignoreUnknownKeys = true }.decodeFromString(
+            ExerciseDatabaseFile.serializer(),
+            File("src/main/assets/exercise_db.json").readText(),
+        )
+        val generated = WorkoutGenerator(db.exercises, db.routines)
+            .generate(
+                GeneratorConfig(totalDurationMin = 30, categories = listOf(Category.FLOOR, Category.SPIN)),
+            ).session
+
+        assertThat(generated.plan.steps.map { it.blockIndex })
+            .containsAtLeast(WorkoutGenerator.WARMUP_BLOCK_INDEX, WorkoutGenerator.COOLDOWN_BLOCK_INDEX)
+
+        val file = ExportFile(
+            exportedAtEpochMs = now,
+            savedWorkouts = listOf(ExportedWorkout("Gen", now, generated)),
+            history = listOf(
+                ExportedHistoryEntry(now - 1_800_000, now, "Gen", 1500, 180.0, emptyList(), generated),
+            ),
+        )
+        val result = ExportImportCodec.decodeAndValidate(ExportImportCodec.encode(file), nowEpochMs = now)
+        assertThat(result).isInstanceOf(ExportImportCodec.ImportResult.Success::class.java)
+        assertThat((result as ExportImportCodec.ImportResult.Success).warnings).isEmpty()
     }
 }

@@ -1,7 +1,6 @@
 package au.mark.kinetiq.widget
 
 import android.content.Context
-import android.content.Intent
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -31,7 +30,7 @@ import java.time.DayOfWeek
 
 /**
  * Home-screen widget (Glance): one-tap "repeat last workout" + current streak.
- * Tapping launches MainActivity with EXTRA_REPEAT_LAST, which starts the last session directly.
+ * Tapping launches MainActivity with ACTION_REPEAT_LAST, which starts the last session directly.
  */
 class KinetiqWidget : GlanceAppWidget() {
 
@@ -44,21 +43,22 @@ class KinetiqWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entryPoint = EntryPointAccessors.fromApplication(context, WidgetEntryPoint::class.java)
-        val last = runCatching { entryPoint.workoutRepository().lastSession() }.getOrNull()
+        // Projections only: the widget renders one name and a streak, so it has no reason to
+        // deserialize a stored session per row inside a broadcast receiver's time budget.
+        val lastName = runCatching { entryPoint.workoutRepository().lastSessionName() }.getOrNull()
         val settings = runCatching { entryPoint.settingsRepository().current() }.getOrNull()
-        val history = runCatching { entryPoint.workoutRepository().historyOnce() }.getOrDefault(emptyList())
+        val startTimes = runCatching { entryPoint.workoutRepository().historyStartTimes() }
+            .getOrDefault(emptyList())
         val restDays = settings?.restDays?.mapNotNull { runCatching { DayOfWeek.of(it) }.getOrNull() }?.toSet()
             ?: setOf(DayOfWeek.SUNDAY)
-        val streak = au.mark.kinetiq.domain.plan.StreakCalculator.currentStreak(
-            history.map { it.startedAtEpochMs }, restDays,
-        )
+        val streak = au.mark.kinetiq.domain.plan.StreakCalculator.currentStreak(startTimes, restDays)
 
         provideContent {
             GlanceTheme {
-                val launchIntent = Intent(context, MainActivity::class.java).apply {
-                    action = MainActivity.ACTION_REPEAT_LAST
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
+                // Carries an origin token only this app can mint; Glance passes our Intent through
+                // verbatim (extras included) into an immutable PendingIntent it creates from our
+                // context, so the token survives to MainActivity on both cold and warm launches.
+                val launchIntent = MainActivity.repeatLastIntent(context)
                 Column(
                     modifier = GlanceModifier
                         .fillMaxSize()
@@ -68,7 +68,7 @@ class KinetiqWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = if (last != null) "▶  Repeat: ${last.name}" else "▶  Start your first workout",
+                        text = if (lastName != null) "▶  Repeat: $lastName" else "▶  Start your first workout",
                         style = TextStyle(fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onSurface),
                         maxLines = 1,
                     )

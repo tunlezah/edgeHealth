@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Least privilege: this workflow only builds and uploads artifacts.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -50,10 +54,14 @@ jobs:
           name: kinetiq-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Upload release APK
+      # Runners have no ~/.android/debug.keystore, so AGP mints a fresh random debug key on every
+      # run. These APKs are therefore signed with a different key each build: fine for smoke
+      # testing, but they cannot be installed over one another and carry no stable provenance.
+      # The value of the assembleRelease step is the no-INTERNET check and the R8 pass, not this.
+      - name: Upload release APK (CI-signed with an ephemeral key — NOT upgradable)
         uses: actions/upload-artifact@v4
         with:
-          name: kinetiq-release-apk
+          name: kinetiq-release-apk-ci-ephemeral-key
           path: app/build/outputs/apk/release/app-release.apk
 
       - name: Upload test reports

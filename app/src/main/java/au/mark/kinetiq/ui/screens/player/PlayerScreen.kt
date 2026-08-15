@@ -252,6 +252,9 @@ fun PlayerScreen(
                             animationId = next.animationId,
                             modifier = Modifier.size(84.dp),
                             contentDesc = "Next: ${next.exerciseName}",
+                            // This card stays on screen during a paused rest, so without this it
+                            // kept animating beside a frozen main animation.
+                            paused = s.paused,
                         )
                         Column(Modifier.padding(start = 10.dp)) {
                             Text("Next up", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

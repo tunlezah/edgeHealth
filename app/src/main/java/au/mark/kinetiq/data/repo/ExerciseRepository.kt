@@ -12,8 +12,10 @@ import au.mark.kinetiq.data.model.Exercise
 import au.mark.kinetiq.data.model.ExerciseDatabaseFile
 import au.mark.kinetiq.data.model.NamedRoutine
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,7 +45,14 @@ class ExerciseRepository @Inject constructor(
     suspend fun exercise(id: String): Exercise? = database().exercises.find { it.id == id }
     suspend fun byCategory(cat: Category): List<Exercise> = database().exercises.filter { it.category == cat }
 
-    private suspend fun loadAndSeed(): ExerciseDatabaseFile {
+    /**
+     * A ~130 KB asset read, a full JSON parse and the validator — plus, on a schema bump, 90
+     * encodeToString calls and two Room writes. Every caller is main-dispatched, including the
+     * service's how-to cue, which fires during the get-ready countdown of every session. `suspend`
+     * alone does not move work off the caller's dispatcher, so switch explicitly; the whole body
+     * stays on one dispatcher so the Room writes do not hop back.
+     */
+    private suspend fun loadAndSeed(): ExerciseDatabaseFile = withContext(Dispatchers.IO) {
         val asset = context.assets.open(ASSET_NAME).bufferedReader().use { it.readText() }
         val parsed = json.decodeFromString<ExerciseDatabaseFile>(asset)
 
@@ -64,7 +73,7 @@ class ExerciseRepository @Inject constructor(
             })
             dao.putMeta(DbMetaEntity(META_SCHEMA_VERSION, parsed.schemaVersion.toString()))
         }
-        return parsed
+        parsed
     }
 
     companion object {

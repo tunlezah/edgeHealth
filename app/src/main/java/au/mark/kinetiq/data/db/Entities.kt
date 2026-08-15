@@ -49,6 +49,24 @@ data class SessionHistoryEntity(
     val sessionJson: String,
 )
 
+/**
+ * History without the `sessionJson` blob — a Room projection, not an entity.
+ *
+ * The list, calendar, trends and streak screens need none of it, but decoding it per row cost a
+ * full [au.mark.kinetiq.data.model.GeneratedSession] parse (~10-15 KB) on the collector's thread
+ * for every row in the table, growing without bound as history accumulated.
+ */
+data class SessionHistoryRow(
+    val id: Long,
+    val startedAtEpochMs: Long,
+    val endedAtEpochMs: Long,
+    val name: String,
+    val totalActiveSec: Int,
+    val calories: Double,
+    val blocksJson: String,
+    val healthConnectWritten: Boolean,
+)
+
 /** Manually entered body metrics; freshest value per metric wins in heuristics. */
 @Entity(tableName = "manual_measurements")
 data class ManualMeasurementEntity(

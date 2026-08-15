@@ -53,15 +53,26 @@ interface WorkoutDao {
     @Insert
     suspend fun addHistory(h: SessionHistoryEntity): Long
 
-    @Query("SELECT * FROM session_history ORDER BY startedAtEpochMs DESC")
-    fun history(): Flow<List<SessionHistoryEntity>>
+    /** Everything the list, calendar, trends and streak screens need — and no session JSON. */
+    @Query(
+        "SELECT id, startedAtEpochMs, endedAtEpochMs, name, totalActiveSec, calories, " +
+            "blocksJson, healthConnectWritten FROM session_history ORDER BY startedAtEpochMs DESC"
+    )
+    fun historyRows(): Flow<List<SessionHistoryRow>>
 
+    /** Timestamps only — the widget's streak needs nothing else. */
+    @Query("SELECT startedAtEpochMs FROM session_history ORDER BY startedAtEpochMs DESC")
+    suspend fun historyStartTimes(): List<Long>
+
+    /** One string — the widget's "Repeat: <name>" line. */
+    @Query("SELECT name FROM session_history ORDER BY startedAtEpochMs DESC LIMIT 1")
+    suspend fun lastSessionName(): String?
+
+    /** Repeat-last genuinely needs the stored session, so this one still selects it. */
     @Query("SELECT * FROM session_history ORDER BY startedAtEpochMs DESC LIMIT 1")
     suspend fun lastSession(): SessionHistoryEntity?
 
-    @Query("SELECT * FROM session_history ORDER BY startedAtEpochMs DESC LIMIT 1")
-    fun lastSessionFlow(): Flow<SessionHistoryEntity?>
-
+    /** Export needs every stored session; that is the point of an export. */
     @Query("SELECT * FROM session_history")
     suspend fun historyOnce(): List<SessionHistoryEntity>
 

@@ -7,6 +7,12 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+// Room schema export. The androidx.room Gradle plugin is not applied, so the location is passed
+// as a KSP argument. Checked-in schemas are the baseline every future Migration is diffed against.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 android {
     namespace = "au.mark.kinetiq"
     compileSdk = 36
@@ -50,6 +56,8 @@ android {
             isReturnDefaultValues = true
         }
     }
+    // Room's MigrationTestHelper reads the exported schemas from androidTest assets.
+    sourceSets.getByName("androidTest") { assets.srcDir("$projectDir/schemas") }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
