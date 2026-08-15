@@ -53,9 +53,11 @@ import au.mark.kinetiq.service.WorkoutSessionService
 import au.mark.kinetiq.ui.components.SectionHeader
 import au.mark.kinetiq.ui.components.formatSec
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
@@ -120,26 +122,39 @@ class BuilderViewModel @Inject constructor(
         uiState.value = uiState.value.copy(showContinuousNotice = false)
     }
 
+    private var generateSeq = 0
+
     fun generate() {
+        val seq = ++generateSeq
         viewModelScope.launch {
+            // Set on Main before the switch and cleared on Main after, so the flag's window is
+            // strictly longer than before — the Generate button's enabled state is unaffected.
             uiState.value = uiState.value.copy(generating = true)
             val settings = settingsRepository.current()
             val metrics = if (uiState.value.config.useHealthData) measurementRepository.bodyMetrics() else null
-            val generator = WorkoutGenerator(
-                exercises = exerciseRepository.exercises(),
-                routines = exerciseRepository.routines(),
-                machines = settings.machines,
-            )
-            val result = generator.generate(
-                uiState.value.config,
-                WorkoutGenerator.Profile(
-                    constraints = settings.constraints,
-                    includeLowEvidence = settings.includeLowEvidence,
-                    visceralFatGoal = settings.visceralFatGoal,
-                    metrics = metrics,
-                ),
-            )
-            settingsRepository.setLastConfigJson(json.encodeToString(GeneratorConfig.serializer(), uiState.value.config))
+            val exercises = exerciseRepository.exercises()
+            val routines = exerciseRepository.routines()
+            // Snapshot what we are generating for, so a config edit mid-generation cannot make the
+            // result describe a different configuration than the one that was saved.
+            val config = uiState.value.config
+            val result = withContext(Dispatchers.Default) {
+                WorkoutGenerator(
+                    exercises = exercises,
+                    routines = routines,
+                    machines = settings.machines,
+                ).generate(
+                    config,
+                    WorkoutGenerator.Profile(
+                        constraints = settings.constraints,
+                        includeLowEvidence = settings.includeLowEvidence,
+                        visceralFatGoal = settings.visceralFatGoal,
+                        metrics = metrics,
+                    ),
+                )
+            }
+            settingsRepository.setLastConfigJson(json.encodeToString(GeneratorConfig.serializer(), config))
+            // A newer generate() superseded this one (rapid Regenerate taps) — drop the stale result.
+            if (seq != generateSeq) return@launch
             uiState.value = uiState.value.copy(
                 preview = result.session, warnings = result.warnings, generating = false,
                 configChanged = false, edited = false,
@@ -163,6 +178,7 @@ class BuilderViewModel @Inject constructor(
     }
 
     fun swapStep(index: Int) {
+        if (uiState.value.generating) return
         viewModelScope.launch {
             val session = uiState.value.preview ?: return@launch
             val step = session.plan.steps.getOrNull(index) ?: return@launch
@@ -192,6 +208,10 @@ class BuilderViewModel @Inject constructor(
     }
 
     private fun editSteps(transform: (List<SessionStep>) -> List<SessionStep>) {
+        // Generation now runs off the main thread, so a preview edit made while one is in flight
+        // would be silently overwritten by its write-back. Ignoring the edit is honest; losing it
+        // after the user saw it applied is not.
+        if (uiState.value.generating) return
         val session = uiState.value.preview ?: return
         val newSteps = transform(session.plan.steps)
         uiState.value = uiState.value.copy(

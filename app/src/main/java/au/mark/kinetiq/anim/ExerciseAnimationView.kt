@@ -5,9 +5,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
@@ -36,7 +39,12 @@ import kotlin.math.sin
  * darker shade + smaller width (never bare alpha, which washes out on light themes), feet and
  * hand shapes, a soft radial contact shadow that tracks foot spread and jump height, a subtle
  * breathing overlay so holds never freeze, per-segment easing driven by frame time, and a
- * working-muscle tint. One pose solve + ~20 filled paths per frame — trivially cheap at 60fps.
+ * working-muscle tint.
+ *
+ * Per frame: one pose solve, one rig solve and ~13 filled paths. The motion-path arc — declared by
+ * 25 of the 50 registry animations — needs a further 29 pose and rig solves, but it is a pure
+ * function of the animation and the canvas size, so it is solved once in `remember` rather than on
+ * every frame.
  */
 @Composable
 fun ExerciseAnimationView(
@@ -46,7 +54,11 @@ fun ExerciseAnimationView(
     paused: Boolean = false,
 ) {
     val anim = animationId?.let { AnimationRegistry.byId[it] } ?: return
-    var timeMs by remember { mutableFloatStateOf(0f) }
+    // Re-keyed on the animation so a recycled LazyColumn row starts at its authored keyframe 0
+    // instead of inheriting the previous exercise's phase. Not keyed on `paused` — unpausing must
+    // continue the loop, not restart it.
+    var timeMs by remember(anim.id) { mutableFloatStateOf(0f) }
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
     LaunchedEffect(anim.id, paused) {
         if (paused) return@LaunchedEffect
@@ -69,14 +81,28 @@ fun ExerciseAnimationView(
     val pathColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.28f)
     val shadowColor = MaterialTheme.colorScheme.onSurface
 
+    // Keyed on canvas size as well as animation id: the points are in pixel space and scale with
+    // the canvas, so a size change must re-solve. Re-keying on id also covers a LazyColumn
+    // recycling a row into a different exercise.
+    val motionPath: Path? = remember(anim.id, canvasSize) {
+        val keyframe = anim as? KeyframeAnim ?: return@remember null
+        val points = motionPathPoints(keyframe, canvasSize.width.toFloat(), canvasSize.height.toFloat())
+        if (points.isEmpty()) null
+        else Path().apply {
+            moveTo(points[0].x, points[0].y)
+            for (i in 1..points.lastIndex) lineTo(points[i].x, points[i].y)
+        }
+    }
+
     Canvas(
         modifier = modifier
             .testTag("anim:${anim.id}")
+            .onSizeChanged { canvasSize = it }
             .semantics { contentDescription = contentDesc },
     ) {
         val style = RenderStyle(bodyColor, farColor, highlight, farHighlight, propColor, groundColor, pathColor, shadowColor)
         when (anim) {
-            is KeyframeAnim -> drawKeyframeAnim(anim, timeMs, style)
+            is KeyframeAnim -> drawKeyframeAnim(anim, timeMs, style, motionPath)
             is SpinAnim -> drawSpinAnim(anim, timeMs, style)
             is EllipticalAnim -> drawEllipticalAnim(anim, timeMs, style)
         }
@@ -103,6 +129,31 @@ private const val VIEW_BOTTOM = 0.56f
 /** Drawn surface lines (author space). Contact joints are authored at [AnimationRegistry.GY]. */
 private val GROUND_Y = AnimationRegistry.GY + 0.032f
 private val MAT_Y = AnimationRegistry.GY + 0.030f
+
+/**
+ * The motion-path arc in canvas pixels.
+ *
+ * Pure in (anim, width, height) — never in time, which is the whole point: this used to be solved
+ * inside the draw lambda, so 29 pose solves and 29 full rig solves ran on every frame to redraw an
+ * identical polyline. 25 of the 50 registry animations declare a path joint. Returning plain
+ * [Offset]s keeps it testable without an Android runtime.
+ */
+internal fun motionPathPoints(anim: KeyframeAnim, width: Float, height: Float): List<Offset> {
+    if (anim.pathJoint == PathJoint.NONE || width <= 0f || height <= 0f) return emptyList()
+    fun mx(x: Float) = (x - VIEW_LEFT) / (VIEW_RIGHT - VIEW_LEFT) * width
+    fun my(y: Float) = (y - VIEW_TOP) / (VIEW_BOTTOM - VIEW_TOP) * height
+    return (0..28).map { i ->
+        val s = Rig.solve(anim.poseAt(i / 28f), anim.facing)
+        val j = when (anim.pathJoint) {
+            PathJoint.WRIST -> s.near.wrist
+            PathJoint.ANKLE -> s.near.ankle
+            PathJoint.PELVIS -> s.pelvis
+            PathJoint.HEAD -> s.headCenter
+            PathJoint.NONE -> s.pelvis
+        }
+        Offset(mx(j.x), my(j.y))
+    }
+}
 
 private fun DrawScope.mapX(x: Float): Float = (x - VIEW_LEFT) / (VIEW_RIGHT - VIEW_LEFT) * size.width
 private fun DrawScope.mapY(y: Float): Float = (y - VIEW_TOP) / (VIEW_BOTTOM - VIEW_TOP) * size.height
@@ -322,7 +373,12 @@ private fun DrawScope.limbLine(x0: Float, y0: Float, x1: Float, y1: Float, c: Co
 
 // ---------------------------------------------------------------------- keyframed
 
-private fun DrawScope.drawKeyframeAnim(anim: KeyframeAnim, timeMs: Float, style: RenderStyle) {
+private fun DrawScope.drawKeyframeAnim(
+    anim: KeyframeAnim,
+    timeMs: Float,
+    style: RenderStyle,
+    motionPath: Path?,
+) {
     val phase = (timeMs % anim.durationMs) / anim.durationMs
     var pose = anim.poseAt(phase)
 
@@ -348,24 +404,10 @@ private fun DrawScope.drawKeyframeAnim(anim: KeyframeAnim, timeMs: Float, style:
         else -> drawGround(style)
     }
 
-    // subtle motion-path arc for the key moving joint
-    if (anim.pathJoint != PathJoint.NONE) {
-        val path = Path()
-        var first = true
-        for (i in 0..28) {
-            val p = anim.poseAt(i / 28f)
-            val s = Rig.solve(p, anim.facing)
-            val j = when (anim.pathJoint) {
-                PathJoint.WRIST -> s.near.wrist
-                PathJoint.ANKLE -> s.near.ankle
-                PathJoint.PELVIS -> s.pelvis
-                PathJoint.HEAD -> s.headCenter
-                PathJoint.NONE -> s.pelvis
-            }
-            val o = pt(j)
-            if (first) { path.moveTo(o.x, o.y); first = false } else path.lineTo(o.x, o.y)
-        }
-        drawPath(path, style.path, style = Stroke(width = scale(0.012f), cap = StrokeCap.Round))
+    // Subtle motion-path arc for the key moving joint. Solved once per (animation, canvas size)
+    // and passed in — it is a pure function of those two things, never of time.
+    motionPath?.let {
+        drawPath(it, style.path, style = Stroke(width = scale(0.012f), cap = StrokeCap.Round))
     }
 
     drawFigure(sk, style, anim.muscle)
