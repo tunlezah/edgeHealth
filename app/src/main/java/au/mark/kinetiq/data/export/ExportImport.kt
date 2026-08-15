@@ -100,8 +100,8 @@ class ExportImportManager @Inject constructor(
             savedWorkouts = saved.map { ExportedWorkout(it.name, it.createdAtEpochMs, it.session) },
             history = history.map {
                 ExportedHistoryEntry(
-                    it.startedAtEpochMs, it.endedAtEpochMs, it.name,
-                    it.totalActiveSec, it.calories, it.blocks, it.session,
+                    it.entry.startedAtEpochMs, it.entry.endedAtEpochMs, it.entry.name,
+                    it.entry.totalActiveSec, it.entry.calories, it.entry.blocks, it.session,
                 )
             },
         )
@@ -121,7 +121,9 @@ class ExportImportManager @Inject constructor(
         }
         val existingHistory = workoutRepository.historyOnce()
         for (entry in file.history) {
-            val dup = existingHistory.any { it.startedAtEpochMs == entry.startedAtEpochMs && it.name == entry.name }
+            val dup = existingHistory.any {
+                it.entry.startedAtEpochMs == entry.startedAtEpochMs && it.entry.name == entry.name
+            }
             if (!dup) {
                 workoutRepository.importHistory(
                     HistoryEntry(
@@ -133,8 +135,8 @@ class ExportImportManager @Inject constructor(
                         calories = entry.calories,
                         blocks = entry.blocks,
                         healthConnectWritten = false,
-                        session = entry.session,
-                    )
+                    ),
+                    session = entry.session,
                 )
                 h++
             }

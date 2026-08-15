@@ -48,7 +48,7 @@ class MainViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            val last = workoutRepository.lastSession() ?: return@launch
+            val last = workoutRepository.lastSessionForRepeat() ?: return@launch
             val session = last.session ?: return@launch
             // Never hand the service a plan it cannot foreground: startSession() bails on
             // steps.firstOrNull() before it reaches startForeground, which trips the ~5 s FGS
@@ -57,7 +57,7 @@ class MainViewModel @Inject constructor(
             WorkoutSessionService.start(
                 context,
                 json.encodeToString(au.mark.kinetiq.data.model.GeneratedSession.serializer(), session),
-                last.name.ifBlank { "Workout" },
+                last.entry.name.ifBlank { "Workout" },
             )
             pendingPlayerLaunch.value = true
         }

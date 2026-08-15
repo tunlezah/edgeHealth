@@ -127,9 +127,10 @@ class HomeViewModel @Inject constructor(
 
     fun repeatLast(context: android.content.Context, onLaunched: () -> Unit) {
         viewModelScope.launch {
-            val last = workoutRepository.lastSession() ?: return@launch
+            val last = workoutRepository.lastSessionForRepeat() ?: return@launch
             val session = last.session ?: return@launch
-            start(context, session, last.name)
+            if (session.plan.steps.isEmpty()) return@launch
+            start(context, session, last.entry.name)
             onLaunched()
         }
     }
