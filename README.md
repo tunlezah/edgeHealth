@@ -30,7 +30,8 @@ Current version: **1.1.0** (`versionCode 2`).
 - [Signing a release for sideloading](#signing-a-release-for-sideloading)
 - [Installing on the Motorola Edge 60 Fusion](#installing-on-the-motorola-edge-60-fusion)
 - [Privacy and the offline guarantee](#privacy-and-the-offline-guarantee)
-- [Known issues](#known-issues)
+- [Audit status](#audit-status)
+- [Database migrations](#database-migrations)
 - [Documentation map](#documentation-map)
 
 ## What's in the app
@@ -126,7 +127,7 @@ app/src/main/java/au/mark/kinetiq/
   widget/     Glance home-screen widget (repeat last workout + streak)
   di/         Hilt modules
 app/src/main/assets/exercise_db.json   versioned exercise/routine database (90 entries, all cited)
-app/src/test/                          15 unit-test classes, 99 tests
+app/src/test/                          23 unit-test classes, 142 tests
 docs/audit/                            security and Android reliability audit reports
 docs/plan/                             phased implementation plan and progress tracking
 ```
@@ -169,7 +170,7 @@ artifacts on every push.
 ./gradlew testDebugUnitTest
 ```
 
-99 tests across 15 classes, running offline under Robolectric (the `android-all` runtime jar is
+142 tests across 23 classes, running offline under Robolectric (the `android-all` runtime jar is
 resolved through Gradle rather than Robolectric's own fetcher, so CI needs no network).
 
 | Test class | Covers |
@@ -252,8 +253,9 @@ verified three ways: a Gradle task on the merged release manifest, a unit test, 
    the Room database, shared preferences and DataStore in both cloud backup and device-to-device
    transfer. That means workout history and body measurements can be copied off-device by the *platform*
    backup transport. Google's cloud backup is end-to-end encrypted with a key derived from the device
-   lockscreen, so Google cannot read it — but if you want nothing leaving the device at all, set
-   `android:allowBackup="false"` in `AndroidManifest.xml`.
+   lockscreen, so Google cannot read it, and this build sets `disableIfNoEncryptionCapabilities` so a
+   device with no screen lock is skipped entirely rather than backed up under a server-held key. If you
+   want nothing leaving the device at all, set `android:allowBackup="false"` in `AndroidManifest.xml`.
 
 **Data stored on device:** workout history, saved workouts, manual body measurements (weight, height,
 body fat %, waist, visceral rating), cached Health Connect values, and settings. All in app-private
@@ -263,30 +265,72 @@ choose via the system file picker — treat that file as sensitive.
 **Health Connect** is off by default and requires explicit permission grants. Reads are limited to
 weight, body fat and height; writes are limited to completed exercise sessions and total calories.
 
-## Known issues
+## Audit status
 
 The app has been through a two-pass security audit and a two-pass Android reliability audit, both with
-independent adversarial verification. Full reports, with verified findings and rejected false positives,
-are in [`docs/audit/`](docs/audit/).
+independent adversarial verification, and the verified findings have been fixed. Full reports —
+including the false positives that were rejected and the fixes deliberately *not* made — are in
+[`docs/audit/`](docs/audit/).
 
-Summary of what is outstanding at the time of writing:
+**No high-severity security findings.** The audit confirmed no logging of sensitive data, no SQL
+injection, no WebView or dynamic code loading, `FLAG_IMMUTABLE` on all PendingIntents, textbook SAF
+usage with no path-traversal surface, and no CI script-injection vector. Three initially-reported
+findings were disproved outright, including a claimed Navigation deep-link bypass — route-based
+destinations register their deep link in a private field deliberately segregated from the matchable
+list, so no URI can reach them.
 
-- **No high-severity security findings.** The audit confirmed no logging of sensitive data, no SQL
-  injection, no WebView or dynamic code loading, correct `FLAG_IMMUTABLE` on all PendingIntents, correct
-  SAF usage with no path-traversal surface, and no CI script-injection vector.
-- **One critical reliability defect:** resuming a stopped workout from the Summary screen after the
-  10-minute recovery window has elapsed deletes the history row before confirming the restore can
-  succeed, then crashes the foreground service. See `docs/audit/reliability-verified.md` (L-1).
-- **One high-severity data-loss risk:** the Room database uses `fallbackToDestructiveMigration()` at
-  schema version 1 with `exportSchema = false`. The next entity change will silently erase all user data
-  unless a schema baseline and real migrations land first (L-2). **Do not bump the database version
-  before fixing this.**
-- **One high-severity performance defect:** history queries deserialize every row's full session JSON on
-  the main thread, and the decoded field is unused by all three screens that trigger it. The freeze grows
-  linearly with history size (L-3).
+Fixed since the audit:
+
+- **Foreground-service crash + data loss (critical).** Resuming a stopped workout from the Summary
+  screen after the 10-minute window deleted the history row before confirming the restore could
+  succeed, then crashed the service. The offer is now gated on a real read-and-parse with a live
+  countdown, and the row is retired only after the restore is confirmed.
+- **Destructive migration (high).** The database had `fallbackToDestructiveMigration()` at version 1
+  with no exported schema. The schema baseline is now checked in under `app/schemas/` and the
+  destructive fallback is gone — see [Database migrations](#database-migrations).
+- **Main-thread history parsing (high).** History queries deserialized every row's full session JSON
+  on the main thread, for a field no screen read. Now a projection query, mapped off-main.
+- Plus the widget's whole-table scan, a stale launch intent that could restart a workout unprompted,
+  an unauthenticated widget action, an audio-focus race, a self-terminating reminder chain, a
+  per-frame animation solve, and import validation gaps.
+
+**One item still outstanding:** the Room schema baseline's identity hash
+(`08f56f3ba29cad9950d877f4722be309`) has not been verified against a device carrying the previously
+shipped build. Do that before the next release — see [Database migrations](#database-migrations).
 
 Phase 3 of the implementation plan (database and animation expansion) is in progress — see
 [`docs/plan/PROGRESS.md`](docs/plan/PROGRESS.md) for the item-level state.
+
+## Database migrations
+
+The Room schema is exported to `app/schemas/` and checked in. Room validates only the identity hash
+stored in `room_master_table` at runtime — it never reads those JSON files — so they are a build
+artifact that exists to make migrations authorable.
+
+There is **no** `fallbackToDestructiveMigration()`. A missing migration now fails loudly on first
+database access instead of silently dropping every table; that is recoverable (reinstall the previous
+APK and export your data), whereas silent destruction is not.
+
+To change an entity:
+
+1. Bump `version` in `KinetiqDatabase.kt`.
+2. Build — KSP emits `app/schemas/au.mark.kinetiq.data.db.KinetiqDatabase/<n>.json`.
+3. Diff it against the previous version and write a `Migration` in `data/db/KinetiqMigrations.kt`,
+   adding it to `KinetiqMigrations.ALL`.
+
+`RoomSchemaBaselineTest` fails the build if a version is bumped without a checked-in schema.
+
+**Before the next release**, verify the checked-in v1 baseline against a device running the previously
+shipped build:
+
+```bash
+adb exec-out run-as au.mark.kinetiq cat databases/kinetiq.db > /tmp/kinetiq.db
+sqlite3 /tmp/kinetiq.db "SELECT identity_hash FROM room_master_table;"
+# must equal database.identityHash in app/schemas/.../1.json
+```
+
+A mismatch means an entity drifted since that build and already needs a migration written against the
+shipped tag's `Entities.kt` rather than `HEAD`.
 
 ## Documentation map
 
@@ -301,7 +345,7 @@ Phase 3 of the implementation plan (database and animation expansion) is in prog
 
 ## Acceptance checks
 
-- `./gradlew testDebugUnitTest` — 99 tests green (DB validator included).
+- `./gradlew testDebugUnitTest` — 142 tests green (DB validator included).
 - `./gradlew assembleRelease` — prints `OK: merged release manifest has no INTERNET permission.`
 - `aapt dump permissions app-release.apk` — no `android.permission.INTERNET` (CI does this too).
 - Hidden animation-QA screen: Settings → long-press the version row.
