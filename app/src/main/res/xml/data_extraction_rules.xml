@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
-    <cloud-backup>
+    <!-- Only back up to the cloud when the device can encrypt it (i.e. the user has a screen
+         lock). Without this, a device with no lock screen uploads workout history and body
+         measurements under a server-held key instead of being skipped.
+         Device-to-device transfer is deliberately unconstrained — it never reaches a server. -->
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
         <include domain="database" path="." />
         <include domain="sharedpref" path="." />
         <include domain="file" path="datastore/" />
