@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import au.mark.kinetiq.data.db.ExerciseDao
 import au.mark.kinetiq.data.db.KinetiqDatabase
+import au.mark.kinetiq.data.db.KinetiqMigrations
 import au.mark.kinetiq.data.db.MeasurementDao
 import au.mark.kinetiq.data.db.WorkoutDao
 import dagger.Module
@@ -29,7 +30,10 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): KinetiqDatabase =
         Room.databaseBuilder(context, KinetiqDatabase::class.java, "kinetiq.db")
-            .fallbackToDestructiveMigration()
+            // No destructive fallback, and no destructive-on-downgrade either — both silently
+            // erase every session, measurement and saved workout the user has ever recorded, with
+            // no server copy to restore from. See KinetiqMigrations for the change procedure.
+            .addMigrations(*KinetiqMigrations.ALL)
             .build()
 
     @Provides fun provideExerciseDao(db: KinetiqDatabase): ExerciseDao = db.exerciseDao()
