@@ -29,9 +29,11 @@ import au.mark.kinetiq.health.HealthConnectManager
 import au.mark.kinetiq.voice.VoiceCoach
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
 import javax.inject.Inject
@@ -44,6 +46,25 @@ internal fun stopArmDecision(nowMs: Long, armedUntilMs: Long): StopDecision =
 
 /** A start command must never clobber a live (unfinished) session. */
 internal fun shouldIgnoreStart(currentFinished: Boolean?): Boolean = currentFinished == false
+
+/**
+ * Actions the companion delivers via `startForegroundService`. Each one arms the platform's ~5 s
+ * foreground-start watchdog, so every path handling one must reach `startForeground` or stop.
+ */
+internal fun isForegroundEntry(action: String?): Boolean =
+    action == WorkoutSessionService.ACTION_START ||
+        action == WorkoutSessionService.ACTION_RESUME_SNAPSHOT ||
+        action == WorkoutSessionService.ACTION_RESUME_STOPPED
+
+/**
+ * A finish coroutine may tear the service down only if its run is still the current one. It does
+ * seconds of suspending work (Health Connect IPC, DB write), during which a new session can be
+ * accepted — `shouldIgnoreStart` lets one in the moment `finished` is set.
+ */
+internal fun shouldTearDown(finishingGen: Int, currentGen: Int): Boolean = finishingGen == currentGen
+
+/** The wake lock exists to keep the step clock accurate — it is only needed while one is running. */
+internal fun shouldHoldWakeLock(paused: Boolean, finished: Boolean): Boolean = !paused && !finished
 
 /**
  * Foreground service that runs the workout: an elapsed-realtime-based timer (accurate across
@@ -83,18 +104,35 @@ class WorkoutSessionService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        when (intent?.action) {
+        latestStartId = startId
+        when (val action = intent?.action) {
             ACTION_START -> {
                 if (shouldIgnoreStart(stateHolder.state.value?.finished)) {
-                    updateNotification() // live session: refresh, never clobber
+                    // Live session: this delivery is a refresh. Already foreground, so the
+                    // platform cleared fgRequired without arming a new timeout.
+                    goForeground() // idempotent — degenerates to notify()
                 } else {
-                    val payload = intent.getStringExtra(EXTRA_SESSION_JSON)
-                    val name = intent.getStringExtra(EXTRA_SESSION_NAME) ?: "Workout"
-                    if (payload != null) startSession(json.decodeFromString(GeneratedSession.serializer(), payload), name)
+                    // A throw here would escape onStartCommand with the watchdog still armed.
+                    val session = intent.getStringExtra(EXTRA_SESSION_JSON)?.let { payload ->
+                        runCatching { json.decodeFromString(GeneratedSession.serializer(), payload) }.getOrNull()
+                    }
+                    if (session == null || session.plan.steps.isEmpty()) {
+                        // Nothing to run. Stopping satisfies the foreground-start timeout without
+                        // ever showing a notification — safe because no live session exists here.
+                        stopSelfResult(startId)
+                    } else {
+                        val name = intent.getStringExtra(EXTRA_SESSION_NAME) ?: "Workout"
+                        val gen = claimForeground("Get ready", "Starting $name…")
+                        startSession(session, name, gen, startId)
+                    }
                 }
             }
-            ACTION_RESUME_SNAPSHOT -> restoreFromSnapshot()
-            ACTION_RESUME_STOPPED -> restoreFromSnapshot(fromStopped = true)
+            // Whether a restorable snapshot exists needs disk I/O, so the foreground has to be
+            // claimed first and released again if the read comes back empty.
+            ACTION_RESUME_SNAPSHOT, ACTION_RESUME_STOPPED -> {
+                val gen = claimForeground(textHint = "Restoring your workout…")
+                restoreFromSnapshot(gen, startId, fromStopped = action == ACTION_RESUME_STOPPED)
+            }
             ACTION_PAUSE -> setPaused(true)
             ACTION_RESUME -> setPaused(false)
             ACTION_SKIP -> skipStep()
@@ -105,7 +143,7 @@ class WorkoutSessionService : LifecycleService() {
             ACTION_STOP -> {
                 val now = SystemClock.elapsedRealtime()
                 when (stopArmDecision(now, stopArmedUntil)) {
-                    StopDecision.FINISH -> finishSession(userStopped = true)
+                    StopDecision.FINISH -> finishSession(userStopped = true, startId = startId)
                     StopDecision.ARM -> {
                         stopArmedUntil = now + STOP_ARM_WINDOW_MS
                         updateNotification()
@@ -119,7 +157,10 @@ class WorkoutSessionService : LifecycleService() {
                 }
             }
             // The player UI confirms with its own dialog, then sends this directly.
-            ACTION_STOP_CONFIRMED -> finishSession(userStopped = true)
+            ACTION_STOP_CONFIRMED -> finishSession(userStopped = true, startId = startId)
+            // START_NOT_STICKY means the platform never redelivers a null intent, but if one ever
+            // arrives it must not leave the service running with nothing to do.
+            null -> abandonRun(runGeneration, startId)
         }
         return START_NOT_STICKY
     }
@@ -127,15 +168,48 @@ class WorkoutSessionService : LifecycleService() {
     private var stopArmedUntil = 0L
     private var stopArmJob: Job? = null
 
+    /**
+     * Bumped synchronously — before any suspension — whenever a new run is accepted, so a finish
+     * coroutine parked in a suspending call can tell whether it still owns the service.
+     */
+    private var runGeneration = 0
+
+    /** Most recent onStartCommand id, for the paths where no id is in scope. */
+    private var latestStartId = 0
+
+    private var isForeground = false
+
+    /** Claim the foreground synchronously and open a new run generation. */
+    private fun claimForeground(titleHint: String? = null, textHint: String? = null): Int {
+        val gen = ++runGeneration
+        goForeground(titleHint, textHint)
+        return gen
+    }
+
+    /**
+     * A foreground entry that turned out to have nothing to run: drop the placeholder and stop.
+     * This is what satisfies the watchdog on the bail-out paths that previously just returned,
+     * leaving the service alive but never foreground until the platform killed the process.
+     */
+    private fun abandonRun(gen: Int, startId: Int) {
+        if (runGeneration != gen) return
+        if (stateHolder.state.value != null) { updateNotification(); return }
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        isForeground = false
+        stopSelfResult(startId)
+    }
+
     // ------------------------------------------------------------------ lifecycle
 
-    private fun startSession(session: GeneratedSession, name: String) {
+    private fun startSession(session: GeneratedSession, name: String, gen: Int, startId: Int) {
         lifecycleScope.launch {
             val settings = settingsRepo.current()
+            if (runGeneration != gen) return@launch
             voice.settings = settings.voice
             val weight = measurementRepo.resolved(Metric.WEIGHT_KG)?.value ?: settings.fallbackWeightKg.toDouble()
+            if (runGeneration != gen) return@launch
 
-            val first = session.plan.steps.firstOrNull() ?: return@launch
+            val first = session.plan.steps.firstOrNull() ?: return@launch abandonRun(gen, startId)
             // A starting session invalidates any unviewed old summary — it can never hijack
             // navigation into the previous session's results.
             stateHolder.clearCompleted()
@@ -147,6 +221,12 @@ class WorkoutSessionService : LifecycleService() {
             engine = newEngine
             engineState = newEngine.initialState()
             announceOnNextResume = false
+            // The on-disk snapshot still describes the previous run until the first tick; forcing
+            // one immediately stops a stale file outliving this start.
+            lastSnapshotMs = 0L
+            // A Stop armed on the previous run must not instantly finish this one.
+            stopArmedUntil = 0L
+            stopArmJob?.cancel()
             stateHolder.update(
                 PlayerState(
                     session = session,
@@ -176,12 +256,18 @@ class WorkoutSessionService : LifecycleService() {
         }
     }
 
-    private fun restoreFromSnapshot(fromStopped: Boolean = false) {
+    private fun restoreFromSnapshot(gen: Int, startId: Int, fromStopped: Boolean = false) {
         lifecycleScope.launch {
-            val snap = if (fromStopped) readStoppedSnapshot(this@WorkoutSessionService, json) ?: return@launch
-            else readSnapshot(this@WorkoutSessionService, json) ?: return@launch
-            if (fromStopped) stoppedSnapshotFile(this@WorkoutSessionService).delete()
+            // This read is the first statement in the launch and is non-suspending, so on
+            // Main.immediate it runs inline inside onStartCommand — the bail-out is deterministic,
+            // not racy, and abandonRun disarms the watchdog before it can fire.
+            val snap = (
+                if (fromStopped) readStoppedSnapshot(this@WorkoutSessionService, json)
+                else readSnapshot(this@WorkoutSessionService, json)
+                ) ?: return@launch abandonRun(gen, startId)
+            if (runGeneration != gen) return@launch
             val settings = settingsRepo.current()
+            if (runGeneration != gen) return@launch
             voice.settings = settings.voice
             val newEngine = SessionEngine(
                 snap.session.plan.steps, snap.weightKg,
@@ -203,6 +289,9 @@ class WorkoutSessionService : LifecycleService() {
                     ?: SessionEngine.CueFlags(),
             )
             announceOnNextResume = true
+            lastSnapshotMs = 0L
+            stopArmedUntil = 0L
+            stopArmJob?.cancel()
             stateHolder.update(
                 PlayerState(
                     session = snap.session,
@@ -220,7 +309,10 @@ class WorkoutSessionService : LifecycleService() {
                     paused = true,
                 )
             )
-            goForeground()
+            // Delete only after the restored state is published: a crash mid-restore then leaves
+            // the snapshot recoverable instead of having consumed it for nothing.
+            if (fromStopped) stoppedSnapshotFile(this@WorkoutSessionService).delete()
+            goForeground() // refines the placeholder posted in onStartCommand
             voice.warmUp { voice.speak("Workout restored — paused. Resume when you are ready.") }
             startTicker()
         }
@@ -265,9 +357,16 @@ class WorkoutSessionService : LifecycleService() {
         setPaused(true)
     }
 
-    private fun goForeground() {
+    private fun goForeground(titleHint: String? = null, textHint: String? = null) {
         registerAutoPause()
-        val notification = buildNotification()
+        val notification = buildNotification(titleHint, textHint)
+        if (isForeground) {
+            // Already claimed. Refine in place — calling startForeground again would re-evaluate
+            // the FGS type, and a permission revoke mid-session would then look like a type
+            // transition (HEALTH -> MEDIA_PLAYBACK), which Android 14+ treats as a change.
+            getSystemService(android.app.NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
+            return
+        }
         val hasActivityRecognition = checkSelfPermission(android.Manifest.permission.ACTIVITY_RECOGNITION) ==
             PackageManager.PERMISSION_GRANTED
         val type = if (hasActivityRecognition) {
@@ -277,6 +376,7 @@ class WorkoutSessionService : LifecycleService() {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
         }
         ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, type)
+        isForeground = true
         acquireWakeLock()
     }
 
@@ -442,8 +542,30 @@ class WorkoutSessionService : LifecycleService() {
         stateHolder.update(
             state.copy(paused = paused, prepareRemainingMs = engineState?.prepareRemainingMs ?: 0)
         )
+        // A paused workout has no step clock to keep accurate, so let the CPU sleep rather than
+        // holding a partial wake lock and spinning a 5 Hz ticker through what may be an
+        // indefinite pause (auto-pause on a call, then the user walks away). startTicker()
+        // re-baselines lastTick to elapsedRealtime() on resume, so the paused interval is never
+        // billed and the engine's deliberate tick clamp is not even exercised.
+        if (paused) {
+            suspendTicker()
+            releaseWakeLock()
+        } else {
+            acquireWakeLock()
+            startTicker()
+        }
         voice.speak(if (paused) "Paused." else "Resuming.", flush = true)
         updateNotification()
+    }
+
+    private fun suspendTicker() {
+        tickerJob?.cancel()
+        tickerJob = null
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let { if (it.isHeld) it.release() }
+        wakeLock = null
     }
 
     private fun skipStep() {
@@ -477,9 +599,11 @@ class WorkoutSessionService : LifecycleService() {
         updateNotification()
     }
 
-    private fun finishSession(userStopped: Boolean) {
+    private fun finishSession(userStopped: Boolean, startId: Int = latestStartId) {
         val state = stateHolder.state.value ?: return
         if (state.finished) return
+        // The run this coroutine owns. Captured before the launch, so it cannot drift.
+        val gen = runGeneration
         val es = engineState
         stateHolder.update(state.copy(finished = true, paused = true))
         tickerJob?.cancel()
@@ -561,19 +685,37 @@ class WorkoutSessionService : LifecycleService() {
             } finally {
                 // A user-initiated stop stays recoverable for 10 minutes (accidental taps).
                 if (userStopped) runCatching { writeStoppedSnapshot(state, es) }
-                // The service must always stop cleanly, even if history or HC writes threw:
-                // no zombie foreground service, no stale "resume" offer for a finished session.
-                deleteSnapshot(this@WorkoutSessionService)
-                stateHolder.update(null)
-                stopSelf()
+                // Nothing here may touch a session that isn't ours. The Health Connect write above
+                // is a cross-process IPC that can take seconds, and shouldIgnoreStart accepts a new
+                // ACTION_START the moment `finished` is set — so by now the user may already have
+                // started another workout, which this block would otherwise wipe out from under them.
+                if (shouldTearDown(gen, runGeneration)) {
+                    // Stop cleanly even if history or HC writes threw: no zombie foreground
+                    // service, no stale "resume" offer for a finished session.
+                    deleteSnapshot(this@WorkoutSessionService)
+                    stateHolder.update(null)
+                    // stopSelfResult declines if a newer command is queued; the fallback makes sure
+                    // a control command racing the finish can never leave the service running.
+                    if (!stopSelfResult(startId)) stopSelf()
+                }
             }
         }
     }
 
     // ------------------------------------------------------------------ snapshot
 
-    /** Written synchronously on a user stop so an accidental stop is recoverable. */
-    private fun writeStoppedSnapshot(state: PlayerState, es: SessionEngine.EngineState?) {
+    /**
+     * Written on a user stop so an accidental stop stays recoverable. It must *complete* before the
+     * finally returns — the service may be destroyed moments later — but synchronous does not mean
+     * main-thread: NonCancellable + IO keeps the completion guarantee (and works even when the
+     * finally is running because of cancellation) while moving a ~12 KB write off the UI thread.
+     *
+     * tmp + rename, matching [maybeSnapshot]: a kill mid-write must leave the previous file or none,
+     * never a truncated one. A truncated file passes an existence + mtime check, which is exactly
+     * how the Summary screen used to end up offering a Resume button that could not be honoured.
+     */
+    private suspend fun writeStoppedSnapshot(state: PlayerState, es: SessionEngine.EngineState?) =
+        withContext(NonCancellable + kotlinx.coroutines.Dispatchers.IO) {
         val snap = SessionSnapshot(
             session = state.session,
             sessionName = state.sessionName,
@@ -588,7 +730,13 @@ class WorkoutSessionService : LifecycleService() {
             blockBounds = es?.blockBounds?.mapValues { (_, v) -> listOf(v.first, v.second) } ?: emptyMap(),
             sessionId = state.sessionId,
         )
-        stoppedSnapshotFile(this).writeText(json.encodeToString(SessionSnapshot.serializer(), snap))
+        val file = stoppedSnapshotFile(this@WorkoutSessionService)
+        val tmp = File(file.parentFile, file.name + ".tmp")
+        tmp.writeText(json.encodeToString(SessionSnapshot.serializer(), snap))
+        if (!tmp.renameTo(file)) {
+            tmp.delete()
+            error("stopped snapshot rename failed")
+        }
     }
 
     private fun maybeSnapshot() {
@@ -624,11 +772,18 @@ class WorkoutSessionService : LifecycleService() {
 
     // ------------------------------------------------------------------ notification
 
-    private fun buildNotification(): Notification {
+    /**
+     * The `state == null` branches double as the placeholder posted synchronously from
+     * onStartCommand, before the session has been loaded. Same builder, same channel, same
+     * NOTIFICATION_ID, same actions — so refining it later is an in-place content replace with no
+     * flicker, and the hints are chosen so ACTION_START's title does not change at all.
+     */
+    private fun buildNotification(titleHint: String? = null, textHint: String? = null): Notification {
         val state = stateHolder.state.value
         val step = state?.currentStep
         val inPrepare = state?.inPrepare == true
         val title = when {
+            state == null && !titleHint.isNullOrBlank() -> titleHint
             inPrepare -> "Get ready"
             step != null -> step.exerciseName
             else -> getString(R.string.app_name)
@@ -636,7 +791,8 @@ class WorkoutSessionService : LifecycleService() {
         val remaining = if (inPrepare) ((state?.prepareRemainingMs ?: 0) / 1000).toInt()
         else ((state?.stepRemainingMs ?: 0) / 1000).toInt()
         val text = when {
-            state == null -> "Workout session"
+            state == null -> textHint ?: "Workout session"
+            state.paused && !inPrepare -> "Paused — tap Resume to continue"
             inPrepare -> "Starting in ${remaining}s — ${step?.exerciseName ?: ""}"
             else -> "${remaining / 60}:${(remaining % 60).toString().padStart(2, '0')} — step ${state.stepIndex + 1}/${state.totalSteps}"
         }
@@ -686,8 +842,9 @@ class WorkoutSessionService : LifecycleService() {
 
     override fun onDestroy() {
         tickerJob?.cancel()
+        isForeground = false
         unregisterAutoPause()
-        wakeLock?.let { if (it.isHeld) it.release() }
+        releaseWakeLock()
         mediaSession?.release()
         voice.stopSpeaking()
         super.onDestroy()
@@ -708,7 +865,9 @@ class WorkoutSessionService : LifecycleService() {
         const val EXTRA_SESSION_JSON = "session_json"
         const val EXTRA_SESSION_NAME = "session_name"
         private const val STOP_ARM_WINDOW_MS = 3_000L
-        private const val STOPPED_SNAPSHOT_VALID_MS = 10 * 60 * 1000L
+
+        /** How long after a user stop the summary still offers to resume. */
+        internal const val STOPPED_SNAPSHOT_VALID_MS = 10 * 60 * 1000L
 
         fun snapshotFile(context: Context): File = File(context.filesDir, "session_snapshot.json")
 

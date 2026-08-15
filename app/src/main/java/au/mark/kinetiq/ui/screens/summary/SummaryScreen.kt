@@ -30,15 +30,38 @@ import au.mark.kinetiq.data.repo.WorkoutRepository
 import au.mark.kinetiq.service.SessionStateHolder
 import au.mark.kinetiq.ui.components.SectionHeader
 import au.mark.kinetiq.ui.components.StatCard
+import au.mark.kinetiq.service.WorkoutSessionService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
+
+/** Outcome of tapping "Resume workout" on the summary. */
+sealed interface ResumeOutcome {
+    data object Started : ResumeOutcome
+    /** Gone, expired, or unparseable — the history row stays put. */
+    data object Expired : ResumeOutcome
+    /** The service never published a live session — the history row stays put. */
+    data object TimedOut : ResumeOutcome
+}
 
 @HiltViewModel
 class SummaryViewModel @Inject constructor(
     val stateHolder: SessionStateHolder,
     private val workoutRepository: WorkoutRepository,
     private val healthConnect: au.mark.kinetiq.health.HealthConnectManager,
+    private val json: kotlinx.serialization.json.Json,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
 ) : ViewModel() {
 
     /** Re-attempt a failed Health Connect write; clientRecordIds make this upsert-safe. */
@@ -69,15 +92,93 @@ class SummaryViewModel @Inject constructor(
         stateHolder.clearCompleted()
     }
 
-    /** Undo an accidental stop: drop the just-written history row and restore the session. */
-    fun resumeStopped(context: android.content.Context, onResumed: () -> Unit) {
-        val summary = stateHolder.lastCompleted.value ?: return
-        viewModelScope.launch {
-            if (summary.historyId > 0) workoutRepository.deleteHistory(summary.historyId)
-            stateHolder.clearCompleted()
-            au.mark.kinetiq.service.WorkoutSessionService.resumeStopped(context)
-            onResumed()
+    /**
+     * Remaining resume window in ms; null means no offer. Disk I/O is never done during
+     * composition — the rule this screen used to break, which is also what made the offer stick
+     * around forever: a value computed in the composable body has nothing to invalidate it.
+     */
+    private val _resumeWindowMs = MutableStateFlow<Long?>(null)
+    val resumeWindowMs: StateFlow<Long?> = _resumeWindowMs.asStateFlow()
+
+    /** Explains a resume that could not be honoured, rather than failing silently. */
+    val message = MutableStateFlow<String?>(null)
+
+    private var windowJob: Job? = null
+    private var resumeInFlight = false
+
+    /**
+     * Gate the offer on a full read *and parse*, not on existence + mtime — a torn write passes an
+     * mtime check. Then tick the remaining window once a second so the button disappears exactly
+     * when the window the app advertised ("resume for the next 10 minutes") actually closes.
+     */
+    fun watchResumeWindow() {
+        windowJob?.cancel()
+        windowJob = viewModelScope.launch {
+            val expiresAt = withContext(Dispatchers.IO) {
+                val parsed = WorkoutSessionService.readStoppedSnapshot(appContext, json)
+                if (parsed == null || parsed.session.plan.steps.isEmpty()) null
+                else WorkoutSessionService.stoppedSnapshotFile(appContext).lastModified() +
+                    WorkoutSessionService.STOPPED_SNAPSHOT_VALID_MS
+            } ?: run { _resumeWindowMs.value = null; return@launch }
+
+            while (isActive) {
+                val left = expiresAt - System.currentTimeMillis()
+                _resumeWindowMs.value = left.takeIf { it > 0 }
+                if (left <= 0) return@launch
+                delay(1_000)
+            }
         }
+    }
+
+    /**
+     * Undo an accidental stop.
+     *
+     * The order is load-bearing. The history row is the user's only record of the workout and there
+     * is no server copy, so it is deleted strictly *after* the service has published a live session
+     * for the restored run. A failed restore therefore leaves history intact; a successful one
+     * leaves no duplicate, because the resumed run writes its own row when it finishes.
+     */
+    fun resumeStopped(context: android.content.Context, onResult: (ResumeOutcome) -> Unit) {
+        val summary = stateHolder.lastCompleted.value ?: return
+        if (resumeInFlight) return
+        resumeInFlight = true
+        viewModelScope.launch {
+            // 1. Prove the snapshot is restorable before touching anything destructive.
+            val snap = withContext(Dispatchers.IO) {
+                WorkoutSessionService.readStoppedSnapshot(context, json)
+            }
+            if (snap == null || snap.session.plan.steps.isEmpty()) {
+                resumeInFlight = false
+                _resumeWindowMs.value = null
+                message.value = "That workout can no longer be resumed — it stays in your history."
+                onResult(ResumeOutcome.Expired)
+                return@launch
+            }
+            // 2. Ask the service to restore.
+            WorkoutSessionService.resumeStopped(context)
+            // 3. Wait for proof. startedAtEpochMs is copied verbatim from the snapshot into the
+            //    restored state, so it identifies this run and excludes any leftover.
+            val live = withTimeoutOrNull(RESUME_CONFIRM_TIMEOUT_MS) {
+                stateHolder.state.first {
+                    it != null && !it.finished && it.startedAtEpochMs == snap.startedAtEpochMs
+                }
+            }
+            if (live == null) {
+                resumeInFlight = false
+                message.value = "Couldn't restart that workout — it's still in your history."
+                onResult(ResumeOutcome.TimedOut)
+                return@launch
+            }
+            // 4. Confirmed. Only now retire the stopped run's row and its summary.
+            if (summary.historyId > 0) runCatching { workoutRepository.deleteHistory(summary.historyId) }
+            stateHolder.clearCompleted()
+            resumeInFlight = false
+            onResult(ResumeOutcome.Started)
+        }
+    }
+
+    companion object {
+        private const val RESUME_CONFIRM_TIMEOUT_MS = 8_000L
     }
 }
 
@@ -92,10 +193,12 @@ fun SummaryScreen(
     // Navigation is a side effect — never run it during composition, and only once. A resume
     // clears the summary too, but owns its own navigation — don't double-navigate.
     var resuming by remember { mutableStateOf(false) }
+    val resumeMessage by viewModel.message.collectAsState()
     androidx.compose.runtime.LaunchedEffect(summary) {
         if (summary == null && !resuming) onDone()
     }
     val s = summary ?: return
+    androidx.compose.runtime.LaunchedEffect(s.sessionId) { viewModel.watchResumeWindow() }
     var name by androidx.compose.runtime.saveable.rememberSaveable(s.sessionId) { mutableStateOf(s.name) }
     // Tracks the name the workout was last saved under; editing re-enables "Save as new name".
     var savedAs by androidx.compose.runtime.saveable.rememberSaveable(s.sessionId) { mutableStateOf<String?>(null) }
@@ -172,14 +275,24 @@ fun SummaryScreen(
             )
         }
 
-        if (s.stoppedEarly && au.mark.kinetiq.service.WorkoutSessionService.hasStoppedSnapshot(context)) {
+        // The window is a live value from the ViewModel, not a disk check evaluated once during
+        // composition — so the offer disappears exactly when it expires instead of lingering and
+        // then failing (which used to delete the history row before discovering it had).
+        val resumeLeftMs by viewModel.resumeWindowMs.collectAsState()
+        resumeLeftMs?.takeIf { s.stoppedEarly }?.let { left ->
+            val minsLeft = ((left + 59_999) / 60_000).toInt()
             OutlinedButton(
                 onClick = {
                     resuming = true
-                    viewModel.resumeStopped(context, onResume)
+                    viewModel.resumeStopped(context) { outcome ->
+                        if (outcome == ResumeOutcome.Started) onResume() else resuming = false
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Stopped by accident? Resume workout") }
+            ) { Text("Stopped by accident? Resume workout · $minsLeft min left") }
+        }
+        resumeMessage?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
 
         OutlinedButton(
