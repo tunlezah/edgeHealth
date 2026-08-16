@@ -485,9 +485,13 @@ private fun DrawScope.drawEllipticalAnim(anim: EllipticalAnim, timeMs: Float, st
     val dir = if (anim.reverse) -1f else 1f
     val phase = (timeMs % anim.durationMs) / anim.durationMs * 2f * PI.toFloat() * dir
 
+    // Forward stride = the foot at the TOP of the loop travels toward +X (the facing
+    // direction), like the swing phase of a gait — so the ellipse must be parameterized
+    // (cos, +sin) in screen space (y down), matching the spin bike's crank. The previous
+    // -sin flipped the rotation, which made every forward stride read as pedaling backwards.
     fun pedal(off: Float): Joint = Joint(
         center.x + a * cos(phase + off),
-        center.y + b * sin(phase + off) * -1f + 0.02f,
+        center.y + b * sin(phase + off) + 0.02f,
     )
 
     val pedalNear = pedal(0f)
