@@ -200,9 +200,16 @@ light; cool-down drops resistance and cadence progressively.
 
 - Current stable client: **`androidx.health.connect:connect-client:1.1.0`** (first stable, Oct 2025).
   The old `androidx.health:health-connect-client` coordinate is discontinued.
-- Permissions: `android.permission.health.READ_WEIGHT / READ_BODY_FAT / READ_HEIGHT / WRITE_EXERCISE /
-  WRITE_TOTAL_CALORIES_BURNED`; request via `PermissionController.createRequestPermissionResultContract()`;
-  availability via `HealthConnectClient.getSdkStatus()`.
+- Permissions: `android.permission.health.READ_WEIGHT / READ_BODY_FAT / READ_HEIGHT /
+  READ_HEALTH_DATA_HISTORY / WRITE_EXERCISE / WRITE_TOTAL_CALORIES_BURNED`; request via
+  `PermissionController.createRequestPermissionResultContract()`; availability via
+  `HealthConnectClient.getSdkStatus()`.
+- **30-day read window (why reads returned nothing).** By default an app can only read data written in
+  the 30 days before permission was first granted; on API 34+ the "no limit" carve-out applies *only to
+  an app's own written data*. The app never writes Weight/Height/Body-fat (only ExerciseSession +
+  TotalCaloriesBurned), so those metrics always count as another app's data and a full-history read
+  **errors** without `PERMISSION_READ_HEALTH_DATA_HISTORY`. The app now requests it; when it isn't
+  granted, `refreshBodyMetrics` caps the read to the last 30 days so recent readings still import.
 - API 34+ rationale entry point: `ViewPermissionUsageActivity` activity-alias with
   `android.intent.action.VIEW_PERMISSION_USAGE` + category `HEALTH_PERMISSIONS`.
 - 1.1.0 breaking change: `Metadata` must come from factory methods — the app uses `Metadata.manualEntry()`.

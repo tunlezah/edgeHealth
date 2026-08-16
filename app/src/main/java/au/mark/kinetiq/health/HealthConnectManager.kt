@@ -17,11 +17,20 @@ import au.mark.kinetiq.data.repo.CompletedBlock
 import au.mark.kinetiq.data.repo.MeasurementRepository
 import au.mark.kinetiq.data.repo.Metric
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** What a body-metrics refresh actually did, so the UI can explain the outcome precisely. */
+data class RefreshSummary(
+    val imported: Int,
+    val readPermissionGranted: Boolean,
+    val historyPermissionGranted: Boolean,
+    val failures: List<String> = emptyList(),
+)
 
 /**
  * Optional Health Connect integration (client 1.1.0).
@@ -46,7 +55,15 @@ class HealthConnectManager @Inject constructor(
         HealthPermission.getWritePermission(ExerciseSessionRecord::class),
         HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
     )
-    val allPermissions = readPermissions + writePermissions
+
+    /**
+     * Health Connect only serves the 30 days before permission was first granted unless this is held.
+     * Body metrics come from other apps (scale/Fit) and are almost always older, so without it the
+     * reads error out and nothing is ever imported. Requested alongside the per-type read permissions;
+     * kept out of [readPermissions] because it is not itself a per-type read grant.
+     */
+    val historyPermission: String = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY
+    val allPermissions = readPermissions + writePermissions + historyPermission
 
     fun availability(): Int = HealthConnectClient.getSdkStatus(context)
     fun isAvailable(): Boolean = availability() == HealthConnectClient.SDK_AVAILABLE
@@ -60,47 +77,72 @@ class HealthConnectManager @Inject constructor(
     suspend fun hasAnyReadPermission(): Boolean = grantedPermissions().any { it in readPermissions }
     suspend fun hasWritePermissions(): Boolean = grantedPermissions().containsAll(writePermissions)
 
-    /** Pulls the freshest Weight/BodyFat/Height records into the local cache with source app + timestamp. */
-    suspend fun refreshBodyMetrics(): Result<Unit> = runCatching {
+    /**
+     * Pulls the freshest Weight/BodyFat/Height records into the local cache with source app +
+     * timestamp. Each metric is read independently so a missing type or a per-type failure can't
+     * abort the others, and the read window is capped to the last 30 days unless the history
+     * permission is granted — Health Connect errors on any read that reaches past 30 days without it.
+     */
+    suspend fun refreshBodyMetrics(): Result<RefreshSummary> = runCatching {
         val client = client() ?: error("Health Connect is not available on this device")
         val granted = client.permissionController.getGrantedPermissions()
+        val historyGranted = historyPermission in granted
+        val timeFilter =
+            if (historyGranted) TimeRangeFilter.before(Instant.now())
+            else TimeRangeFilter.after(Instant.now().minus(Duration.ofDays(HISTORY_WINDOW_DAYS)))
 
-        suspend fun <T : androidx.health.connect.client.records.Record> latest(type: kotlin.reflect.KClass<T>): T? {
-            val response = client.readRecords(
+        suspend fun <T : androidx.health.connect.client.records.Record> latest(type: kotlin.reflect.KClass<T>): T? =
+            client.readRecords(
                 ReadRecordsRequest(
                     recordType = type,
-                    timeRangeFilter = TimeRangeFilter.before(Instant.now()),
+                    timeRangeFilter = timeFilter,
                     ascendingOrder = false,
                     pageSize = 1,
                 )
-            )
-            return response.records.firstOrNull()
+            ).records.firstOrNull()
+
+        var imported = 0
+        val failures = mutableListOf<String>()
+        // Read one metric in isolation: skip when its permission is missing, count a cached value,
+        // and record (never rethrow) a per-type failure so the remaining metrics still run.
+        suspend fun pull(label: String, permission: String, read: suspend () -> Boolean) {
+            if (permission !in granted) return
+            runCatching { read() }
+                .onSuccess { if (it) imported++ }
+                .onFailure { failures += "$label: ${it.message ?: it.javaClass.simpleName}" }
         }
 
-        if (HealthPermission.getReadPermission(WeightRecord::class) in granted) {
-            latest(WeightRecord::class)?.let {
+        pull("Weight", HealthPermission.getReadPermission(WeightRecord::class)) {
+            latest(WeightRecord::class)?.also {
                 measurements.cacheHealthConnectValue(
                     Metric.WEIGHT_KG, it.weight.inKilograms, it.time.toEpochMilli(),
                     it.metadata.dataOrigin.packageName,
                 )
-            }
+            } != null
         }
-        if (HealthPermission.getReadPermission(BodyFatRecord::class) in granted) {
-            latest(BodyFatRecord::class)?.let {
+        pull("Body fat", HealthPermission.getReadPermission(BodyFatRecord::class)) {
+            latest(BodyFatRecord::class)?.also {
                 measurements.cacheHealthConnectValue(
                     Metric.BODY_FAT_PCT, it.percentage.value, it.time.toEpochMilli(),
                     it.metadata.dataOrigin.packageName,
                 )
-            }
+            } != null
         }
-        if (HealthPermission.getReadPermission(HeightRecord::class) in granted) {
-            latest(HeightRecord::class)?.let {
+        pull("Height", HealthPermission.getReadPermission(HeightRecord::class)) {
+            latest(HeightRecord::class)?.also {
                 measurements.cacheHealthConnectValue(
                     Metric.HEIGHT_CM, it.height.inMeters * 100.0, it.time.toEpochMilli(),
                     it.metadata.dataOrigin.packageName,
                 )
-            }
+            } != null
         }
+
+        RefreshSummary(
+            imported = imported,
+            readPermissionGranted = granted.any { it in readPermissions },
+            historyPermissionGranted = historyGranted,
+            failures = failures,
+        )
     }
 
 
@@ -169,6 +211,9 @@ class HealthConnectManager @Inject constructor(
     }
 
     companion object {
+        /** Health Connect's default read window (days) when the history permission is not granted. */
+        private const val HISTORY_WINDOW_DAYS = 30L
+
         /** Deterministic per session+record so Health Connect retries upsert, never duplicate. */
         internal fun clientRecordIdFor(startEpochMs: Long, kind: String, index: Int = -1): String =
             if (index >= 0) "kinetiq-$startEpochMs-$kind-$index" else "kinetiq-$startEpochMs-$kind"

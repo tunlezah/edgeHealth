@@ -69,9 +69,17 @@ class HealthDataViewModel @Inject constructor(
     fun refreshFromHealthConnect() {
         viewModelScope.launch {
             status.value = "Reading Health Connect…"
-            val result = healthConnect.refreshBodyMetrics()
-            status.value = result.fold(
-                onSuccess = { if (healthConnect.hasAnyReadPermission()) "Health data refreshed." else "Connected, but no read permissions granted." },
+            status.value = healthConnect.refreshBodyMetrics().fold(
+                onSuccess = { s ->
+                    when {
+                        !s.readPermissionGranted -> "Connected, but no read permissions granted."
+                        s.imported > 0 ->
+                            "Imported ${s.imported} metric${if (s.imported == 1) "" else "s"} from Health Connect."
+                        !s.historyPermissionGranted ->
+                            "No readings in the last 30 days — grant 'access past data' in Health Connect to import older entries."
+                        else -> "Connected, but Health Connect returned no readings."
+                    }
+                },
                 onFailure = { "Could not read: ${it.message}" },
             )
             reload()
