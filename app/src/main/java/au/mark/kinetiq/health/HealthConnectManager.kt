@@ -29,6 +29,11 @@ data class RefreshSummary(
     val imported: Int,
     val readPermissionGranted: Boolean,
     val historyPermissionGranted: Boolean,
+    /** Metric labels whose per-type read permission was granted (so a read was attempted). */
+    val attempted: List<String> = emptyList(),
+    /** Attempted reads that came back with zero records (distinct from a thrown error). */
+    val emptyReads: List<String> = emptyList(),
+    /** Attempted reads that threw, as "label: ExceptionType — message". */
     val failures: List<String> = emptyList(),
 )
 
@@ -102,14 +107,17 @@ class HealthConnectManager @Inject constructor(
             ).records.firstOrNull()
 
         var imported = 0
+        val attempted = mutableListOf<String>()
+        val emptyReads = mutableListOf<String>()
         val failures = mutableListOf<String>()
-        // Read one metric in isolation: skip when its permission is missing, count a cached value,
-        // and record (never rethrow) a per-type failure so the remaining metrics still run.
+        // Read one metric in isolation: skip when its permission is missing, else record the outcome
+        // (cached / empty / threw) without rethrowing so the remaining metrics still run.
         suspend fun pull(label: String, permission: String, read: suspend () -> Boolean) {
             if (permission !in granted) return
+            attempted += label
             runCatching { read() }
-                .onSuccess { if (it) imported++ }
-                .onFailure { failures += "$label: ${it.message ?: it.javaClass.simpleName}" }
+                .onSuccess { cached -> if (cached) imported++ else emptyReads += label }
+                .onFailure { failures += "$label: ${it.javaClass.simpleName}${it.message?.let { m -> " — $m" }.orEmpty()}" }
         }
 
         pull("Weight", HealthPermission.getReadPermission(WeightRecord::class)) {
@@ -141,6 +149,8 @@ class HealthConnectManager @Inject constructor(
             imported = imported,
             readPermissionGranted = granted.any { it in readPermissions },
             historyPermissionGranted = historyGranted,
+            attempted = attempted,
+            emptyReads = emptyReads,
             failures = failures,
         )
     }
