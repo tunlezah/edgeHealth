@@ -72,15 +72,18 @@ class HealthDataViewModel @Inject constructor(
             status.value = healthConnect.refreshBodyMetrics().fold(
                 onSuccess = { s ->
                     when {
-                        !s.readPermissionGranted -> "Connected, but no read permissions granted."
                         s.imported > 0 ->
                             "Imported ${s.imported} metric${if (s.imported == 1) "" else "s"} from Health Connect."
+                        !s.readPermissionGranted -> "Connected, but no read permissions were granted."
+                        s.failures.isNotEmpty() -> "Read failed — ${s.failures.joinToString("; ")}"
+                        s.attempted.isEmpty() -> "Read access on, but Weight/Body fat/Height are all toggled off."
                         !s.historyPermissionGranted ->
-                            "No readings in the last 30 days — grant 'access past data' in Health Connect to import older entries."
-                        else -> "Connected, but Health Connect returned no readings."
+                            "0 records for ${s.emptyReads.joinToString()} in the last 30 days — grant 'access past data' for older entries."
+                        else ->
+                            "0 records for ${s.emptyReads.joinToString()} (history access on). The source app may not be sharing that type to Health Connect."
                     }
                 },
-                onFailure = { "Could not read: ${it.message}" },
+                onFailure = { "Could not read: ${it.javaClass.simpleName} — ${it.message}" },
             )
             reload()
         }
