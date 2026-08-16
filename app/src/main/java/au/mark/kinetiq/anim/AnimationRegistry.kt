@@ -614,10 +614,15 @@ object AnimationRegistry {
         ),
     )
 
-    /** Footwork on heels: feet dorsiflexed on the bar. */
-    private val rfFootworkHeels = footworkAnim("rf_footwork_heels", foot = 15f)
-    /** Footwork on toes: ankles in relevé. */
-    private val rfFootworkToes = footworkAnim("rf_footwork_toes", foot = -25f)
+    // Supine foot convention: the figure lies face-up with the head toward +X, which is the
+    // MIRRORED chirality of the standing facing-+X rig — anatomically neutral is foot ≈ ±180
+    // (toes to the ceiling), dorsiflexion moves toward +90 and plantarflexion toward -90.
+    // Small |foot| values point the toes INTO the carriage/floor.
+
+    /** Footwork on heels: feet dorsiflexed on the bar, toes to the ceiling. */
+    private val rfFootworkHeels = footworkAnim("rf_footwork_heels", foot = 165f)
+    /** Footwork on toes: ankles in relevé, toes pressing the bar. */
+    private val rfFootworkToes = footworkAnim("rf_footwork_toes", foot = -105f)
 
     private val rfHundred = KeyframeAnim(
         id = "rf_hundred", durationMs = 1300, prop = Prop.REFORMER, muscle = MuscleGroup.CORE,
@@ -693,15 +698,19 @@ object AnimationRegistry {
         ),
     )
 
+    // Inverted-V facing the foot bar: hips are the solved apex of a chest->pelvis->ankle
+    // two-bone chain (the prop is short relative to the figure, so the pelvis cannot be
+    // hand-placed without folding the knees). Legs stay near-straight, feet flat on the
+    // carriage with toes lifted toward the bar.
     private val elIn = Pose(
-        pelvisX = -0.02f, pelvisY = 0.115f, torso = -118f, spine = -14f, neck = -46f,
-        thighL = 50.2f, kneeL = 100.2f, footL = 8f, thighR = 50.2f, kneeR = 100.2f, footR = 8f,
-        uArmL = 111.3f, uArmR = 111.3f, elbowL = -110.3f, elbowR = -110.3f, prop = 0.2f,
+        pelvisX = -0.124f, pelvisY = -0.039f, torso = -94.9f, spine = -26f, neck = -38f,
+        thighL = 2.3f, kneeL = -10f, footL = 139.7f, thighR = 2.3f, kneeR = -10f, footR = 139.7f,
+        uArmL = 153.2f, uArmR = 153.2f, elbowL = -63.3f, elbowR = -63.3f, prop = 0.2f,
     )
     private val elOut = Pose(
-        pelvisX = 0.05f, pelvisY = 0.135f, torso = -108f, spine = -14f, neck = -40f,
-        thighL = 58.4f, kneeL = 106f, footL = 8f, thighR = 58.4f, kneeR = 106f, footR = 8f,
-        uArmL = 92f, uArmR = 92f, elbowL = -84.8f, elbowR = -84.8f, prop = 0.6f,
+        pelvisX = -0.093f, pelvisY = -0.026f, torso = -97.4f, spine = -26f, neck = -38f,
+        thighL = 10.6f, kneeL = -10f, footL = 131.4f, thighR = 10.6f, kneeR = -10f, footR = 131.4f,
+        uArmL = 154.5f, uArmR = 154.5f, elbowL = -78.6f, elbowR = -78.6f, prop = 0.6f,
     )
 
     /** Elephant: pike with hands on the foot bar, heels press the carriage back. */
@@ -716,9 +725,11 @@ object AnimationRegistry {
     )
 
     private fun kneeStretch(prop: Float, uArm: Float, elbow: Float): Pose {
+        // Facing -X (head toward the bar): knee flexion is NEGATIVE so the shins trail
+        // behind (+X) along the carriage, feet pointed toward the shoulder rests.
         return Pose(
             pelvisX = carriageX(prop), pelvisY = 0.171f, torso = -72f, spine = 22f, neck = -60f,
-            thighL = -5.6f, kneeL = 84.4f, footL = -88f, thighR = -5.6f, kneeR = 84.4f, footR = -88f,
+            thighL = 5.6f, kneeL = -84.4f, footL = -92f, thighR = 5.6f, kneeR = -84.4f, footR = -92f,
             uArmL = uArm, uArmR = uArm, elbowL = elbow, elbowR = elbow, prop = prop,
         )
     }
@@ -733,15 +744,18 @@ object AnimationRegistry {
         ),
     )
 
+    // Straight-line plank on toes, feet riding the carriage. footR/L on the "back" pose is
+    // authored past -180 (not wrapped to +170.6) so interpolation takes the short way round
+    // instead of spinning the foot through a full turn.
     private val lsFwd = Pose(
-        pelvisX = -0.198f, pelvisY = 0.176f, torso = -55.9f, spine = 6f, neck = -40f,
-        thighL = 91.5f, kneeL = 92.6f, footL = 25f, thighR = 91.5f, kneeR = 92.6f, footR = 25f,
-        uArmL = 52.9f, uArmR = 52.9f, elbowL = -2.7f, elbowR = -2.7f, prop = 0.55f,
+        pelvisX = -0.145f, pelvisY = 0.050f, torso = -86.1f, spine = -6f, neck = -18f,
+        thighL = 38.7f, kneeL = -14f, footL = -177.3f, thighR = 38.7f, kneeR = -14f, footR = -177.3f,
+        uArmL = 130.8f, uArmR = 130.8f, elbowL = -57.8f, elbowR = -57.8f, prop = 0.72f,
     )
     private val lsBack = Pose(
-        pelvisX = -0.158f, pelvisY = 0.176f, torso = -61.7f, spine = 6f, neck = -40f,
-        thighL = 90f, kneeL = 77f, footL = 25f, thighR = 90f, kneeR = 77f, footR = 25f,
-        uArmL = 54.4f, uArmR = 54.4f, elbowL = -2.9f, elbowR = -2.9f, prop = 0.95f,
+        pelvisX = -0.138f, pelvisY = 0.125f, torso = -69.9f, spine = -6f, neck = -18f,
+        thighL = 50.8f, kneeL = -14f, footL = -189.4f, thighR = 50.8f, kneeR = -14f, footR = -189.4f,
+        uArmL = 109.4f, uArmR = 109.4f, elbowL = -56.3f, elbowR = -56.3f, prop = 1f,
     )
 
     /** Long stretch: plank with hands on the bar, whole body glides with the carriage. */
@@ -755,15 +769,16 @@ object AnimationRegistry {
         ),
     )
 
+    // Up-stretch: inverted V on toes, hips the solved apex (same chain solve as the elephant).
     private val pkUp = Pose(
-        pelvisX = -0.214f, pelvisY = 0.075f, torso = -89.1f, spine = 10f, neck = -46f,
-        thighL = 64.5f, kneeL = 77.9f, footL = 25f, thighR = 64.5f, kneeR = 77.9f, footR = 25f,
-        uArmL = 104f, uArmR = 104f, elbowL = -18.5f, elbowR = -18.5f, prop = 0.15f,
+        pelvisX = -0.136f, pelvisY = -0.080f, torso = -109.4f, spine = -10f, neck = -32f,
+        thighL = 6.1f, kneeL = -12f, footL = -140.5f, thighR = 6.1f, kneeR = -12f, footR = -140.5f,
+        uArmL = 149.9f, uArmR = 149.9f, elbowL = -56.9f, elbowR = -56.9f, prop = 0.15f,
     )
     private val pkOut = Pose(
-        pelvisX = -0.13f, pelvisY = 0.13f, torso = -78.1f, spine = 10f, neck = -52f,
-        thighL = 77.5f, kneeL = 95.4f, footL = 25f, thighR = 77.5f, kneeR = 95.4f, footR = 25f,
-        uArmL = 83.3f, uArmR = 83.3f, elbowL = -37.2f, elbowR = -37.2f, prop = 0.5f,
+        pelvisX = -0.114f, pelvisY = -0.062f, torso = -111f, spine = -10f, neck = -32f,
+        thighL = 14.2f, kneeL = -12f, footL = -148.6f, thighR = 14.2f, kneeR = -12f, footR = -148.6f,
+        uArmL = 154.2f, uArmR = 154.2f, elbowL = -74.6f, elbowR = -74.6f, prop = 0.5f,
     )
 
     /** Up-stretch / pike. */
@@ -817,9 +832,9 @@ object AnimationRegistry {
         ),
     )
 
-    private fun rfLungePose(prop: Float, pelX: Float, thighF: Float, kneeF: Float, footF: Float) = Pose(
-        pelvisX = pelX, pelvisY = 0.24f, torso = -14f, neck = 8f,
-        thighR = thighF, kneeR = kneeF, footR = footF,      // front leg on the platform
+    private fun rfLungePose(prop: Float, pelX: Float, pelY: Float, thighF: Float, kneeF: Float, footF: Float) = Pose(
+        pelvisX = pelX, pelvisY = pelY, torso = -14f, neck = 8f,
+        thighR = thighF, kneeR = kneeF, footR = footF,      // front leg: knee over the ankle, foot flat toward -X
         thighL = 44.5f, kneeL = -45.5f, footL = -85f,       // rear shin along the carriage
         uArmL = -6f, uArmR = -6f, elbowL = 10f, elbowR = 10f, prop = prop,
     )
@@ -828,16 +843,16 @@ object AnimationRegistry {
     private val rfLunge = KeyframeAnim(
         id = "rf_lunge", durationMs = 3600, prop = Prop.REFORMER, muscle = MuscleGroup.LEGS,
         keyframes = listOf(
-            Keyframe(0f, rfLungePose(0.2f, -0.40f, -69.9f, -123.3f, -53.4f)),
-            Keyframe(0.40f, rfLungePose(0.62f, -0.26f, -90.8f, -104.9f, -14.1f)),
-            Keyframe(0.56f, rfLungePose(0.62f, -0.26f, -90.8f, -104.9f, -14.1f)),   // sink into the stretch
-            Keyframe(0.94f, rfLungePose(0.2f, -0.40f, -69.9f, -123.3f, -53.4f)),
+            Keyframe(0f, rfLungePose(0.2f, -0.315f, 0.235f, -91.0f, -115.9f, 143f)),
+            Keyframe(0.40f, rfLungePose(0.62f, -0.21f, 0.26f, -102.2f, -98.3f, 171.9f)),
+            Keyframe(0.56f, rfLungePose(0.62f, -0.21f, 0.26f, -102.2f, -98.3f, 171.9f)),   // sink into the stretch
+            Keyframe(0.94f, rfLungePose(0.2f, -0.315f, 0.235f, -91.0f, -115.9f, 143f)),
         ),
     )
 
     private val mmTall = Pose(
         pelvisX = carriageX(0.15f) + 0.02f, pelvisY = 0.20f, torso = -6f, spine = -6f, neck = -4f,
-        thighL = -30f, kneeL = -120f, footL = -10f, thighR = -34f, kneeR = -118f, footR = -10f,
+        thighL = -30f, kneeL = -120f, footL = -80f, thighR = -34f, kneeR = -118f, footR = -80f,
         uArmL = 52f, elbowL = 30f, uArmR = -130f, elbowR = 6f, prop = 0.15f,
     )
     private val mmReach = mmTall.copy(
@@ -884,13 +899,13 @@ object AnimationRegistry {
     private val pcDn = Pose(
         pelvisX = carriageX(0.1f) + 0.03f, pelvisY = CARRIAGE_LIE, torso = 91f, neck = -12f,
         uArmL = 179f, uArmR = 179f,
-        thighL = -151.6f, kneeL = -97.5f, footL = 12f, thighR = -151.6f, kneeR = -97.5f, footR = 12f,
+        thighL = -151.6f, kneeL = -97.5f, footL = 175f, thighR = -151.6f, kneeR = -97.5f, footR = 175f,
         prop = 0.1f,
     )
     private val pcUp = Pose(
         pelvisX = carriageX(0.12f) + 0.03f, pelvisY = 0.315f, torso = 118.2f, spine = -16f, neck = -7f,
         uArmL = 152f, uArmR = 152f,
-        thighL = -136.1f, kneeL = -99f, footL = 12f, thighR = -136.1f, kneeR = -99f, footR = 12f,
+        thighL = -136.1f, kneeL = -99f, footL = 175f, thighR = -136.1f, kneeR = -99f, footR = 175f,
         prop = 0.12f,
     )
 
