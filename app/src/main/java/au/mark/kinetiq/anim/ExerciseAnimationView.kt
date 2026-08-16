@@ -34,12 +34,15 @@ import kotlin.math.sin
 /**
  * Procedural exercise animation player.
  *
- * Rendering quality bar: tapered capsule limbs with a line-weight hierarchy (torso heaviest,
- * distal segments lightest), a curved two-segment spine, near/far limb depth via a blended
- * darker shade + smaller width (never bare alpha, which washes out on light themes), feet and
- * hand shapes, a soft radial contact shadow that tracks foot spread and jump height, a subtle
- * breathing overlay so holds never freeze, per-segment easing driven by frame time, and a
- * working-muscle tint.
+ * Rendering style — "Unified" (glyph weight, Kinetiq color): every segment is drawn at ONE
+ * stroke radius so joints fuse into continuous monoline strokes the way the Apple Watch
+ * workout glyph does; the head is an oversized disc detached from the shoulders by a clear
+ * neck gap; limbs end in bare round caps (the cap is the hand); feet keep their own capsule
+ * because they carry real exercise information (footwork heels vs toes). Depth stays
+ * color-only: far limbs render at the SAME width in a quieter blended tone (never bare alpha,
+ * which washes out on light themes). A curved two-segment spine, a soft radial contact shadow
+ * tracking foot spread and jump height, a subtle breathing overlay so holds never freeze,
+ * per-segment easing driven by frame time, and a working-muscle tint complete the scene.
  *
  * Per frame: one pose solve, one rig solve and ~13 filled paths. The motion-path arc — declared by
  * 25 of the 50 registry animations — needs a further 29 pose and rig solves, but it is a pure
@@ -73,9 +76,9 @@ fun ExerciseAnimationView(
 
     val bodyColor = MaterialTheme.colorScheme.primary
     val surface = MaterialTheme.colorScheme.surface
-    val farColor = lerp(bodyColor, surface, 0.42f)
+    val farColor = lerp(bodyColor, surface, 0.50f)
     val highlight = MaterialTheme.colorScheme.tertiary
-    val farHighlight = lerp(highlight, surface, 0.42f)
+    val farHighlight = lerp(highlight, surface, 0.50f)
     val propColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
     val groundColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.30f)
     val pathColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.28f)
@@ -162,22 +165,20 @@ private fun DrawScope.scale(v: Float): Float = v / (VIEW_RIGHT - VIEW_LEFT) * si
 
 // ---------------------------------------------------------------------- figure primitives
 
-/** Segment radii (author units) — proximal -> distal taper and torso-heavy weight hierarchy. */
+/**
+ * Stroke geometry (author units). One radius everywhere is the point of the style: matched
+ * radii + round caps make every joint fuse into a continuous stroke, and no segment ever
+ * drops below legibility at workout-list size.
+ */
 private object Widths {
-    const val TORSO_PELVIS = 0.030f
-    const val TORSO_CHEST = 0.024f
-    const val NECK = 0.011f
-    const val THIGH_HIP = 0.023f
-    const val THIGH_KNEE = 0.018f
-    const val SHANK_KNEE = 0.018f
-    const val SHANK_ANKLE = 0.013f
-    const val UARM_SHOULDER = 0.019f
-    const val UARM_ELBOW = 0.015f
-    const val FARM_ELBOW = 0.015f
-    const val FARM_WRIST = 0.011f
-    const val FOOT = 0.013f
-    const val HAND = 0.016f
-    const val FAR_SCALE = 0.85f
+    /** The single monoline stroke radius for torso, limbs and feet. */
+    const val STROKE = 0.026f
+    /** Drawn head radius — oversized relative to the rig's anatomical [Proportions.HEAD_R]. */
+    const val HEAD = 0.075f
+    /** Clear air between the shoulder line and the floating head disc. */
+    const val HEAD_GAP = 0.020f
+    /** Far limbs keep full width; depth is carried by color alone. */
+    const val FAR_SCALE = 1f
 }
 
 /** Filled tapered capsule from [a] (radius ra) to [b] (radius rb) with round caps. */
@@ -207,7 +208,7 @@ private fun DrawScope.spineBlob(pelvis: Joint, mid: Joint, chest: Joint, rPelvis
     // quad Bézier control so the curve passes through the mid joint
     val cx = 2f * mid.x - 0.5f * (pelvis.x + chest.x)
     val cy = 2f * mid.y - 0.5f * (pelvis.y + chest.y)
-    val n = 8
+    val n = 16
     val pts = ArrayList<Offset>(n + 1)
     val radii = FloatArray(n + 1)
     for (i in 0..n) {
@@ -242,12 +243,13 @@ private fun DrawScope.spineBlob(pelvis: Joint, mid: Joint, chest: Joint, rPelvis
 }
 
 private fun DrawScope.drawSide(side: SkeletonSide, legColor: Color, armColor: Color, k: Float, hasFeet: Boolean) {
-    capsule(side.hip, side.knee, Widths.THIGH_HIP * k, Widths.THIGH_KNEE * k, legColor)
-    capsule(side.knee, side.ankle, Widths.SHANK_KNEE * k, Widths.SHANK_ANKLE * k, legColor)
-    if (hasFeet) capsule(side.ankle, side.toe, Widths.FOOT * k, Widths.FOOT * 0.85f * k, legColor)
-    capsule(side.shoulder, side.elbow, Widths.UARM_SHOULDER * k, Widths.UARM_ELBOW * k, armColor)
-    capsule(side.elbow, side.wrist, Widths.FARM_ELBOW * k, Widths.FARM_WRIST * k, armColor)
-    drawCircle(armColor, radius = scale(Widths.HAND * k), center = pt(side.wrist))
+    val w = Widths.STROKE * k
+    capsule(side.hip, side.knee, w, w, legColor)
+    capsule(side.knee, side.ankle, w, w, legColor)
+    if (hasFeet) capsule(side.ankle, side.toe, w, w, legColor)
+    capsule(side.shoulder, side.elbow, w, w, armColor)
+    // no hand blob: the forearm's round cap IS the hand
+    capsule(side.elbow, side.wrist, w, w, armColor)
 }
 
 /** Soft contact shadow: tracks the support spread and fades/narrows as the figure leaves the ground. */
@@ -263,7 +265,7 @@ private fun DrawScope.drawShadow(sk: Skeleton, style: RenderStyle) {
     val xs = (onGround.ifEmpty { supports }).map { it.x }
     val cx = (xs.min() + xs.max()) / 2f
     val halfW = ((xs.max() - xs.min()) / 2f + 0.10f) * (1f - 0.35f * elevation)
-    val alpha = 0.18f * (1f - 0.65f * elevation)
+    val alpha = 0.12f * (1f - 0.65f * elevation)
     if (alpha <= 0.01f) return
     val center = Offset(mapX(cx), mapY(GROUND_Y))
     val radius = scale(halfW)
@@ -285,13 +287,19 @@ private fun DrawScope.drawFigure(sk: Skeleton, style: RenderStyle, muscle: Muscl
     val torsoGroup = muscle == MuscleGroup.CORE || muscle == MuscleGroup.CHEST ||
         muscle == MuscleGroup.BACK || muscle == MuscleGroup.FULL_BODY
 
-    // far side first (parallax silhouette)
+    // far side first (color-only depth)
     drawSide(sk.far, far(legGroup), far(armGroup), Widths.FAR_SCALE, hasFeet)
-    // torso as a curved tapered blob, then neck + head
+    // torso as a curved monoline blob
     spineBlob(sk.pelvis, sk.midTorso, sk.chest,
-        Widths.TORSO_PELVIS, Widths.TORSO_CHEST, near(torsoGroup))
-    capsule(sk.chest, sk.neckTop, Widths.NECK, Widths.NECK, style.body)
-    drawCircle(style.body, radius = scale(Proportions.HEAD_R * 0.92f), center = pt(sk.headCenter))
+        Widths.STROKE, Widths.STROKE, near(torsoGroup))
+    // floating head: no drawn neck — the disc is re-centered along the neck direction so the
+    // gap and the oversized radius stay attached to the pose however far the neck flexes
+    val ndx = sk.neckTop.x - sk.chest.x
+    val ndy = sk.neckTop.y - sk.chest.y
+    val nlen = maxOf(hypot(ndx, ndy), 1e-4f)
+    val reach = Widths.HEAD_GAP + Widths.HEAD
+    val headC = Joint(sk.neckTop.x + ndx / nlen * reach, sk.neckTop.y + ndy / nlen * reach)
+    drawCircle(style.body, radius = scale(Widths.HEAD), center = pt(headC))
     // near side
     drawSide(sk.near, near(legGroup), near(armGroup), 1f, hasFeet)
 }
