@@ -273,7 +273,7 @@ class ResistanceTrackingTest {
         val library = listOf(
             set("knee_pushup", MovementSlot.UPPER_PUSH, ladder = "pushup", rung = 2),
             set("pushup", MovementSlot.UPPER_PUSH, ladder = "pushup", rung = 3),
-            set("elevated_pushup", MovementSlot.UPPER_PUSH, ladder = "pushup", rung = 4, equipment = listOf(Equipment.CHAIR_OR_STEP)),
+            set("elevated_pushup", MovementSlot.UPPER_PUSH, ladder = "pushup", rung = 4, equipment = listOf(Equipment.CHAIR)),
             set("lateral_raise", MovementSlot.SHOULDERS),
         )
         val easy = arrayOf(EffortRating.EASY, EffortRating.EASY)

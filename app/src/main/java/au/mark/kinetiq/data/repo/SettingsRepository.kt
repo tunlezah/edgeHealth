@@ -50,14 +50,16 @@ data class MachineSettings(
 data class EquipmentSettings(
     /** Heaviest single hand weight owned, kg. Exercises that need more are never generated. */
     val handWeightMaxKg: Float = 2f,
-    val chairOrStep: Boolean = false,
+    val chair: Boolean = false,
+    val step: Boolean = false,
     val reformerBox: Boolean = false,
     val ankleAnchor: Boolean = false,
 ) {
     /** Everything owned except hand weights, which the session config switches on. */
     val owned: Set<au.mark.kinetiq.data.model.Equipment>
         get() = buildSet {
-            if (chairOrStep) add(au.mark.kinetiq.data.model.Equipment.CHAIR_OR_STEP)
+            if (chair) add(au.mark.kinetiq.data.model.Equipment.CHAIR)
+            if (step) add(au.mark.kinetiq.data.model.Equipment.STEP)
             if (reformerBox) add(au.mark.kinetiq.data.model.Equipment.REFORMER_BOX)
             if (ankleAnchor) add(au.mark.kinetiq.data.model.Equipment.ANKLE_ANCHOR)
         }
@@ -131,7 +133,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val restMode = stringPreferencesKey("rest_mode")
         val continuousNoticeSeen = booleanPreferencesKey("continuous_notice_seen")
         val handWeightMaxKg = floatPreferencesKey("eq_hand_weight_max_kg")
-        val chairOrStep = booleanPreferencesKey("eq_chair_or_step")
+        val chair = booleanPreferencesKey("eq_chair")
+        val step = booleanPreferencesKey("eq_step")
         val reformerBox = booleanPreferencesKey("eq_reformer_box")
         val ankleAnchor = booleanPreferencesKey("eq_ankle_anchor")
         val ladderRungs = stringPreferencesKey("ladder_rungs")
@@ -179,7 +182,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             continuousNoticeSeen = p[Keys.continuousNoticeSeen] ?: false,
             equipment = EquipmentSettings(
                 handWeightMaxKg = p[Keys.handWeightMaxKg] ?: 2f,
-                chairOrStep = p[Keys.chairOrStep] ?: false,
+                chair = p[Keys.chair] ?: false,
+                step = p[Keys.step] ?: false,
                 reformerBox = p[Keys.reformerBox] ?: false,
                 ankleAnchor = p[Keys.ankleAnchor] ?: false,
             ),
@@ -227,7 +231,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setContinuousNoticeSeen(v: Boolean) = edit { it[Keys.continuousNoticeSeen] = v }
     suspend fun setEquipment(e: EquipmentSettings) = edit {
         it[Keys.handWeightMaxKg] = e.handWeightMaxKg
-        it[Keys.chairOrStep] = e.chairOrStep
+        it[Keys.chair] = e.chair
+        it[Keys.step] = e.step
         it[Keys.reformerBox] = e.reformerBox
         it[Keys.ankleAnchor] = e.ankleAnchor
     }

@@ -243,7 +243,7 @@ class ResistanceFoundationTest {
     fun `a limited or equipment-bound exercise does not satisfy the mat-only promise`() {
         val problems = problemsFor(
             set("a", MovementSlot.LOWER_PUSH, tier = EvidenceTier.LIMITED),
-            set("b", MovementSlot.UPPER_PUSH, equipment = listOf(Equipment.CHAIR_OR_STEP)),
+            set("b", MovementSlot.UPPER_PUSH, equipment = listOf(Equipment.CHAIR)),
             set("c", MovementSlot.LOWER_PULL, cat = Category.REFORMER),
         )
         for (slot in listOf("LOWER_PUSH", "UPPER_PUSH", "LOWER_PULL")) {

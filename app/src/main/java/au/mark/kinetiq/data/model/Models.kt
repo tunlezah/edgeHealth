@@ -47,13 +47,17 @@ enum class BodyArea { KNEE, WRIST, SHOULDER, LOWER_BACK, NECK, HIP, ANKLE }
  * Kit an exercise needs beyond its category's own station (mat, reformer, bike, elliptical).
  * An exercise is only ever generated when every item it lists is available: HAND_WEIGHTS comes
  * from the per-session Builder chip, the rest from Settings → Equipment.
+ *
+ * CHAIR and STEP are separate on purpose: a chair raises hands, feet or shoulders, but nobody
+ * should stand on the edge of one — a calf raise off an edge needs a step or stair.
  */
 @Serializable
-enum class Equipment { HAND_WEIGHTS, CHAIR_OR_STEP, REFORMER_BOX, ANKLE_ANCHOR }
+enum class Equipment { HAND_WEIGHTS, CHAIR, STEP, REFORMER_BOX, ANKLE_ANCHOR }
 
 fun Equipment.displayName(): String = when (this) {
     Equipment.HAND_WEIGHTS -> "Hand weights"
-    Equipment.CHAIR_OR_STEP -> "Sturdy chair or step"
+    Equipment.CHAIR -> "Sturdy chair or bench"
+    Equipment.STEP -> "Step or bottom stair"
     Equipment.REFORMER_BOX -> "Reformer long box"
     Equipment.ANKLE_ANCHOR -> "Ankle anchor"
 }

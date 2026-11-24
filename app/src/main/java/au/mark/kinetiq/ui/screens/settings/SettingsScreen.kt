@@ -368,12 +368,16 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         SettingSwitchRow(
-            "Sturdy chair or step", equipment.chairOrStep,
-            subtitle = "Unlocks elevated and step-based exercises as they are added",
-        ) { v -> viewModel.set { setEquipment(equipment.copy(chairOrStep = v)) } }
+            "Sturdy chair or bench", equipment.chair,
+            subtitle = "For raised hands, feet or shoulders: harder push-ups, split squats and hip thrusts",
+        ) { v -> viewModel.set { setEquipment(equipment.copy(chair = v)) } }
+        SettingSwitchRow(
+            "Step or bottom stair", equipment.step,
+            subtitle = "For calf raises through a full range off an edge",
+        ) { v -> viewModel.set { setEquipment(equipment.copy(step = v)) } }
         SettingSwitchRow(
             "Reformer long box", equipment.reformerBox,
-            subtitle = "Unlocks prone pulling work on the reformer as it is added",
+            subtitle = "For prone pulling straps — the reformer's best upper-back exercise",
         ) { v -> viewModel.set { setEquipment(equipment.copy(reformerBox = v)) } }
         SettingSwitchRow(
             "Ankle anchor", equipment.ankleAnchor,

@@ -115,7 +115,7 @@ muscle-retention session starts with whichever region is furthest behind.
   manual entry (weight, height, body fat %, waist, smart-scale visceral rating — freshest wins).
 - **Body constraints** editing; **Include low-evidence exercises** toggle.
 - **Machines**: GR7/VG50BS max levels, spring notation.
-- **Equipment**: heaviest single hand weight (kg, default 2), sturdy chair or step, reformer long
+- **Equipment**: heaviest single hand weight (kg, default 2), sturdy chair or bench, step or bottom stair, reformer long
   box, ankle anchor. Muscle-retention sessions only use what is switched on here.
 - **Reminders**: day chips + time picker (WorkManager; reschedules itself, survives reboot).
 - **Streak rest days**: days that never break a streak.
