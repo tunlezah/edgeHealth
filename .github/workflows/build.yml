@@ -25,6 +25,11 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # The action's default is 'tools platform-tools'. The obsolete 'tools' package is no
+          # longer in the SDK repository, so sdkmanager exits 1 ("Failed to find package 'tools'")
+          # and the job dies here before a single test runs. Nothing in this build uses it.
+          packages: platform-tools
 
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
