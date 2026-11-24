@@ -43,6 +43,28 @@ data class MachineSettings(
     val springNotation: SpringNotation = SpringNotation.GENERIC,
 )
 
+/**
+ * Kit the user owns beyond the machines. Hand weights are owned here but only *used* when the
+ * Builder's per-session chip is on; the other three gate exercises directly.
+ */
+data class EquipmentSettings(
+    /** Heaviest single hand weight owned, kg. Exercises that need more are never generated. */
+    val handWeightMaxKg: Float = 2f,
+    val chair: Boolean = false,
+    val step: Boolean = false,
+    val reformerBox: Boolean = false,
+    val ankleAnchor: Boolean = false,
+) {
+    /** Everything owned except hand weights, which the session config switches on. */
+    val owned: Set<au.mark.kinetiq.data.model.Equipment>
+        get() = buildSet {
+            if (chair) add(au.mark.kinetiq.data.model.Equipment.CHAIR)
+            if (step) add(au.mark.kinetiq.data.model.Equipment.STEP)
+            if (reformerBox) add(au.mark.kinetiq.data.model.Equipment.REFORMER_BOX)
+            if (ankleAnchor) add(au.mark.kinetiq.data.model.Equipment.ANKLE_ANCHOR)
+        }
+}
+
 data class AppSettings(
     val onboardingComplete: Boolean = false,
     val disclaimerAcknowledged: Boolean = false,
@@ -69,6 +91,9 @@ data class AppSettings(
     val defaultRestMode: au.mark.kinetiq.data.model.RestMode = au.mark.kinetiq.data.model.RestMode.STANDARD,
     /** One-time "continuous mode removes rests" notice acknowledged. */
     val continuousNoticeSeen: Boolean = false,
+    val equipment: EquipmentSettings = EquipmentSettings(),
+    /** Current rung per resistance progression ladder; a missing ladder uses the generator's default. */
+    val ladderRungs: Map<String, Int> = emptyMap(),
 )
 
 @Singleton
@@ -107,6 +132,12 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val lastConfig = stringPreferencesKey("last_config")
         val restMode = stringPreferencesKey("rest_mode")
         val continuousNoticeSeen = booleanPreferencesKey("continuous_notice_seen")
+        val handWeightMaxKg = floatPreferencesKey("eq_hand_weight_max_kg")
+        val chair = booleanPreferencesKey("eq_chair")
+        val step = booleanPreferencesKey("eq_step")
+        val reformerBox = booleanPreferencesKey("eq_reformer_box")
+        val ankleAnchor = booleanPreferencesKey("eq_ankle_anchor")
+        val ladderRungs = stringPreferencesKey("ladder_rungs")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -149,6 +180,14 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
                 runCatching { au.mark.kinetiq.data.model.RestMode.valueOf(it) }.getOrNull()
             } ?: au.mark.kinetiq.data.model.RestMode.STANDARD,
             continuousNoticeSeen = p[Keys.continuousNoticeSeen] ?: false,
+            equipment = EquipmentSettings(
+                handWeightMaxKg = p[Keys.handWeightMaxKg] ?: 2f,
+                chair = p[Keys.chair] ?: false,
+                step = p[Keys.step] ?: false,
+                reformerBox = p[Keys.reformerBox] ?: false,
+                ankleAnchor = p[Keys.ankleAnchor] ?: false,
+            ),
+            ladderRungs = decodeLadderRungs(p[Keys.ladderRungs]),
         )
     }
 
@@ -190,6 +229,21 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setVisceralGoal(v: Boolean) = edit { it[Keys.visceralGoal] = v }
     suspend fun setDefaultRestMode(v: au.mark.kinetiq.data.model.RestMode) = edit { it[Keys.restMode] = v.name }
     suspend fun setContinuousNoticeSeen(v: Boolean) = edit { it[Keys.continuousNoticeSeen] = v }
+    suspend fun setEquipment(e: EquipmentSettings) = edit {
+        it[Keys.handWeightMaxKg] = e.handWeightMaxKg
+        it[Keys.chair] = e.chair
+        it[Keys.step] = e.step
+        it[Keys.reformerBox] = e.reformerBox
+        it[Keys.ankleAnchor] = e.ankleAnchor
+    }
+
+    /** Read-modify-write inside one DataStore transaction, so two quick taps cannot lose one. */
+    suspend fun setLadderRung(ladder: String, rung: Int) = edit {
+        val next = decodeLadderRungs(it[Keys.ladderRungs]) + (ladder to rung.coerceAtLeast(1))
+        it[Keys.ladderRungs] = encodeLadderRungs(next)
+    }
+
+    suspend fun resetLadderRungs() = edit { it.remove(Keys.ladderRungs) }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit(block)
@@ -201,4 +255,17 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
 
     private fun decodeIntSet(raw: String?, default: Set<Int>): Set<Int> =
         raw?.let { s -> s.split(',').filter { it.isNotBlank() }.mapNotNull { it.toIntOrNull() }.toSet() } ?: default
+
+    companion object {
+        /** "pushup=3,leg_push=2" — ladder ids are lower_snake_case (validator-enforced), so no escaping is needed. */
+        internal fun encodeLadderRungs(rungs: Map<String, Int>): String =
+            rungs.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${it.value}" }
+
+        internal fun decodeLadderRungs(raw: String?): Map<String, Int> =
+            raw?.split(',')?.mapNotNull { pair ->
+                val (k, v) = pair.split('=').takeIf { it.size == 2 } ?: return@mapNotNull null
+                val rung = v.toIntOrNull() ?: return@mapNotNull null
+                if (k.isBlank() || rung < 1) null else k to rung
+            }?.toMap() ?: emptyMap()
+    }
 }

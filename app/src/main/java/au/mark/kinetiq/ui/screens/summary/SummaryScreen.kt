@@ -61,8 +61,49 @@ class SummaryViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
     private val healthConnect: au.mark.kinetiq.health.HealthConnectManager,
     private val json: kotlinx.serialization.json.Json,
+    private val exerciseRepository: au.mark.kinetiq.data.repo.ExerciseRepository,
+    private val settingsRepository: au.mark.kinetiq.data.repo.SettingsRepository,
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
 ) : ViewModel() {
+
+    /** Progression advice from this session's set ratings; empty for sessions without resistance sets. */
+    val suggestions = MutableStateFlow<List<au.mark.kinetiq.domain.resistance.ProgressionAdvisor.Suggestion>>(emptyList())
+
+    /** Ladders already moved up from this summary, so the button cannot be applied twice. */
+    val movedUp = MutableStateFlow<Set<String>>(emptySet())
+
+    fun loadSuggestions() {
+        val s = stateHolder.lastCompleted.value ?: return
+        viewModelScope.launch {
+            val outcomes = au.mark.kinetiq.domain.resistance.ResistanceTracking.outcomes(
+                s.session.plan, s.completedSets, s.setRatings,
+            )
+            movedUp.value = emptySet()
+            if (outcomes.isEmpty()) {
+                suggestions.value = emptyList()
+                return@launch
+            }
+            // Advice is a nicety; a failed lookup must never take the summary down with it.
+            suggestions.value = runCatching {
+                val settings = settingsRepository.current()
+                val kit = au.mark.kinetiq.domain.generator.ExerciseEligibility.kitFor(
+                    settings.equipment.owned, settings.equipment.handWeightMaxKg, s.session.config.usesHandWeights,
+                )
+                au.mark.kinetiq.domain.resistance.ProgressionAdvisor.suggestions(
+                    outcomes, exerciseRepository.exercises(),
+                ) { au.mark.kinetiq.domain.generator.ExerciseEligibility.allowed(it, settings.constraints, kit) }
+            }.getOrDefault(emptyList())
+        }
+    }
+
+    fun moveUp(suggestion: au.mark.kinetiq.domain.resistance.ProgressionAdvisor.Suggestion) {
+        val ladder = suggestion.ladder ?: return
+        val rung = suggestion.nextRung ?: return
+        viewModelScope.launch {
+            settingsRepository.setLadderRung(ladder, rung)
+            movedUp.value = movedUp.value + ladder
+        }
+    }
 
     /** Re-attempt a failed Health Connect write; clientRecordIds make this upsert-safe. */
     fun retryHealthConnect() {
@@ -198,7 +239,12 @@ fun SummaryScreen(
         if (summary == null && !resuming) onDone()
     }
     val s = summary ?: return
-    androidx.compose.runtime.LaunchedEffect(s.sessionId) { viewModel.watchResumeWindow() }
+    androidx.compose.runtime.LaunchedEffect(s.sessionId) {
+        viewModel.watchResumeWindow()
+        viewModel.loadSuggestions()
+    }
+    val suggestions by viewModel.suggestions.collectAsState()
+    val movedUp by viewModel.movedUp.collectAsState()
     var name by androidx.compose.runtime.saveable.rememberSaveable(s.sessionId) { mutableStateOf(s.name) }
     // Tracks the name the workout was last saved under; editing re-enables "Save as new name".
     var savedAs by androidx.compose.runtime.saveable.rememberSaveable(s.sessionId) { mutableStateOf<String?>(null) }
@@ -224,14 +270,58 @@ fun SummaryScreen(
                         }.getOrNull()?.displayName()
                             ?: block.category.lowercase().replaceFirstChar { it.uppercase() }
                         Text(
-                            categoryLabel + if (block.isHiit) " · HIIT" else "",
+                            categoryLabel + when {
+                                block.isHiit -> " · HIIT"
+                                block.isResistance -> " · resistance sets"
+                                else -> ""
+                            },
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            "${block.activeSec / 60} min ${block.activeSec % 60}s · ${block.calories.toInt()} kcal",
+                            "${block.activeSec / 60} min ${block.activeSec % 60}s · ${block.calories.toInt()} kcal" +
+                                if (block.isResistance) " · ${block.hardSets} hard set${if (block.hardSets == 1) "" else "s"}" else "",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        if (block.isResistance && block.muscleSets.isNotEmpty()) {
+                            Text(
+                                au.mark.kinetiq.domain.resistance.ResistanceTracking.totalByMuscle(listOf(block.muscleSets))
+                                    .entries.joinToString(" · ") { (m, n) -> "${m.displayName().lowercase()} ${formatSets(n)}" },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (suggestions.isNotEmpty()) {
+            SectionHeader("Next time")
+            suggestions.forEach { sg ->
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(sg.exerciseName, style = MaterialTheme.typography.titleMedium)
+                        val moved = sg.ladder != null && sg.ladder in movedUp
+                        Text(
+                            when {
+                                moved -> "Next session uses ${sg.nextExerciseName}."
+                                sg.advice == au.mark.kinetiq.domain.resistance.ResistanceTracking.Advice.MOVE_UP && sg.canMoveUp ->
+                                    "Four or more reps in hand on every set — it has stopped being hard enough to count. " +
+                                        "${sg.nextExerciseName} is the next step up."
+                                sg.advice == au.mark.kinetiq.domain.resistance.ResistanceTracking.Advice.MOVE_UP ->
+                                    "Four or more reps in hand on every set, so those sets did not count. There is no harder " +
+                                        "version your equipment allows: slow the lowering, pause where it is hardest, or it " +
+                                        "needs a heavier load."
+                                else ->
+                                    "You finished with reps in hand. Same version next time — keep going until you couldn't " +
+                                        "do another good rep."
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        if (!moved && sg.canMoveUp) {
+                            OutlinedButton(onClick = { viewModel.moveUp(sg) }) { Text("Move up to ${sg.nextExerciseName}") }
+                        }
                     }
                 }
             }
@@ -303,3 +393,6 @@ fun SummaryScreen(
         ) { Text("Done") }
     }
 }
+
+/** "3" for 3.0, "2.5" for 2.5 — secondary muscles earn half sets. */
+private fun formatSets(n: Double): String = if (n % 1.0 == 0.0) n.toInt().toString() else "%.1f".format(n)

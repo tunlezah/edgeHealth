@@ -195,6 +195,13 @@ fun PlayerScreen(
             color = MaterialTheme.colorScheme.primary,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
+        if (step.setIndex != null && step.setCount != null) {
+            Text(
+                "Set ${step.setIndex} of ${step.setCount}",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
         step.machineCueText?.let {
             // The machine cue is what the user reads from across the room — keep it big and
             // high-contrast, never a muted caption.
@@ -204,6 +211,16 @@ fun PlayerScreen(
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 8.dp),
+            )
+        }
+        step.effortCue?.let {
+            // How the set should end — the part of a resistance set that actually matters.
+            Text(
+                it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             )
         }
 
@@ -243,6 +260,15 @@ fun PlayerScreen(
                 )
             }
 
+            // Effort rating for the set just performed. Sits inside the tap-to-skip region, but the
+            // chips take their own taps, so rating never skips the rest.
+            s.rateableSetIndex?.let { setIndex ->
+                SetEffortRating(
+                    selected = s.setRatings[setIndex],
+                    onRate = { WorkoutSessionService.rateSet(context, setIndex, it) },
+                )
+            }
+
             // Next up preview during rests/transitions
             val next = s.nextStep
             if (next != null && isRestStep) {
@@ -259,6 +285,13 @@ fun PlayerScreen(
                         Column(Modifier.padding(start = 10.dp)) {
                             Text("Next up", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(next.exerciseName, style = MaterialTheme.typography.titleMedium)
+                            if (next.setIndex != null && next.setCount != null) {
+                                Text(
+                                    "Set ${next.setIndex} of ${next.setCount}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
@@ -267,6 +300,15 @@ fun PlayerScreen(
                 ) { Text("Skip rest — tap anywhere") }
                 Spacer(Modifier.height(4.dp))
             }
+        }
+
+        // Resistance sets end when the last good rep is done, not when the clock says so. Unlike
+        // Skip, this keeps the rest that follows and counts the set.
+        if (step.isResistanceSet) {
+            androidx.compose.material3.Button(
+                onClick = { WorkoutSessionService.command(context, WorkoutSessionService.ACTION_SET_DONE) },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).height(56.dp),
+            ) { Text("Set done", style = MaterialTheme.typography.titleMedium) }
         }
 
         // Controls — min 56dp touch targets, TalkBack labels
@@ -307,6 +349,44 @@ fun PlayerScreen(
     }
 }
 
+/**
+ * "How many more good reps could you have done?" — asked during the rest after a performed set.
+ * A timer cannot see effort; this one tap is what tells the app whether a set was hard enough to
+ * count and when an exercise has become too easy.
+ */
+@Composable
+private fun SetEffortRating(
+    selected: au.mark.kinetiq.data.model.EffortRating?,
+    onRate: (au.mark.kinetiq.data.model.EffortRating) -> Unit,
+) {
+    Card(Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Good reps left in that set?", style = MaterialTheme.typography.titleSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    au.mark.kinetiq.data.model.EffortRating.HARD to "0–1",
+                    au.mark.kinetiq.data.model.EffortRating.MEDIUM to "2–3",
+                    au.mark.kinetiq.data.model.EffortRating.EASY to "4 or more",
+                ).forEach { (rating, label) ->
+                    androidx.compose.material3.FilterChip(
+                        selected = selected == rating,
+                        onClick = { onRate(rating) },
+                        label = { Text(label) },
+                    )
+                }
+            }
+            if (selected == au.mark.kinetiq.data.model.EffortRating.EASY) {
+                Text(
+                    "Too easy to count — slow the lowering next set, or it is time for a harder version.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
 /** GET-READY countdown before the current step's clock starts. Tap to jump to the last 3 s. */
 @Composable
 private fun PrepareView(s: au.mark.kinetiq.service.PlayerState) {
@@ -339,6 +419,9 @@ private fun PrepareView(s: au.mark.kinetiq.service.PlayerState) {
         )
         Text("First up", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(step.exerciseName, style = MaterialTheme.typography.headlineSmall)
+        if (step.setIndex != null && step.setCount != null) {
+            Text("Set ${step.setIndex} of ${step.setCount}", style = MaterialTheme.typography.titleMedium)
+        }
         step.machineCueText?.let {
             Text(it, style = MaterialTheme.typography.titleMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }

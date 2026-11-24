@@ -1,7 +1,10 @@
 package au.mark.kinetiq.domain.plan
 
+import au.mark.kinetiq.data.model.Muscle
+import au.mark.kinetiq.data.model.displayName
 import au.mark.kinetiq.data.repo.CompletedBlock
 import au.mark.kinetiq.data.repo.HistoryEntry
+import au.mark.kinetiq.domain.resistance.ResistanceTracking
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -29,7 +32,77 @@ object WeeklyPlanEngine {
         val cardioSessionsDone: Int,
         val strengthSessionsDone: Int,
         val suggestion: String,
+        val resistance: ResistanceProgress = ResistanceProgress(),
     )
+
+    /**
+     * Muscle-retention dose for the week (RESEARCH.md §12).
+     *
+     * Targets are per muscle group: [SETS_TARGET] hard sets a week, never below [SETS_FLOOR].
+     * The floor is Iversen 2021's "at least four weekly sets"; the target is a judgment call
+     * between that and the ~10 sets where growth-oriented dose-response curves flatten — no
+     * study has tested a minimum dose during an energy deficit, and the copy says so.
+     */
+    data class ResistanceProgress(
+        /** Sessions this week with at least [SETS_PER_SESSION] hard sets. */
+        val sessionsDone: Int = 0,
+        val sessionsTarget: Int = SESSIONS_TARGET,
+        /** Hard-set credit per muscle this week; every muscle present, 0.0 when untrained. */
+        val setsByMuscle: Map<Muscle, Double> = Muscle.entries.associateWith { 0.0 },
+        val suggestion: String = NO_SETS_YET,
+    ) {
+        val anySets: Boolean get() = setsByMuscle.values.any { it > 0.0 }
+        val belowFloor: List<Muscle> get() = setsByMuscle.filterValues { it < SETS_FLOOR }.keys.toList()
+    }
+
+    const val SESSIONS_TARGET = 2
+    const val SETS_TARGET = 6
+    const val SETS_FLOOR = 4
+    /** Fewer hard sets than this and a session is a top-up, not a resistance session. */
+    const val SETS_PER_SESSION = 4
+
+    internal const val NO_SETS_YET =
+        "No resistance sets yet this week. Two or three short muscle-retention sessions are what help you hold " +
+            "on to muscle while losing fat — cardio alone does not do that job."
+
+    /** Hard-set credit per muscle for the current week, for the generator's "what is behind" ordering. */
+    fun weeklyMuscleSets(
+        history: List<HistoryEntry>,
+        today: LocalDate = LocalDate.now(),
+        zone: ZoneId = ZoneId.systemDefault(),
+    ): Map<Muscle, Double> = ResistanceTracking.totalByMuscle(
+        thisWeek(history, today, zone).flatMap { e -> e.blocks.filter { it.isResistance }.map { it.muscleSets } },
+    )
+
+    private fun thisWeek(history: List<HistoryEntry>, today: LocalDate, zone: ZoneId): List<HistoryEntry> {
+        val weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        return history.filter {
+            val d = Instant.ofEpochMilli(it.startedAtEpochMs).atZone(zone).toLocalDate()
+            !d.isBefore(weekStart) && !d.isAfter(today)
+        }
+    }
+
+    internal fun resistanceProgress(week: List<HistoryEntry>): ResistanceProgress {
+        val sessions = week.count { e -> e.blocks.filter { it.isResistance }.sumOf { it.hardSets } >= SETS_PER_SESSION }
+        val totals = ResistanceTracking.totalByMuscle(week.flatMap { e -> e.blocks.filter { it.isResistance }.map { it.muscleSets } })
+        val byMuscle = Muscle.entries.associateWith { totals[it] ?: 0.0 }
+        val trained = byMuscle.values.any { it > 0.0 }
+        // Trunk endurance work is not what this meter is for; do not nag about it.
+        val tracked = byMuscle.filterKeys { it != Muscle.TRUNK }
+        val below = tracked.filterValues { it < SETS_FLOOR }.keys
+        val short = tracked.filterValues { it >= SETS_FLOOR && it < SETS_TARGET }.keys
+        fun names(ms: Collection<Muscle>) = ms.joinToString(", ") { it.displayName().lowercase() }
+        val suggestion = when {
+            !trained -> NO_SETS_YET
+            below.isNotEmpty() ->
+                "Under the weekly minimum of $SETS_FLOOR hard sets: ${names(below)}. " +
+                    "A muscle-retention session starts with whatever is furthest behind."
+            short.isNotEmpty() ->
+                "Every muscle group has its minimum. Still short of $SETS_TARGET sets: ${names(short)}."
+            else -> "Every muscle group has had $SETS_TARGET or more hard sets this week. More adds little — recover."
+        }
+        return ResistanceProgress(sessionsDone = sessions, setsByMuscle = byMuscle, suggestion = suggestion)
+    }
 
     private val CARDIO_CATEGORIES = setOf("SPIN", "ELLIPTICAL")
     private val STRENGTH_CATEGORIES = setOf("FLOOR", "REFORMER", "BACK")
@@ -43,11 +116,7 @@ object WeeklyPlanEngine {
         val targets = if (visceralFatGoal) WeeklyTargets(moderateCardioMinutes = 180, cardioSessions = 4, strengthSessions = 2)
         else WeeklyTargets()
 
-        val weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        val thisWeek = history.filter {
-            val d = Instant.ofEpochMilli(it.startedAtEpochMs).atZone(zone).toLocalDate()
-            !d.isBefore(weekStart) && !d.isAfter(today)
-        }
+        val thisWeek = thisWeek(history, today, zone)
 
         var cardioMin = 0
         var cardioSessions = 0
@@ -75,7 +144,10 @@ object WeeklyPlanEngine {
                 "Cardio target met. Add $strengthLeft strength session${plural(strengthLeft)} (floor or reformer) this week."
         }
 
-        return WeeklyProgress(targets, cardioMin, cardioSessions, strengthSessions, suggestion)
+        return WeeklyProgress(
+            targets, cardioMin, cardioSessions, strengthSessions, suggestion,
+            resistance = resistanceProgress(thisWeek),
+        )
     }
 
     private fun plural(n: Int) = if (n == 1) "" else "s"

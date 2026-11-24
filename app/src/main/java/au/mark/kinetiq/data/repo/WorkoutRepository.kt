@@ -23,6 +23,12 @@ data class CompletedBlock(
     val isHiit: Boolean,
     val startedAtEpochMs: Long,
     val endedAtEpochMs: Long,
+    // --- Muscle-retention blocks. Additive: rows written before the feature decode to the defaults. ---
+    val isResistance: Boolean = false,
+    /** Sets performed and not rated too easy (see ResistanceTracking). */
+    val hardSets: Int = 0,
+    /** Hard-set credit per muscle, keyed by Muscle name: 1 per primary muscle, ½ per secondary. */
+    val muscleSets: Map<String, Double> = emptyMap(),
 )
 
 data class SavedWorkout(val id: Long, val name: String, val createdAtEpochMs: Long, val session: GeneratedSession)

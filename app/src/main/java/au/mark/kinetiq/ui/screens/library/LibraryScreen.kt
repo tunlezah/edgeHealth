@@ -53,6 +53,9 @@ data class LibraryUiState(
     val category: Category? = null,
     val target: Target? = null,
     val tier: EvidenceTier? = null,
+    /** Show only exercises usable as muscle-retention sets, optionally at one retention tier. */
+    val retentionOnly: Boolean = false,
+    val retentionTier: EvidenceTier? = null,
     val includeLowEvidence: Boolean = false,
 )
 
@@ -79,6 +82,10 @@ class LibraryViewModel @Inject constructor(
     fun setCategory(c: Category?) { uiState.value = uiState.value.copy(category = c) }
     fun setTarget(t: Target?) { uiState.value = uiState.value.copy(target = t) }
     fun setTier(t: EvidenceTier?) { uiState.value = uiState.value.copy(tier = t) }
+    fun setRetentionOnly(v: Boolean) {
+        uiState.value = uiState.value.copy(retentionOnly = v, retentionTier = if (v) uiState.value.retentionTier else null)
+    }
+    fun setRetentionTier(t: EvidenceTier?) { uiState.value = uiState.value.copy(retentionOnly = true, retentionTier = t) }
 
     suspend fun exercise(id: String): Exercise? = exerciseRepository.exercise(id)
 }
@@ -91,7 +98,9 @@ fun LibraryScreen(onOpen: (String) -> Unit, viewModel: LibraryViewModel = hiltVi
     val filtered = state.exercises.filter { ex ->
         (state.category == null || ex.category == state.category) &&
             (state.target == null || state.target in ex.targets) &&
-            (state.tier == null || ex.evidenceTier == state.tier)
+            (state.tier == null || ex.evidenceTier == state.tier) &&
+            (!state.retentionOnly || ex.resistance != null) &&
+            (state.retentionTier == null || ex.resistance?.tier == state.retentionTier)
     }
 
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -134,6 +143,31 @@ fun LibraryScreen(onOpen: (String) -> Unit, viewModel: LibraryViewModel = hiltVi
                 }
             }
         }
+        item {
+            SectionHeader("Muscle retention")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = state.retentionOnly && state.retentionTier == null,
+                    onClick = { viewModel.setRetentionOnly(!(state.retentionOnly && state.retentionTier == null)) },
+                    label = { Text("resistance sets") },
+                )
+                EvidenceTier.entries.forEach { t ->
+                    FilterChip(
+                        selected = state.retentionTier == t,
+                        onClick = {
+                            if (state.retentionTier == t) viewModel.setRetentionOnly(false) else viewModel.setRetentionTier(t)
+                        },
+                        label = { Text(t.name.lowercase()) },
+                    )
+                }
+            }
+            Text(
+                "Graded separately: how good an exercise is for holding on to muscle, which is not the same as " +
+                    "how well supported it is for general health.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (filtered.isEmpty()) {
             item {
                 Text(
@@ -169,6 +203,14 @@ fun LibraryScreen(onOpen: (String) -> Unit, viewModel: LibraryViewModel = hiltVi
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        ex.resistance?.let { r ->
+                            Text(
+                                "Muscle retention: ${r.tier.name.lowercase()}" +
+                                    if (ex.equipment.isNotEmpty()) " · needs ${ex.equipment.joinToString { it.displayName().lowercase() }}" else "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                     EvidenceBadge(ex.evidenceTier)
                 }
@@ -237,22 +279,41 @@ fun ExerciseDetailScreen(exerciseId: String, onBack: () -> Unit, viewModel: Libr
             Text(ex.popularityNote!!, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
         }
 
+        if (ex.equipment.isNotEmpty()) {
+            SectionHeader("Equipment")
+            Text(ex.equipment.joinToString { it.displayName() }, style = MaterialTheme.typography.bodyMedium)
+        }
+
+        ex.resistance?.let { r ->
+            SectionHeader("Muscle retention")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "As a resistance exercise",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                EvidenceBadge(r.tier)
+            }
+            Text(
+                "Trains: " + r.primary.joinToString { it.displayName().lowercase() } +
+                    if (r.secondary.isNotEmpty()) " (also ${r.secondary.joinToString { it.displayName().lowercase() }})" else "",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (r.unilateral) Text("One side at a time — the timer calls the switch.", style = MaterialTheme.typography.bodyMedium)
+            r.minUsefulKg?.let {
+                Text(
+                    "Planned for hand weights of about ${if (it % 1f == 0f) it.toInt().toString() else it.toString()} kg or more " +
+                        "each — an estimate, not a study finding.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            r.note?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary) }
+            r.references.forEach { ref -> ReferenceCard(ref) }
+        }
+
         if (ex.references.isNotEmpty()) {
             SectionHeader("References")
-            ex.references.forEach { ref ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(10.dp)) {
-                        Text("${ref.authors} (${ref.year})", style = MaterialTheme.typography.labelLarge)
-                        Text(ref.title, style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            "${ref.journal} · ${ref.doiOrPmid}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(ref.finding, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
+            ex.references.forEach { ref -> ReferenceCard(ref) }
         }
 
         Text(
@@ -260,5 +321,21 @@ fun ExerciseDetailScreen(exerciseId: String, onBack: () -> Unit, viewModel: Libr
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+@Composable
+private fun ReferenceCard(ref: au.mark.kinetiq.data.model.Reference) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(10.dp)) {
+            Text("${ref.authors} (${ref.year})", style = MaterialTheme.typography.labelLarge)
+            Text(ref.title, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "${ref.journal} · ${ref.doiOrPmid}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(ref.finding, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }

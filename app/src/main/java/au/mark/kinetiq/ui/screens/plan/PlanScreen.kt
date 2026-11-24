@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import au.mark.kinetiq.data.model.displayName
 import au.mark.kinetiq.data.repo.SettingsRepository
 import au.mark.kinetiq.data.repo.WorkoutRepository
 import au.mark.kinetiq.domain.plan.WeeklyPlanEngine
@@ -97,6 +98,57 @@ fun PlanScreen(viewModel: PlanViewModel = hiltViewModel()) {
         PlanProgressRow(
             "Strength sessions (floor / reformer)",
             progress.strengthSessionsDone, targets.strengthSessions, "sessions",
+        )
+
+        val resistance = progress.resistance
+        SectionHeader("Muscle retention")
+        Text(
+            "Hard sets per muscle group this week, from muscle-retention sessions. A set counts when you did it " +
+                "and did not rate it as too easy. Aim for ${WeeklyPlanEngine.SETS_TARGET}–10 a week and never under " +
+                "${WeeklyPlanEngine.SETS_FLOOR}. No trial has tested a minimum dose while losing fat, so treat these as " +
+                "sensible targets, not guarantees — and expect to minimise muscle loss, not eliminate it. " +
+                "Bike and elliptical time does not count here.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(resistance.suggestion, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+        PlanProgressRow(
+            "Resistance sessions (${WeeklyPlanEngine.SETS_PER_SESSION}+ hard sets)",
+            resistance.sessionsDone, resistance.sessionsTarget, "sessions",
+        )
+        if (resistance.anySets) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    resistance.setsByMuscle.forEach { (muscle, sets) ->
+                        MuscleSetsRow(muscle.displayName(), sets)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** One muscle group's week: a bar to the target with the floor's shortfall called out in words. */
+@Composable
+private fun MuscleSetsRow(label: String, sets: Double) {
+    val target = WeeklyPlanEngine.SETS_TARGET
+    val shown = if (sets % 1.0 == 0.0) sets.toInt().toString() else "%.1f".format(sets)
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row {
+            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "$shown / $target sets" + if (sets < WeeklyPlanEngine.SETS_FLOOR) " · under minimum" else "",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (sets >= target) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        LinearProgressIndicator(
+            progress = { (sets / target).toFloat().coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

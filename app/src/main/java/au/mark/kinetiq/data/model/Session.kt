@@ -24,7 +24,24 @@ data class SessionStep(
     val animationId: String? = null,
     /** Index of the block this step belongs to (block = one category run). */
     val blockIndex: Int = 0,
-)
+    // --- Resistance sets (muscle-retention sessions). All additive: null/false/empty elsewhere. ---
+    /** 1-based set number and total sets of this exercise in its block; null = not a set. */
+    val setIndex: Int? = null,
+    val setCount: Int? = null,
+    /** Unilateral set: the halfway cue becomes "Switch sides." and is always spoken. */
+    val switchSides: Boolean = false,
+    /** Tempo/effort instruction shown under the exercise name and spoken before the first set. */
+    val effortCue: String? = null,
+    /**
+     * Muscles this set trains, baked in at generation so the weekly set meter needs no exercise
+     * lookup and stays correct for history even if the bundled database later changes.
+     */
+    val primaryMuscles: List<Muscle> = emptyList(),
+    val secondaryMuscles: List<Muscle> = emptyList(),
+) {
+    /** True for a WORK step that is one set of a muscle-retention block. */
+    val isResistanceSet: Boolean get() = type == StepType.WORK && setIndex != null
+}
 
 /** One category block of a session. */
 @Serializable
@@ -34,6 +51,8 @@ data class SessionBlock(
     val isHiit: Boolean = false,
     /** Name of the named routine used, if any. */
     val routineName: String? = null,
+    /** True for a set-based muscle-retention block. */
+    val isResistance: Boolean = false,
 )
 
 /** A complete generated (or saved) workout session plan. */
@@ -54,6 +73,14 @@ data class WorkoutPlan(
 @Serializable
 enum class RestMode { STANDARD, RECOVERY, CONTINUOUS }
 
+/**
+ * What a session is built for. GENERAL is the original circuit/interval generator and is the
+ * default for every stored config. MUSCLE_RETENTION rebuilds FLOOR and REFORMER blocks as
+ * repeated sets taken close to failure (RESEARCH.md §12); other categories are unaffected.
+ */
+@Serializable
+enum class SessionFocus { GENERAL, MUSCLE_RETENTION }
+
 /** Generator inputs (Section 5 of the spec). */
 @Serializable
 data class GeneratorConfig(
@@ -72,7 +99,35 @@ data class GeneratorConfig(
     val intensity: Intensity = Intensity.MODERATE,
     val useHealthData: Boolean = true,
     val transitionSec: Int = 60,
-)
+    /** Configs stored before this field existed deserialize to GENERAL — the behaviour they were saved with. */
+    val focus: SessionFocus = SessionFocus.GENERAL,
+    /** Hand weights are to hand for this session; without it no HAND_WEIGHTS exercise is eligible. */
+    val handWeights: Boolean = false,
+    /**
+     * Muscle-retention only: let a LIMITED-tier exercise fill a movement slot that nothing better
+     * can cover with the available equipment. Never promotes one over a better-graded option.
+     */
+    val allowLimitedGapFill: Boolean = false,
+    /** Muscle-retention only: first weeks — stop each set with 3–4 reps in hand while learning the moves. */
+    val easeIn: Boolean = false,
+) {
+    val isMuscleRetention: Boolean get() = focus == SessionFocus.MUSCLE_RETENTION
+
+    /**
+     * Hand weights only ever count in a muscle-retention session. Every hand-weight exercise is a
+     * graded resistance exercise, so a stale flag on a general config must not pull one into a circuit.
+     */
+    val usesHandWeights: Boolean get() = isMuscleRetention && handWeights
+}
+
+/**
+ * How a resistance set ended, as the user judged it — the only effort signal a timer has.
+ * HARD = 0–1 good reps left, MEDIUM = 2–3, EASY = 4 or more. A set rated EASY earns no credit in
+ * the weekly meter: a light-load set that ends that far from failure is not the stimulus the
+ * evidence describes (RESEARCH.md §12).
+ */
+@Serializable
+enum class EffortRating { HARD, MEDIUM, EASY }
 
 /** A concrete result the player runs, kept alongside the config that produced it. */
 @Serializable

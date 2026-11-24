@@ -138,6 +138,11 @@ class WorkoutSessionService : LifecycleService() {
             ACTION_SKIP -> skipStep()
             ACTION_SKIP_PREPARE -> skipPrepare()
             ACTION_EXTEND -> extendStep()
+            ACTION_SET_DONE -> completeSet()
+            ACTION_RATE_SET -> rateSet(
+                stepIndex = intent.getIntExtra(EXTRA_STEP_INDEX, -1),
+                rating = intent.getStringExtra(EXTRA_RATING),
+            )
             // The notification's Stop is two-stage: the first tap arms it for 3 s (label flips
             // to "Tap again to stop"), only a second tap inside the window ends the session.
             ACTION_STOP -> {
@@ -220,6 +225,7 @@ class WorkoutSessionService : LifecycleService() {
             )
             engine = newEngine
             engineState = newEngine.initialState()
+            setRatings = emptyMap()
             announceOnNextResume = false
             // The on-disk snapshot still describes the previous run until the first tick; forcing
             // one immediately stops a stale file outliving this start.
@@ -287,7 +293,10 @@ class WorkoutSessionService : LifecycleService() {
                 },
                 cues = step?.let { SessionEngine.cueFlagsForRestore(it, snap.stepRemainingMs) }
                     ?: SessionEngine.CueFlags(),
+                stepElapsedMs = step?.let { (it.durationSec * 1000L - snap.stepRemainingMs).coerceAtLeast(0L) } ?: 0L,
+                completedSets = snap.completedSets.toSet(),
             )
+            setRatings = decodeRatings(snap.setRatings)
             announceOnNextResume = true
             lastSnapshotMs = 0L
             stopArmedUntil = 0L
@@ -307,6 +316,8 @@ class WorkoutSessionService : LifecycleService() {
                     startedAtEpochMs = snap.startedAtEpochMs,
                     weightKg = snap.weightKg,
                     paused = true,
+                    completedSets = snap.completedSets.toSet(),
+                    setRatings = setRatings,
                 )
             )
             // Delete only after the restored state is published: a crash mid-restore then leaves
@@ -434,6 +445,8 @@ class WorkoutSessionService : LifecycleService() {
                 prepareRemainingMs = es.prepareRemainingMs,
                 totalElapsedActiveMs = es.totalElapsedActiveMs,
                 caloriesSoFar = es.caloriesSoFar,
+                completedSets = es.completedSets,
+                setRatings = setRatings,
             )
         )
     }
@@ -441,11 +454,15 @@ class WorkoutSessionService : LifecycleService() {
     private fun executeEffects(effects: List<SessionEngine.Effect>) {
         for (effect in effects) when (effect) {
             SessionEngine.Effect.PlayCountdownBeeps -> voice.countdownBeeps()
-            SessionEngine.Effect.SpeakHalfway -> voice.speak("Halfway.")
-            is SessionEngine.Effect.SpeakNextHowTo -> speakHowToAt(effect.nextIndex)
+            // Both of these were spoken unconditionally; their Settings toggles did nothing.
+            SessionEngine.Effect.SpeakHalfway -> if (voice.settings.halfwayCue) voice.speak("Halfway.")
+            // Not optional: the user cannot know when half the window has gone.
+            SessionEngine.Effect.SpeakSwitchSides -> voice.speak("Switch sides.")
+            is SessionEngine.Effect.SpeakNextHowTo ->
+                if (voice.settings.howToDescription) speakHowToAt(effect.nextIndex, repeatSets = false)
             is SessionEngine.Effect.SpeakNextUp -> {
-                val name = stateHolder.state.value?.session?.plan?.steps?.getOrNull(effect.nextIndex)?.exerciseName
-                if (name != null) voice.speak("Next up: $name.")
+                val next = stateHolder.state.value?.session?.plan?.steps?.getOrNull(effect.nextIndex)
+                if (next != null) voice.speak("Next up: ${spokenLabel(next)}.")
             }
             is SessionEngine.Effect.AnnounceStep -> {
                 // Flush any still-running how-to so the new step's name is never delayed.
@@ -470,17 +487,22 @@ class WorkoutSessionService : LifecycleService() {
                         StepType.COOLDOWN -> "Cool down: "
                         else -> ""
                     }
-                    voice.speak("$prefix${step.exerciseName}. ${formatDuration(step.durationSec)}.")
+                    voice.speak("$prefix${spokenLabel(step)}. ${formatDuration(step.durationSec)}.")
                 }
-                if (voice.settings.machineSettingCues && step.machineCueText != null) {
+                // Springs, weights and the effort target are said once per exercise, not before
+                // every set of it.
+                val firstSet = (step.setIndex ?: 1) == 1
+                if (firstSet && voice.settings.machineSettingCues && step.machineCueText != null) {
                     voice.speak(step.machineCueText)
                 }
+                // The effort target is what makes a set count, so it is not behind a toggle.
+                if (firstSet) step.effortCue?.let { voice.speak(it) }
                 if (fresh && voice.settings.howToDescription) speakHowToAt(state.stepIndex)
             }
             StepType.REST -> {
                 if (voice.settings.restNextUpCue) {
                     val next = state.nextStep
-                    val nextName = next?.exerciseName
+                    val nextName = next?.let { spokenLabel(it) }
                     voice.speak(
                         if (nextName != null) "Rest ${step.durationSec} seconds. Next up: $nextName."
                         else "Rest ${step.durationSec} seconds."
@@ -494,9 +516,21 @@ class WorkoutSessionService : LifecycleService() {
         }
     }
 
-    private fun speakHowToAt(index: Int) {
+    /** "Push-up, set 2 of 3" for resistance sets; the plain name otherwise. */
+    private fun spokenLabel(step: au.mark.kinetiq.data.model.SessionStep): String {
+        val n = step.setIndex
+        val of = step.setCount
+        return if (n != null && of != null) "${step.exerciseName}, set $n of $of" else step.exerciseName
+    }
+
+    /**
+     * @param repeatSets false for the automatic cue in a rest: the how-to is spoken before the
+     *   first set of an exercise only, never again before sets two and three.
+     */
+    private fun speakHowToAt(index: Int, repeatSets: Boolean = true) {
         lifecycleScope.launch {
             val step = stateHolder.state.value?.session?.plan?.steps?.getOrNull(index) ?: return@launch
+            if (!repeatSets && (step.setIndex ?: 1) > 1) return@launch
             val id = step.exerciseId ?: return@launch
             howToFor(id)?.let { voice.speak(it) }
         }
@@ -590,6 +624,39 @@ class WorkoutSessionService : LifecycleService() {
         updateNotification()
     }
 
+    /** "Set done" from the player: end the set and go to its rest (see SessionEngine.completeSet). */
+    private fun completeSet() {
+        val state = stateHolder.state.value ?: return
+        val eng = engine ?: return
+        val es = engineState ?: return
+        val result = eng.completeSet(es)
+        if (result.state === es) return // not a resistance set, or still in get-ready
+        voice.stopSpeaking()
+        engineState = result.state
+        if (!result.state.finished) {
+            syncState(state)
+            updateNotification()
+        }
+        executeEffects(result.effects)
+    }
+
+    /** Post-set effort rating. Only a set the engine recorded as performed can be rated. */
+    private fun rateSet(stepIndex: Int, rating: String?) {
+        val es = engineState ?: return
+        val parsed = rating?.let { runCatching { au.mark.kinetiq.data.model.EffortRating.valueOf(it) }.getOrNull() } ?: return
+        if (stepIndex !in es.completedSets) return
+        setRatings = setRatings + (stepIndex to parsed)
+        syncState()
+        lastSnapshotMs = 0L // persist the rating with the next tick rather than up to 5 s later
+    }
+
+    private var setRatings: Map<Int, au.mark.kinetiq.data.model.EffortRating> = emptyMap()
+
+    private fun decodeRatings(raw: Map<Int, String>): Map<Int, au.mark.kinetiq.data.model.EffortRating> =
+        raw.mapNotNull { (k, v) ->
+            runCatching { au.mark.kinetiq.data.model.EffortRating.valueOf(v) }.getOrNull()?.let { k to it }
+        }.toMap()
+
     private fun extendStep() {
         val eng = engine ?: return
         val es = engineState ?: return
@@ -605,6 +672,7 @@ class WorkoutSessionService : LifecycleService() {
         // The run this coroutine owns. Captured before the launch, so it cannot drift.
         val gen = runGeneration
         val es = engineState
+        val ratings = setRatings
         stateHolder.update(state.copy(finished = true, paused = true))
         tickerJob?.cancel()
         voice.speak(
@@ -633,6 +701,8 @@ class WorkoutSessionService : LifecycleService() {
                         blockBounds = es?.blockBounds ?: emptyMap(),
                         weightKg = state.weightKg,
                         fallbackBounds = state.startedAtEpochMs to endedAt,
+                        completedSets = es?.completedSets ?: emptySet(),
+                        setRatings = ratings,
                     )
                 }.getOrDefault(emptyList())
 
@@ -680,6 +750,8 @@ class WorkoutSessionService : LifecycleService() {
                         healthConnectError = hcError,
                         session = state.session,
                         stoppedEarly = userStopped,
+                        completedSets = es?.completedSets ?: emptySet(),
+                        setRatings = ratings,
                     )
                 )
             } finally {
@@ -729,6 +801,8 @@ class WorkoutSessionService : LifecycleService() {
             blockActiveMs = es?.blockActiveMs ?: emptyMap(),
             blockBounds = es?.blockBounds?.mapValues { (_, v) -> listOf(v.first, v.second) } ?: emptyMap(),
             sessionId = state.sessionId,
+            completedSets = es?.completedSets?.sorted() ?: emptyList(),
+            setRatings = setRatings.mapValues { it.value.name },
         )
         val file = stoppedSnapshotFile(this@WorkoutSessionService)
         val tmp = File(file.parentFile, file.name + ".tmp")
@@ -745,6 +819,7 @@ class WorkoutSessionService : LifecycleService() {
         lastSnapshotMs = now
         val state = stateHolder.state.value ?: return
         val es = engineState ?: return
+        val ratings = setRatings
         lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             runCatching {
                 val snap = SessionSnapshot(
@@ -761,6 +836,8 @@ class WorkoutSessionService : LifecycleService() {
                     blockBounds = es.blockBounds.mapValues { (_, v) -> listOf(v.first, v.second) },
                     prepareRemainingMs = es.prepareRemainingMs,
                     sessionId = state.sessionId,
+                    completedSets = es.completedSets.sorted(),
+                    setRatings = ratings.mapValues { it.value.name },
                 )
                 val file = snapshotFile(this@WorkoutSessionService)
                 val tmp = File(file.parentFile, file.name + ".tmp")
@@ -860,6 +937,10 @@ class WorkoutSessionService : LifecycleService() {
         const val ACTION_SKIP = "au.mark.kinetiq.SKIP"
         const val ACTION_SKIP_PREPARE = "au.mark.kinetiq.SKIP_PREPARE"
         const val ACTION_EXTEND = "au.mark.kinetiq.EXTEND"
+        const val ACTION_SET_DONE = "au.mark.kinetiq.SET_DONE"
+        const val ACTION_RATE_SET = "au.mark.kinetiq.RATE_SET"
+        const val EXTRA_STEP_INDEX = "step_index"
+        const val EXTRA_RATING = "rating"
         const val ACTION_STOP = "au.mark.kinetiq.STOP"
         const val ACTION_STOP_CONFIRMED = "au.mark.kinetiq.STOP_CONFIRMED"
         const val EXTRA_SESSION_JSON = "session_json"
@@ -922,6 +1003,15 @@ class WorkoutSessionService : LifecycleService() {
 
         fun command(context: Context, action: String) {
             context.startService(Intent(context, WorkoutSessionService::class.java).setAction(action))
+        }
+
+        fun rateSet(context: Context, stepIndex: Int, rating: au.mark.kinetiq.data.model.EffortRating) {
+            context.startService(
+                Intent(context, WorkoutSessionService::class.java)
+                    .setAction(ACTION_RATE_SET)
+                    .putExtra(EXTRA_STEP_INDEX, stepIndex)
+                    .putExtra(EXTRA_RATING, rating.name)
+            )
         }
     }
 }
