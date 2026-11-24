@@ -46,7 +46,9 @@ import au.mark.kinetiq.data.model.StepType
 import au.mark.kinetiq.data.repo.ExerciseRepository
 import au.mark.kinetiq.data.repo.MeasurementRepository
 import au.mark.kinetiq.data.repo.SettingsRepository
+import au.mark.kinetiq.domain.generator.ExerciseEligibility
 import au.mark.kinetiq.domain.generator.GeneratorWarning
+import au.mark.kinetiq.domain.generator.ResistanceBlockBuilder
 import au.mark.kinetiq.domain.generator.WorkoutGenerator
 import au.mark.kinetiq.domain.MachineCueRenderer
 import au.mark.kinetiq.service.WorkoutSessionService
@@ -149,6 +151,8 @@ class BuilderViewModel @Inject constructor(
                         includeLowEvidence = settings.includeLowEvidence,
                         visceralFatGoal = settings.visceralFatGoal,
                         metrics = metrics,
+                        ownedEquipment = settings.equipment.owned,
+                        handWeightMaxKg = settings.equipment.handWeightMaxKg,
                     ),
                 )
             }
@@ -186,11 +190,20 @@ class BuilderViewModel @Inject constructor(
             val settings = settingsRepository.current()
             val usedIds = session.plan.steps.mapNotNull { it.exerciseId }.toSet()
             val discreteCategories = setOf(Category.FLOOR, Category.REFORMER, Category.BACK)
-            val candidates = exerciseRepository.byCategory(step.category)
+            // Same gates the generator applies (ExerciseEligibility) — including equipment, so a
+            // swap can never introduce a hand-weight exercise into a session built without them.
+            val kit = ExerciseEligibility.kitFor(
+                settings.equipment.owned, settings.equipment.handWeightMaxKg, session.config.handWeights,
+            )
+            val inCategory = exerciseRepository.byCategory(step.category)
+            if (step.isResistanceSet) {
+                swapResistanceExercise(step, inCategory, usedIds, kit, settings)
+                return@launch
+            }
+            val candidates = inCategory
                 .filter { it.kind.name == (if (step.category in discreteCategories) "DISCRETE" else "INTERVAL_SEGMENT") }
-                .filter { !it.isWarmupCooldown && it.id !in usedIds }
-                .filter { settings.includeLowEvidence || it.evidenceTier != au.mark.kinetiq.data.model.EvidenceTier.LIMITED }
-                .filter { it.contraindications.none { c -> c in settings.constraints } }
+                .filter { it.id !in usedIds }
+                .filter { ExerciseEligibility.inGeneralPool(it, settings.constraints, settings.includeLowEvidence, kit) }
             val replacement = candidates.randomOrNull() ?: return@launch
             editSteps { steps ->
                 steps.mapIndexed { i, s ->
@@ -207,13 +220,50 @@ class BuilderViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Swapping one set swaps every set of that exercise in its block, for another exercise that
+     * trains the same movement slot — otherwise "set 2 of 3" would be a different exercise from
+     * set 1, and the session would quietly lose the region the original was chosen to cover.
+     */
+    private fun swapResistanceExercise(
+        step: SessionStep,
+        inCategory: List<au.mark.kinetiq.data.model.Exercise>,
+        usedIds: Set<String>,
+        kit: ExerciseEligibility.Kit,
+        settings: au.mark.kinetiq.data.repo.AppSettings,
+    ) {
+        val session = uiState.value.preview ?: return
+        val slot = inCategory.find { it.id == step.exerciseId }?.resistance?.slot ?: return
+        val includeLimited = settings.includeLowEvidence || session.config.allowLimitedGapFill
+        val sameSlot = inCategory.filter { ex ->
+            ex.kind == au.mark.kinetiq.data.model.ExerciseKind.DISCRETE && ex.id !in usedIds &&
+                ex.resistance?.slot == slot &&
+                ExerciseEligibility.inResistancePool(ex, settings.constraints, includeLimited, kit)
+        }
+        // A limited-evidence option is only ever a gap filler, here as in the generator.
+        val better = sameSlot.filter { it.resistance?.tier != au.mark.kinetiq.data.model.EvidenceTier.LIMITED }
+        val replacement = better.ifEmpty { sameSlot }.randomOrNull() ?: return
+        val window = ResistanceBlockBuilder.windowFor(replacement)
+        editSteps { steps ->
+            steps.map { s ->
+                if (s.isResistanceSet && s.blockIndex == step.blockIndex && s.exerciseId == step.exerciseId) {
+                    ResistanceBlockBuilder.setStep(
+                        ex = replacement, machines = settings.machines, easeIn = session.config.easeIn,
+                        blockIndex = s.blockIndex, durationSec = s.durationSec.coerceIn(window.min, window.max),
+                        setIndex = s.setIndex ?: 1, setCount = s.setCount ?: 1,
+                    )
+                } else s
+            }
+        }
+    }
+
     private fun editSteps(transform: (List<SessionStep>) -> List<SessionStep>) {
         // Generation now runs off the main thread, so a preview edit made while one is in flight
         // would be silently overwritten by its write-back. Ignoring the edit is honest; losing it
         // after the user saw it applied is not.
         if (uiState.value.generating) return
         val session = uiState.value.preview ?: return
-        val newSteps = transform(session.plan.steps)
+        val newSteps = ResistanceBlockBuilder.renumberSets(transform(session.plan.steps))
         uiState.value = uiState.value.copy(
             preview = session.copy(plan = session.plan.copy(steps = newSteps, totalSec = newSteps.sumOf { it.durationSec })),
             edited = true,

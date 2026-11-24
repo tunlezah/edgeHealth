@@ -1,10 +1,13 @@
 package au.mark.kinetiq.data
 
 import au.mark.kinetiq.data.model.Category
+import au.mark.kinetiq.data.model.Equipment
 import au.mark.kinetiq.data.model.EvidenceTier
 import au.mark.kinetiq.data.model.Exercise
 import au.mark.kinetiq.data.model.ExerciseDatabaseFile
 import au.mark.kinetiq.data.model.ExerciseKind
+import au.mark.kinetiq.data.model.MovementSlot
+import au.mark.kinetiq.data.model.Reference
 
 /**
  * Validates the bundled exercise database against the content rules in the spec:
@@ -14,7 +17,9 @@ import au.mark.kinetiq.data.model.ExerciseKind
  *  - every field populated (no placeholder text),
  *  - machine cues present and matching the category,
  *  - animation ids resolve against the animation registry,
- *  - named routines reference existing segments of the same category.
+ *  - named routines reference existing segments of the same category,
+ *  - equipment and muscle-retention profiles are complete, honestly tiered and consistent, and
+ *    the retention content actually covers the regions the app says it covers.
  *
  * Used both by the runtime loader (fail fast on a bad build) and by unit tests.
  */
@@ -75,15 +80,8 @@ object DatabaseValidator {
                     if (ex.popularityNote.isNullOrBlank()) problem("$where: LIMITED tier requires popularityNote")
                 }
             }
-            for (ref in ex.references) {
-                val rw = "$where reference '${ref.title.take(40)}'"
-                validateText(rw, "title", ref.title, problems)
-                validateText(rw, "authors", ref.authors, problems)
-                validateText(rw, "journal", ref.journal, problems)
-                validateText(rw, "doiOrPmid", ref.doiOrPmid, problems)
-                validateText(rw, "finding", ref.finding, problems)
-                if (ref.year !in 1950..(java.time.Year.now().value + 1)) problem("$rw: implausible year ${ref.year}")
-            }
+            for (ref in ex.references) validateReference(where, ref, problems)
+            validateEquipmentAndResistance(where, ex, problems)
 
             if (ex.defaultWorkSec <= 0) problem("$where: defaultWorkSec must be > 0")
             if (ex.defaultRestSec < 0) problem("$where: defaultRestSec must be >= 0")
@@ -160,8 +158,108 @@ object DatabaseValidator {
             if (r.totalSec < 4 * 60) problem("$where: total ${r.totalSec}s is too short for a named routine")
         }
 
+        validateResistanceCoverage(db, problems)
+
         return Result(problems)
     }
+
+    private fun validateReference(where: String, ref: Reference, problems: MutableList<String>) {
+        val rw = "$where reference '${ref.title.take(40)}'"
+        validateText(rw, "title", ref.title, problems)
+        validateText(rw, "authors", ref.authors, problems)
+        validateText(rw, "journal", ref.journal, problems)
+        validateText(rw, "doiOrPmid", ref.doiOrPmid, problems)
+        validateText(rw, "finding", ref.finding, problems)
+        if (ref.year !in 1950..(java.time.Year.now().value + 1)) problems.add("$rw: implausible year ${ref.year}")
+    }
+
+    /**
+     * Equipment flags and the muscle-retention profile. The profile's tier is graded separately
+     * from the exercise's general tier and held to the same honesty rule: STRONG/MODERATE need a
+     * reference of their own, LIMITED needs a candid note.
+     */
+    private fun validateEquipmentAndResistance(where: String, ex: Exercise, problems: MutableList<String>) {
+        fun problem(msg: String) = problems.add(msg)
+
+        if (ex.equipment.distinct().size != ex.equipment.size) problem("$where: duplicate equipment entries")
+        if (ex.equipment.isNotEmpty() && ex.category in listOf(Category.SPIN, Category.ELLIPTICAL))
+            problem("$where: machine interval segments cannot require extra equipment")
+        if (Equipment.REFORMER_BOX in ex.equipment && ex.category != Category.REFORMER)
+            problem("$where: REFORMER_BOX is only meaningful on REFORMER exercises")
+        if (ex.equipment.isNotEmpty() && ex.isWarmupCooldown)
+            problem("$where: warm-up/cool-down content must need no extra equipment")
+
+        val r = ex.resistance
+        if (r == null) {
+            // Hand weights exist in this app only as a resistance tool; an ungraded entry that
+            // needs them would dodge the minimum-useful-load gate.
+            if (Equipment.HAND_WEIGHTS in ex.equipment)
+                problem("$where: HAND_WEIGHTS exercises must carry a resistance profile")
+            return
+        }
+        val rwhere = "$where resistance"
+        if (ex.category !in RESISTANCE_CATEGORIES) problem("$rwhere: profiles are only for FLOOR and REFORMER exercises")
+        if (ex.kind != ExerciseKind.DISCRETE) problem("$rwhere: only DISCRETE exercises can be resistance sets")
+        if (ex.isWarmupCooldown) problem("$rwhere: warm-up/cool-down content cannot be a resistance set")
+        if (r.primary.isEmpty()) problem("$rwhere: needs at least one primary muscle")
+        if (r.primary.distinct().size != r.primary.size || r.secondary.distinct().size != r.secondary.size)
+            problem("$rwhere: duplicate muscles")
+        if (r.primary.any { it in r.secondary }) problem("$rwhere: a muscle cannot be both primary and secondary")
+        when (r.tier) {
+            EvidenceTier.STRONG, EvidenceTier.MODERATE ->
+                if (r.references.isEmpty()) problem("$rwhere: ${r.tier} retention tier requires >= 1 reference of its own")
+            EvidenceTier.LIMITED ->
+                if (r.note.isNullOrBlank()) problem("$rwhere: LIMITED retention tier requires a candid note")
+        }
+        r.note?.let { validateText(rwhere, "note", it, problems) }
+        for (ref in r.references) validateReference(rwhere, ref, problems)
+        if (r.rung < 1) problem("$rwhere: rung must be >= 1")
+        r.ladder?.let {
+            if (!LADDER_PATTERN.matches(it)) problem("$rwhere: ladder id '$it' must be lower_snake_case")
+        }
+        val minKg = r.minUsefulKg
+        if (Equipment.HAND_WEIGHTS in ex.equipment) {
+            if (minKg == null) problem("$rwhere: HAND_WEIGHTS exercises must state minUsefulKg")
+            else if (minKg <= 0f || minKg > 40f) problem("$rwhere: implausible minUsefulKg $minKg")
+        } else if (minKg != null) {
+            problem("$rwhere: minUsefulKg is only for HAND_WEIGHTS exercises")
+        }
+    }
+
+    /**
+     * Database-level retention rules. Skipped entirely while no exercise carries a profile, so a
+     * database without the feature is still valid.
+     *
+     * The coverage rules pin the claims the app makes in its copy: with nothing but a mat you can
+     * train leg push, upper push and hamstring/glute at MODERATE or better. Upper-body pulling is
+     * deliberately NOT promised without equipment — that gap is real (RESEARCH.md §12) and the
+     * generator warns about it rather than papering over it.
+     */
+    private fun validateResistanceCoverage(db: ExerciseDatabaseFile, problems: MutableList<String>) {
+        val profiled = db.exercises.filter { it.resistance != null }
+        if (profiled.isEmpty()) return
+
+        for ((ladder, members) in profiled.filter { it.resistance?.ladder != null }.groupBy { it.resistance!!.ladder!! }) {
+            val slots = members.map { it.resistance!!.slot }.distinct()
+            if (slots.size > 1) problems.add("ladder '$ladder': members span several slots $slots")
+        }
+
+        for (slot in MAT_ONLY_SLOTS) {
+            val ok = profiled.any { ex ->
+                ex.category == Category.FLOOR && ex.equipment.isEmpty() &&
+                    ex.resistance!!.slot == slot && ex.resistance.tier != EvidenceTier.LIMITED
+            }
+            if (!ok) problems.add("resistance coverage: no MODERATE+ equipment-free FLOOR exercise for $slot")
+        }
+        for (slot in MovementSlot.entries) {
+            if (profiled.none { it.resistance!!.slot == slot })
+                problems.add("resistance coverage: no exercise at all for $slot")
+        }
+    }
+
+    private val RESISTANCE_CATEGORIES = listOf(Category.FLOOR, Category.REFORMER)
+    private val MAT_ONLY_SLOTS = listOf(MovementSlot.LOWER_PUSH, MovementSlot.UPPER_PUSH, MovementSlot.LOWER_PULL)
+    private val LADDER_PATTERN = Regex("^[a-z][a-z0-9_]*$")
 
     private val SPRING_PATTERN = Regex("^(LIGHT|MEDIUM|HEAVY)(_[1-4])?$")
 

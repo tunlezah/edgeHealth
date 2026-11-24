@@ -2,16 +2,20 @@ package au.mark.kinetiq.domain.generator
 
 import au.mark.kinetiq.data.model.BodyArea
 import au.mark.kinetiq.data.model.Category
+import au.mark.kinetiq.data.model.Equipment
 import au.mark.kinetiq.data.model.EvidenceTier
 import au.mark.kinetiq.data.model.Exercise
 import au.mark.kinetiq.data.model.ExerciseKind
 import au.mark.kinetiq.data.model.GeneratedSession
 import au.mark.kinetiq.data.model.GeneratorConfig
 import au.mark.kinetiq.data.model.Intensity
+import au.mark.kinetiq.data.model.MovementSlot
 import au.mark.kinetiq.data.model.NamedRoutine
 import au.mark.kinetiq.data.model.RestMode
 import au.mark.kinetiq.data.model.SessionBlock
+import au.mark.kinetiq.data.model.SessionFocus
 import au.mark.kinetiq.data.model.SessionStep
+import au.mark.kinetiq.data.model.displayName
 import au.mark.kinetiq.data.model.StepType
 import au.mark.kinetiq.data.model.Target
 import au.mark.kinetiq.data.model.WorkoutPlan
@@ -73,11 +77,18 @@ class WorkoutGenerator(
         val includeLowEvidence: Boolean = false,
         val visceralFatGoal: Boolean = true,
         val metrics: BodyMetrics? = null,
+        /** Kit owned per Settings → Equipment. Hand weights are switched on per session by the config. */
+        val ownedEquipment: Set<Equipment> = emptySet(),
+        val handWeightMaxKg: Float = 2f,
+        /** Current rung per progression ladder; missing = [ResistanceBlockBuilder.DEFAULT_RUNG]. */
+        val ladderRungs: Map<String, Int> = emptyMap(),
     )
 
     fun generate(config: GeneratorConfig, profile: Profile = Profile()): GeneratorResult {
         val warnings = mutableListOf<GeneratorWarning>()
         val categories = config.categories.ifEmpty { listOf(Category.FLOOR) }
+        val kit = ExerciseEligibility.kitFor(profile.ownedEquipment, profile.handWeightMaxKg, config.handWeights)
+        val retention = config.focus == SessionFocus.MUSCLE_RETENTION
 
         val highAdiposity = config.useHealthData && profile.metrics?.let { m ->
             (m.bmi ?: 0.0) >= 30.0 || (m.bodyFatPct ?: 0.0) >= 32.0
@@ -115,7 +126,17 @@ class WorkoutGenerator(
 
         // Warm-up/cool-down carry sentinel block indices so their minutes never pollute the
         // first/last block's history and Health Connect records.
-        if (warmupSec > 0) steps += warmupSteps(categories.first(), warmupSec, profile, blockIndex = WARMUP_BLOCK_INDEX)
+        if (warmupSec > 0) steps += warmupSteps(categories.first(), warmupSec, profile, kit, blockIndex = WARMUP_BLOCK_INDEX)
+
+        // Muscle-retention sessions: slots covered by earlier blocks are deprioritised in later
+        // ones, so Floor + Reformer complement each other instead of doubling up.
+        // The slot order draws from the shared Random, so it is only taken for retention sessions —
+        // a GENERAL session must consume exactly the random numbers it always has.
+        val resistanceBuilder = ResistanceBlockBuilder(exercises, machines, random)
+        val slotOrder = if (retention) resistanceBuilder.slotOrder() else emptyList()
+        val coveredSlots = mutableSetOf<MovementSlot>()
+        val availableSlots = mutableSetOf<MovementSlot>()
+        val unfilledSlots = mutableMapOf<MovementSlot, ResistanceBlockBuilder.Unfilled>()
 
         categories.forEachIndexed { index, cat ->
             if (index > 0) {
@@ -130,23 +151,44 @@ class WorkoutGenerator(
             val secs = blockSec.getValue(cat)
             when (cat) {
                 Category.FLOOR, Category.REFORMER, Category.BACK -> {
-                    val (blockSteps, blockWarnings) = discreteBlock(cat, secs, config, profile, highAdiposity, index)
-                    steps += blockSteps
-                    warnings += blockWarnings
-                    blocks += SessionBlock(category = cat, isHiit = false)
+                    if (retention && cat in RESISTANCE_CATEGORIES) {
+                        val built = resistanceBuilder.build(
+                            cat = cat, blockSec = secs, config = config, constraints = profile.constraints,
+                            includeLowEvidence = profile.includeLowEvidence, kit = kit,
+                            ladderRungs = profile.ladderRungs, blockIndex = index,
+                            slotOrder = slotOrder, alreadyCovered = coveredSlots,
+                        )
+                        steps += built.steps
+                        warnings += built.warnings
+                        coveredSlots += built.covered
+                        availableSlots += built.available
+                        for ((slot, why) in built.unfilled) unfilledSlots.merge(slot, why) { a, b -> minOf(a, b) }
+                        blocks += SessionBlock(category = cat, isHiit = false, isResistance = built.steps.isNotEmpty())
+                    } else {
+                        val (blockSteps, blockWarnings) = discreteBlock(cat, secs, config, profile, kit, highAdiposity, index)
+                        steps += blockSteps
+                        warnings += blockWarnings
+                        blocks += SessionBlock(category = cat, isHiit = false)
+                    }
                 }
                 Category.SPIN, Category.ELLIPTICAL -> {
-                    val (blockSteps, block) = machineBlock(cat, secs, config, profile, highAdiposity, index)
+                    val (blockSteps, block) = machineBlock(cat, secs, config, profile, kit, highAdiposity, index)
                     steps += blockSteps
                     blocks += block
                 }
             }
         }
 
-        if (cooldownSec > 0) steps += cooldownSteps(categories.last(), cooldownSec, profile, blockIndex = COOLDOWN_BLOCK_INDEX)
+        if (cooldownSec > 0) steps += cooldownSteps(categories.last(), cooldownSec, profile, kit, blockIndex = COOLDOWN_BLOCK_INDEX)
+
+        if (retention) {
+            warnings += retentionWarnings(config, categories, profile, kit, availableSlots, unfilledSlots)
+        }
 
         // Visceral-fat goal check: >= 50% of WORK time should be MODERATE+ cardio-targeted.
-        if (profile.visceralFatGoal && config.useHealthData) {
+        // Not applied to muscle-retention sessions: they are built for a different goal, and the
+        // weekly cardio dose is tracked on the Plan screen rather than nagged about here.
+        if (profile.visceralFatGoal && config.useHealthData && !retention) {
             val byId = exercises.associateBy { it.id }
             val workSteps = steps.filter { it.type == StepType.WORK }
             val workSec = workSteps.sumOf { it.durationSec }
@@ -187,13 +229,11 @@ class WorkoutGenerator(
     // ---------------------------------------------------------------------------------------
     // Selection pool
 
-    private fun pool(cat: Category, profile: Profile, kind: ExerciseKind? = null): List<Exercise> =
+    private fun pool(cat: Category, profile: Profile, kit: ExerciseEligibility.Kit, kind: ExerciseKind? = null): List<Exercise> =
         exercises.filter { ex ->
             ex.category == cat &&
                 (kind == null || ex.kind == kind) &&
-                !ex.isWarmupCooldown &&
-                (profile.includeLowEvidence || ex.evidenceTier != EvidenceTier.LIMITED) &&
-                ex.contraindications.none { it in profile.constraints }
+                ExerciseEligibility.inGeneralPool(ex, profile.constraints, profile.includeLowEvidence, kit)
         }
 
     private fun intensityRank(i: Intensity) = when (i) {
@@ -211,11 +251,12 @@ class WorkoutGenerator(
         blockSec: Int,
         config: GeneratorConfig,
         profile: Profile,
+        kit: ExerciseEligibility.Kit,
         highAdiposity: Boolean,
         blockIndex: Int,
     ): Pair<List<SessionStep>, List<GeneratorWarning>> {
         val warnings = mutableListOf<GeneratorWarning>()
-        var candidates = pool(cat, profile, ExerciseKind.DISCRETE)
+        var candidates = pool(cat, profile, kit, ExerciseKind.DISCRETE)
             .filter { allowedByPreference(it, config.intensity) }
         if (highAdiposity) {
             val lowImpact = candidates.filter { it.impact == au.mark.kinetiq.data.model.Impact.LOW }
@@ -301,11 +342,7 @@ class WorkoutGenerator(
     }
 
     /** True when moving between [a] and [b] requires re-setup (springs, machine presence, body position). */
-    internal fun setupChange(a: Exercise, b: Exercise): Boolean =
-        a.category != b.category ||
-            (a.machine == null) != (b.machine == null) ||
-            a.machine?.reformer?.springs != b.machine?.reformer?.springs ||
-            a.machine?.reformer?.bodyPosition != b.machine?.reformer?.bodyPosition
+    internal fun setupChange(a: Exercise, b: Exercise): Boolean = requiresSetupChange(a, b)
 
     /**
      * RECOVERY-mode rest, scaled inside the 30–45 s evidence window. Longer rests at *lower*
@@ -336,30 +373,95 @@ class WorkoutGenerator(
         minBound: (Int) -> Int,
         maxBound: (Int) -> Int,
         targetSec: Int,
-    ): List<Int> {
-        if (initial.isEmpty()) return initial
-        val out = initial.mapIndexed { i, v -> v.coerceIn(minBound(i), maxBound(i)) }.toMutableList()
-        repeat(6) {
-            val residual = targetSec - out.sum()
-            if (kotlin.math.abs(residual) <= 2) return@repeat
-            val adjustable = out.indices.filter { i ->
-                if (residual > 0) out[i] < maxBound(i) else out[i] > minBound(i)
+    ): List<Int> = redistributeSeconds(initial, minBound, maxBound, targetSec)
+
+    // ---------------------------------------------------------------------------------------
+    // Muscle-retention session warnings
+
+    /**
+     * One warning per big-four slot that nothing could fill, each with the cheapest one-tap fix
+     * that would fill it, plus the strength-before-cardio ordering advisory. Slots that were
+     * merely squeezed out by a short session are not warned about — that is the plan working.
+     */
+    private fun retentionWarnings(
+        config: GeneratorConfig,
+        categories: List<Category>,
+        profile: Profile,
+        kit: ExerciseEligibility.Kit,
+        available: Set<MovementSlot>,
+        unfilled: Map<MovementSlot, ResistanceBlockBuilder.Unfilled>,
+    ): List<GeneratorWarning> {
+        val out = mutableListOf<GeneratorWarning>()
+        val selected = categories.filter { it in RESISTANCE_CATEGORIES }
+        if (selected.isEmpty()) {
+            out += GeneratorWarning(
+                message = "Muscle-retention sessions are built from Floor and Reformer work — neither is selected, " +
+                    "so this session contains no resistance sets.",
+                fixLabel = "Add Floor",
+                fixedConfig = config.copy(categories = listOf(Category.FLOOR) + categories),
+            )
+            return out
+        }
+        val includeLimited = profile.includeLowEvidence || config.allowLimitedGapFill
+        val kitWithWeights = ExerciseEligibility.kitFor(profile.ownedEquipment, profile.handWeightMaxKg, true)
+        fun fillable(slot: MovementSlot, cats: List<Category>, k: ExerciseEligibility.Kit, limited: Boolean) =
+            exercises.any { ex ->
+                ex.category in cats && ex.kind == ExerciseKind.DISCRETE && ex.resistance?.slot == slot &&
+                    ExerciseEligibility.inResistancePool(ex, profile.constraints, limited, k)
             }
-            if (adjustable.isEmpty()) return@repeat
-            val share = residual.toDouble() / adjustable.size
-            for (i in adjustable) {
-                out[i] = (out[i] + share).roundToInt().coerceIn(minBound(i), maxBound(i))
+        val limitedOnly = mutableListOf<MovementSlot>()
+        for (slot in ResistanceBlockBuilder.BIG_FOUR) {
+            // "Available" = some selected block had a usable exercise for it; if it still went
+            // untrained that was the clock, not the equipment.
+            if (slot in available || slot !in unfilled) continue
+            val name = slot.displayName()
+            val otherCats = RESISTANCE_CATEGORIES.filter { it !in selected }
+            when {
+                unfilled[slot] == ResistanceBlockBuilder.Unfilled.LIMITED_ONLY && !includeLimited ->
+                    limitedOnly += slot
+                !config.handWeights && fillable(slot, selected, kitWithWeights, includeLimited) -> out += GeneratorWarning(
+                    message = "Nothing here covers your $name muscles without hand weights.",
+                    fixLabel = "Use hand weights",
+                    fixedConfig = config.copy(handWeights = true),
+                )
+                otherCats.any { fillable(slot, listOf(it), kit, includeLimited) } -> {
+                    val add = otherCats.first { fillable(slot, listOf(it), kit, includeLimited) }
+                    out += GeneratorWarning(
+                        message = "Nothing on ${selected.joinToString(" or ") { stationName(it) }} covers your $name " +
+                            "muscles with your equipment. ${add.displayName()} can.",
+                        fixLabel = "Add ${add.displayName()}",
+                        fixedConfig = config.copy(categories = categories + add),
+                    )
+                }
+                else -> out += GeneratorWarning(
+                    message = "No $name exercise matches your equipment and body constraints, so those muscles " +
+                        "are not trained in this session. Settings → Equipment lists what would open more up.",
+                )
             }
         }
-        // Exact settling: hand out the last few seconds one at a time while any element has room.
-        var residual = targetSec - out.sum()
-        while (residual != 0) {
-            val i = out.indices.firstOrNull { i ->
-                if (residual > 0) out[i] < maxBound(i) else out[i] > minBound(i)
-            } ?: break
-            val step = if (residual > 0) 1 else -1
-            out[i] += step
-            residual -= step
+        if (limitedOnly.isNotEmpty()) {
+            out += GeneratorWarning(
+                message = "Only limited-evidence exercises can cover your " +
+                    limitedOnly.joinToString(" and ") { it.displayName() } +
+                    " muscles with this equipment, so they are left out. They can be added as clearly labelled fillers.",
+                fixLabel = "Add limited-evidence fillers",
+                fixedConfig = config.copy(allowLimitedGapFill = true),
+            )
+        }
+        // Strength before cardio: helps lower-body strength in the same session; no proven effect
+        // on muscle size (Eddens 2018; Schumann 2022 — RESEARCH.md §12).
+        val firstCardio = categories.indexOfFirst { it == Category.SPIN || it == Category.ELLIPTICAL }
+        val lastResistance = categories.indexOfLast { it in RESISTANCE_CATEGORIES }
+        if (firstCardio in 0 until lastResistance) {
+            out += GeneratorWarning(
+                message = "Your resistance sets come after cardio. Doing them first keeps your legs fresh for the " +
+                    "sets that matter here.",
+                fixLabel = "Resistance first",
+                fixedConfig = config.copy(
+                    categories = categories.filter { it in RESISTANCE_CATEGORIES } +
+                        categories.filter { it !in RESISTANCE_CATEGORIES },
+                ),
+            )
         }
         return out
     }
@@ -425,6 +527,7 @@ class WorkoutGenerator(
         blockSec: Int,
         config: GeneratorConfig,
         profile: Profile,
+        kit: ExerciseEligibility.Kit,
         highAdiposity: Boolean,
         blockIndex: Int,
     ): Pair<List<SessionStep>, SessionBlock> {
@@ -438,7 +541,7 @@ class WorkoutGenerator(
         val fitting = routines.filter { r ->
             r.category == cat &&
                 blockSec.toDouble() / r.totalSec in 0.5..2.0 &&
-                r.steps.all { s -> byId[s.exerciseId]?.contraindications?.none { it in profile.constraints } != false } &&
+                r.steps.all { s -> byId[s.exerciseId]?.let { ExerciseEligibility.allowed(it, profile.constraints, kit) } != false } &&
                 (profile.includeLowEvidence || r.steps.all { s -> byId[s.exerciseId]?.evidenceTier != EvidenceTier.LIMITED }) &&
                 intensityRank(r.intensity) <= intensityRank(config.intensity) + 1 &&
                 (!highAdiposity || intensityRank(r.intensity) <= intensityRank(Intensity.HIGH))
@@ -478,7 +581,7 @@ class WorkoutGenerator(
         }
 
         // Fallback: assemble segments to fill the block.
-        var candidates = pool(cat, profile, ExerciseKind.INTERVAL_SEGMENT)
+        var candidates = pool(cat, profile, kit, ExerciseKind.INTERVAL_SEGMENT)
             .filter { allowedByPreference(it, config.intensity) }
         if (highAdiposity) candidates = candidates.filter { it.intensity != Intensity.VERY_HIGH }.ifEmpty { candidates }
         if (candidates.isEmpty()) return emptyList<SessionStep>() to SessionBlock(category = cat)
@@ -519,15 +622,19 @@ class WorkoutGenerator(
     internal fun warmCoolSlice(totalSec: Int): Int =
         (totalSec / 10).coerceIn(minOf(3 * 60, totalSec / 6), 5 * 60)
 
-    private fun warmupSteps(cat: Category, seconds: Int, profile: Profile, blockIndex: Int): List<SessionStep> =
-        warmCool(cat, seconds, StepType.WARMUP, profile, blockIndex)
+    private fun warmupSteps(
+        cat: Category, seconds: Int, profile: Profile, kit: ExerciseEligibility.Kit, blockIndex: Int,
+    ): List<SessionStep> = warmCool(cat, seconds, StepType.WARMUP, profile, kit, blockIndex)
 
-    private fun cooldownSteps(cat: Category, seconds: Int, profile: Profile, blockIndex: Int): List<SessionStep> =
-        warmCool(cat, seconds, StepType.COOLDOWN, profile, blockIndex)
+    private fun cooldownSteps(
+        cat: Category, seconds: Int, profile: Profile, kit: ExerciseEligibility.Kit, blockIndex: Int,
+    ): List<SessionStep> = warmCool(cat, seconds, StepType.COOLDOWN, profile, kit, blockIndex)
 
-    private fun warmCool(cat: Category, seconds: Int, type: StepType, profile: Profile, blockIndex: Int): List<SessionStep> {
+    private fun warmCool(
+        cat: Category, seconds: Int, type: StepType, profile: Profile, kit: ExerciseEligibility.Kit, blockIndex: Int,
+    ): List<SessionStep> {
         val pool = exercises.filter {
-            it.isWarmupCooldown && it.contraindications.none { c -> c in profile.constraints } &&
+            it.isWarmupCooldown && ExerciseEligibility.allowed(it, profile.constraints, kit) &&
                 (it.category == cat || it.category == Category.FLOOR)
         }.sortedByDescending { it.category == cat }
         if (pool.isEmpty()) return emptyList()
@@ -552,6 +659,9 @@ class WorkoutGenerator(
         /** Sentinel block indices: warm-up/cool-down time is excluded from per-block records. */
         const val WARMUP_BLOCK_INDEX = -1
         const val COOLDOWN_BLOCK_INDEX = -2
+
+        /** Categories whose blocks become set-based in a muscle-retention session. */
+        val RESISTANCE_CATEGORIES = listOf(Category.FLOOR, Category.REFORMER)
 
         fun stationName(cat: Category): String = when (cat) {
             Category.FLOOR -> "the mat"

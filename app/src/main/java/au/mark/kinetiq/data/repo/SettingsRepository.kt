@@ -43,6 +43,26 @@ data class MachineSettings(
     val springNotation: SpringNotation = SpringNotation.GENERIC,
 )
 
+/**
+ * Kit the user owns beyond the machines. Hand weights are owned here but only *used* when the
+ * Builder's per-session chip is on; the other three gate exercises directly.
+ */
+data class EquipmentSettings(
+    /** Heaviest single hand weight owned, kg. Exercises that need more are never generated. */
+    val handWeightMaxKg: Float = 2f,
+    val chairOrStep: Boolean = false,
+    val reformerBox: Boolean = false,
+    val ankleAnchor: Boolean = false,
+) {
+    /** Everything owned except hand weights, which the session config switches on. */
+    val owned: Set<au.mark.kinetiq.data.model.Equipment>
+        get() = buildSet {
+            if (chairOrStep) add(au.mark.kinetiq.data.model.Equipment.CHAIR_OR_STEP)
+            if (reformerBox) add(au.mark.kinetiq.data.model.Equipment.REFORMER_BOX)
+            if (ankleAnchor) add(au.mark.kinetiq.data.model.Equipment.ANKLE_ANCHOR)
+        }
+}
+
 data class AppSettings(
     val onboardingComplete: Boolean = false,
     val disclaimerAcknowledged: Boolean = false,
@@ -69,6 +89,7 @@ data class AppSettings(
     val defaultRestMode: au.mark.kinetiq.data.model.RestMode = au.mark.kinetiq.data.model.RestMode.STANDARD,
     /** One-time "continuous mode removes rests" notice acknowledged. */
     val continuousNoticeSeen: Boolean = false,
+    val equipment: EquipmentSettings = EquipmentSettings(),
 )
 
 @Singleton
@@ -107,6 +128,10 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val lastConfig = stringPreferencesKey("last_config")
         val restMode = stringPreferencesKey("rest_mode")
         val continuousNoticeSeen = booleanPreferencesKey("continuous_notice_seen")
+        val handWeightMaxKg = floatPreferencesKey("eq_hand_weight_max_kg")
+        val chairOrStep = booleanPreferencesKey("eq_chair_or_step")
+        val reformerBox = booleanPreferencesKey("eq_reformer_box")
+        val ankleAnchor = booleanPreferencesKey("eq_ankle_anchor")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -149,6 +174,12 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
                 runCatching { au.mark.kinetiq.data.model.RestMode.valueOf(it) }.getOrNull()
             } ?: au.mark.kinetiq.data.model.RestMode.STANDARD,
             continuousNoticeSeen = p[Keys.continuousNoticeSeen] ?: false,
+            equipment = EquipmentSettings(
+                handWeightMaxKg = p[Keys.handWeightMaxKg] ?: 2f,
+                chairOrStep = p[Keys.chairOrStep] ?: false,
+                reformerBox = p[Keys.reformerBox] ?: false,
+                ankleAnchor = p[Keys.ankleAnchor] ?: false,
+            ),
         )
     }
 
@@ -190,6 +221,12 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setVisceralGoal(v: Boolean) = edit { it[Keys.visceralGoal] = v }
     suspend fun setDefaultRestMode(v: au.mark.kinetiq.data.model.RestMode) = edit { it[Keys.restMode] = v.name }
     suspend fun setContinuousNoticeSeen(v: Boolean) = edit { it[Keys.continuousNoticeSeen] = v }
+    suspend fun setEquipment(e: EquipmentSettings) = edit {
+        it[Keys.handWeightMaxKg] = e.handWeightMaxKg
+        it[Keys.chairOrStep] = e.chairOrStep
+        it[Keys.reformerBox] = e.reformerBox
+        it[Keys.ankleAnchor] = e.ankleAnchor
+    }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit(block)
