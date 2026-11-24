@@ -1,10 +1,12 @@
 package au.mark.kinetiq.service
 
+import au.mark.kinetiq.data.model.EffortRating
 import au.mark.kinetiq.data.model.SessionStep
 import au.mark.kinetiq.data.model.StepType
 import au.mark.kinetiq.data.model.WorkoutPlan
 import au.mark.kinetiq.data.repo.CompletedBlock
 import au.mark.kinetiq.domain.CalorieCalculator
+import au.mark.kinetiq.domain.resistance.ResistanceTracking
 
 /**
  * Pure workout state machine: tick accrual, cue points, step advance, prepare countdowns,
@@ -40,11 +42,21 @@ class SessionEngine(
         val blockBounds: Map<Int, Pair<Long, Long>> = emptyMap(),
         val cues: CueFlags = CueFlags(),
         val finished: Boolean = false,
+        /** Active time accrued in the current step; reset on every advance. */
+        val stepElapsedMs: Long = 0L,
+        /**
+         * Step indices of resistance sets that were actually performed: run to the end of their
+         * window, or ended with "Set done" after at least [MIN_COUNTED_SET_MS]. A skipped set is
+         * never in here — this is what the weekly sets-per-muscle meter counts.
+         */
+        val completedSets: Set<Int> = emptySet(),
     )
 
     sealed interface Effect {
         data object PlayCountdownBeeps : Effect
         data object SpeakHalfway : Effect
+        /** One-side-at-a-time set reached its midpoint. A functional cue, not a progress nicety. */
+        data object SpeakSwitchSides : Effect
         data class SpeakNextHowTo(val nextIndex: Int) : Effect
         data class SpeakNextUp(val nextIndex: Int) : Effect
         data class AnnounceStep(val index: Int, val fresh: Boolean) : Effect
@@ -111,9 +123,11 @@ class SessionEngine(
         }
 
         var cues = state.cues
-        if (!cues.halfwaySpoken && isActiveStep && stepDurationMs >= 40_000 && remaining <= stepDurationMs / 2) {
+        if (!cues.halfwaySpoken && isActiveStep && (stepDurationMs >= 40_000 || step.switchSides) &&
+            remaining <= stepDurationMs / 2
+        ) {
             cues = cues.copy(halfwaySpoken = true)
-            effects += Effect.SpeakHalfway
+            effects += if (step.switchSides) Effect.SpeakSwitchSides else Effect.SpeakHalfway
         }
         val next = steps.getOrNull(state.stepIndex + 1)
         if (!cues.countdownSpoken && remaining <= COUNTDOWN_LEAD_MS &&
@@ -142,9 +156,28 @@ class SessionEngine(
             blockActiveMs = blockActive,
             blockBounds = blockBounds,
             cues = cues,
+            stepElapsedMs = state.stepElapsedMs + accrualMs,
         )
-        return if (remaining <= 0) advance(accrued, by = 1, effects = effects)
-        else TickResult(accrued.copy(stepRemainingMs = remaining), effects)
+        return if (remaining <= 0) {
+            // A set that ran its whole window was performed.
+            val done = if (step.isResistanceSet) accrued.copy(completedSets = accrued.completedSets + state.stepIndex) else accrued
+            advance(done, by = 1, effects = effects)
+        } else TickResult(accrued.copy(stepRemainingMs = remaining), effects)
+    }
+
+    /**
+     * "Set done": the user reached their last good rep before the window ran out. For a resistance
+     * set that is the goal, not an early exit — so unlike [skip] the rest that follows is kept,
+     * and the set counts as performed once it has run for [MIN_COUNTED_SET_MS].
+     * A no-op on anything that is not a resistance set.
+     */
+    fun completeSet(state: EngineState): TickResult {
+        if (state.finished || state.prepareRemainingMs > 0) return TickResult(state, emptyList())
+        val step = steps.getOrNull(state.stepIndex) ?: return TickResult(state, emptyList())
+        if (!step.isResistanceSet) return TickResult(state, emptyList())
+        val marked = if (state.stepElapsedMs >= MIN_COUNTED_SET_MS)
+            state.copy(completedSets = state.completedSets + state.stepIndex) else state
+        return advance(marked, by = 1, effects = mutableListOf())
     }
 
     /** Skipping a WORK step also skips the rest that followed it — the user wants the next exercise. */
@@ -170,7 +203,10 @@ class SessionEngine(
         val next = steps.getOrNull(nextIndex) ?: return finish(state, effects)
         effects += Effect.AnnounceStep(nextIndex, fresh = false)
         return TickResult(
-            state.copy(stepIndex = nextIndex, stepRemainingMs = next.durationSec * 1000L, cues = CueFlags()),
+            state.copy(
+                stepIndex = nextIndex, stepRemainingMs = next.durationSec * 1000L, cues = CueFlags(),
+                stepElapsedMs = 0L,
+            ),
             effects,
         )
     }
@@ -186,6 +222,8 @@ class SessionEngine(
         const val RESUME_PREPARE_MS = 3_000L
         const val COUNTDOWN_LEAD_MS = 3_300L
         const val NEXT_UP_LEAD_MS = 5_000L
+        /** Shortest a set can run and still count — a few slow reps; less is a false start. */
+        const val MIN_COUNTED_SET_MS = 15_000L
 
         fun isActive(type: StepType): Boolean =
             type != StepType.REST && type != StepType.TRANSITION
@@ -215,6 +253,8 @@ fun completedBlocks(
     blockBounds: Map<Int, Pair<Long, Long>>,
     weightKg: Double,
     fallbackBounds: Pair<Long, Long>,
+    completedSets: Set<Int> = emptySet(),
+    setRatings: Map<Int, EffortRating> = emptyMap(),
 ): List<CompletedBlock> = plan.blocks.mapIndexedNotNull { index, block ->
     val activeSec = ((blockActiveMs[index] ?: 0L) / 1000).toInt()
     if (activeSec <= 0) return@mapIndexedNotNull null
@@ -232,5 +272,9 @@ fun completedBlocks(
         isHiit = block.isHiit,
         startedAtEpochMs = bounds.first,
         endedAtEpochMs = bounds.second,
+        isResistance = block.isResistance,
+        hardSets = if (block.isResistance) ResistanceTracking.hardSets(plan, index, completedSets, setRatings) else 0,
+        muscleSets = if (block.isResistance) ResistanceTracking.muscleSets(plan, index, completedSets, setRatings)
+        else emptyMap(),
     )
 }

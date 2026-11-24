@@ -9,6 +9,7 @@ import au.mark.kinetiq.data.model.ExerciseKind
 import au.mark.kinetiq.data.model.GeneratorConfig
 import au.mark.kinetiq.data.model.LoadClass
 import au.mark.kinetiq.data.model.MovementSlot
+import au.mark.kinetiq.data.model.Muscle
 import au.mark.kinetiq.data.model.ResistanceProfile
 import au.mark.kinetiq.data.model.RestMode
 import au.mark.kinetiq.data.model.SessionStep
@@ -68,12 +69,16 @@ internal class ResistanceBlockBuilder(
     data class Pick(val exercise: Exercise, val sets: Int)
 
     /**
-     * The big four rotated to a random start, accessories after. Rotation keeps lower and upper
-     * alternating (so pairs never compete) while making sure a short session does not train the
-     * same two regions every time.
+     * The big four rotated so the region with the fewest hard sets this week comes first (a random
+     * one when they are level, e.g. on a Monday), accessories after. Rotating — rather than
+     * sorting — keeps lower and upper alternating so pairs never compete, while making sure a
+     * short session picks up what is behind instead of training the same two regions every time.
      */
-    fun slotOrder(): List<MovementSlot> {
-        val start = random.nextInt(BIG_FOUR.size)
+    fun slotOrder(weeklyMuscleSets: Map<Muscle, Double> = emptyMap()): List<MovementSlot> {
+        fun done(slot: MovementSlot) = weeklyMuscleSets[LEAD_MUSCLE.getValue(slot)] ?: 0.0
+        val least = BIG_FOUR.minOf(::done)
+        val behind = BIG_FOUR.filter { done(it) == least }
+        val start = BIG_FOUR.indexOf(behind[random.nextInt(behind.size)])
         return BIG_FOUR.drop(start) + BIG_FOUR.take(start) + ACCESSORIES
     }
 
@@ -297,6 +302,14 @@ internal class ResistanceBlockBuilder(
             MovementSlot.LOWER_PUSH, MovementSlot.UPPER_PUSH, MovementSlot.LOWER_PULL, MovementSlot.UPPER_PULL,
         )
         val ACCESSORIES = MovementSlot.entries.filter { it !in BIG_FOUR }
+
+        /** The muscle whose weekly sets stand for each big-four region when deciding what is behind. */
+        private val LEAD_MUSCLE = mapOf(
+            MovementSlot.LOWER_PUSH to Muscle.QUADS,
+            MovementSlot.UPPER_PUSH to Muscle.CHEST,
+            MovementSlot.LOWER_PULL to Muscle.HAMSTRINGS,
+            MovementSlot.UPPER_PULL to Muscle.BACK,
+        )
 
         /** Ladder rung used until the user's own level is known: the middle of most ladders. */
         const val DEFAULT_RUNG = 2

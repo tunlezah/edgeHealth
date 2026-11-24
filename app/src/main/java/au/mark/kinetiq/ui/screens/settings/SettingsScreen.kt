@@ -327,6 +327,46 @@ fun SettingsScreen(
             )
         }
 
+        SectionHeader("Equipment")
+        Text(
+            "What you have beyond the machines. Muscle-retention sessions only ever use what is switched on " +
+                "here; hand weights are also chosen per session in the Builder.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        val equipment = settings.equipment
+        var handWeightMax by remember(equipment.handWeightMaxKg) {
+            mutableStateOf(equipment.handWeightMaxKg.let { if (it % 1f == 0f) it.toInt().toString() else it.toString() })
+        }
+        OutlinedTextField(
+            value = handWeightMax,
+            onValueChange = { raw ->
+                handWeightMax = raw.filter { it.isDigit() || it == '.' }.take(4)
+                handWeightMax.toFloatOrNull()?.let { kg ->
+                    if (kg in 0.5f..40f) viewModel.set { setEquipment(equipment.copy(handWeightMaxKg = kg)) }
+                }
+            },
+            label = { Text("Heaviest single hand weight (kg)") },
+            isError = handWeightMax.toFloatOrNull()?.let { it in 0.5f..40f } != true,
+            supportingText = {
+                Text("0.5–40. Exercises that need a heavier weight to be worth doing are left out, not watered down.")
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        SettingSwitchRow(
+            "Sturdy chair or step", equipment.chairOrStep,
+            subtitle = "Unlocks elevated and step-based exercises as they are added",
+        ) { v -> viewModel.set { setEquipment(equipment.copy(chairOrStep = v)) } }
+        SettingSwitchRow(
+            "Reformer long box", equipment.reformerBox,
+            subtitle = "Unlocks prone pulling work on the reformer as it is added",
+        ) { v -> viewModel.set { setEquipment(equipment.copy(reformerBox = v)) } }
+        SettingSwitchRow(
+            "Ankle anchor", equipment.ankleAnchor,
+            subtitle = "Something immovable to hook your heels under, for Nordic hamstring curls",
+        ) { v -> viewModel.set { setEquipment(equipment.copy(ankleAnchor = v)) } }
+
         SectionHeader("Workout defaults")
         Text("Rest between exercises (new workouts)", style = MaterialTheme.typography.bodyMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

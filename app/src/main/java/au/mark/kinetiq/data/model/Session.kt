@@ -110,7 +110,24 @@ data class GeneratorConfig(
     val allowLimitedGapFill: Boolean = false,
     /** Muscle-retention only: first weeks — stop each set with 3–4 reps in hand while learning the moves. */
     val easeIn: Boolean = false,
-)
+) {
+    val isMuscleRetention: Boolean get() = focus == SessionFocus.MUSCLE_RETENTION
+
+    /**
+     * Hand weights only ever count in a muscle-retention session. Every hand-weight exercise is a
+     * graded resistance exercise, so a stale flag on a general config must not pull one into a circuit.
+     */
+    val usesHandWeights: Boolean get() = isMuscleRetention && handWeights
+}
+
+/**
+ * How a resistance set ended, as the user judged it — the only effort signal a timer has.
+ * HARD = 0–1 good reps left, MEDIUM = 2–3, EASY = 4 or more. A set rated EASY earns no credit in
+ * the weekly meter: a light-load set that ends that far from failure is not the stimulus the
+ * evidence describes (RESEARCH.md §12).
+ */
+@Serializable
+enum class EffortRating { HARD, MEDIUM, EASY }
 
 /** A concrete result the player runs, kept alongside the config that produced it. */
 @Serializable

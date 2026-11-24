@@ -10,10 +10,10 @@ import au.mark.kinetiq.data.model.GeneratedSession
 import au.mark.kinetiq.data.model.GeneratorConfig
 import au.mark.kinetiq.data.model.Intensity
 import au.mark.kinetiq.data.model.MovementSlot
+import au.mark.kinetiq.data.model.Muscle
 import au.mark.kinetiq.data.model.NamedRoutine
 import au.mark.kinetiq.data.model.RestMode
 import au.mark.kinetiq.data.model.SessionBlock
-import au.mark.kinetiq.data.model.SessionFocus
 import au.mark.kinetiq.data.model.SessionStep
 import au.mark.kinetiq.data.model.displayName
 import au.mark.kinetiq.data.model.StepType
@@ -82,13 +82,15 @@ class WorkoutGenerator(
         val handWeightMaxKg: Float = 2f,
         /** Current rung per progression ladder; missing = [ResistanceBlockBuilder.DEFAULT_RUNG]. */
         val ladderRungs: Map<String, Int> = emptyMap(),
+        /** Hard sets per muscle so far this week, so a retention session starts with what is behind. */
+        val weeklyMuscleSets: Map<Muscle, Double> = emptyMap(),
     )
 
     fun generate(config: GeneratorConfig, profile: Profile = Profile()): GeneratorResult {
         val warnings = mutableListOf<GeneratorWarning>()
         val categories = config.categories.ifEmpty { listOf(Category.FLOOR) }
-        val kit = ExerciseEligibility.kitFor(profile.ownedEquipment, profile.handWeightMaxKg, config.handWeights)
-        val retention = config.focus == SessionFocus.MUSCLE_RETENTION
+        val kit = ExerciseEligibility.kitFor(profile.ownedEquipment, profile.handWeightMaxKg, config.usesHandWeights)
+        val retention = config.isMuscleRetention
 
         val highAdiposity = config.useHealthData && profile.metrics?.let { m ->
             (m.bmi ?: 0.0) >= 30.0 || (m.bodyFatPct ?: 0.0) >= 32.0
@@ -133,7 +135,7 @@ class WorkoutGenerator(
         // The slot order draws from the shared Random, so it is only taken for retention sessions —
         // a GENERAL session must consume exactly the random numbers it always has.
         val resistanceBuilder = ResistanceBlockBuilder(exercises, machines, random)
-        val slotOrder = if (retention) resistanceBuilder.slotOrder() else emptyList()
+        val slotOrder = if (retention) resistanceBuilder.slotOrder(profile.weeklyMuscleSets) else emptyList()
         val coveredSlots = mutableSetOf<MovementSlot>()
         val availableSlots = mutableSetOf<MovementSlot>()
         val unfilledSlots = mutableMapOf<MovementSlot, ResistanceBlockBuilder.Unfilled>()

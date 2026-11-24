@@ -90,6 +90,8 @@ data class AppSettings(
     /** One-time "continuous mode removes rests" notice acknowledged. */
     val continuousNoticeSeen: Boolean = false,
     val equipment: EquipmentSettings = EquipmentSettings(),
+    /** Current rung per resistance progression ladder; a missing ladder uses the generator's default. */
+    val ladderRungs: Map<String, Int> = emptyMap(),
 )
 
 @Singleton
@@ -132,6 +134,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val chairOrStep = booleanPreferencesKey("eq_chair_or_step")
         val reformerBox = booleanPreferencesKey("eq_reformer_box")
         val ankleAnchor = booleanPreferencesKey("eq_ankle_anchor")
+        val ladderRungs = stringPreferencesKey("ladder_rungs")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -180,6 +183,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
                 reformerBox = p[Keys.reformerBox] ?: false,
                 ankleAnchor = p[Keys.ankleAnchor] ?: false,
             ),
+            ladderRungs = decodeLadderRungs(p[Keys.ladderRungs]),
         )
     }
 
@@ -228,6 +232,14 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         it[Keys.ankleAnchor] = e.ankleAnchor
     }
 
+    /** Read-modify-write inside one DataStore transaction, so two quick taps cannot lose one. */
+    suspend fun setLadderRung(ladder: String, rung: Int) = edit {
+        val next = decodeLadderRungs(it[Keys.ladderRungs]) + (ladder to rung.coerceAtLeast(1))
+        it[Keys.ladderRungs] = encodeLadderRungs(next)
+    }
+
+    suspend fun resetLadderRungs() = edit { it.remove(Keys.ladderRungs) }
+
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit(block)
     }
@@ -238,4 +250,17 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
 
     private fun decodeIntSet(raw: String?, default: Set<Int>): Set<Int> =
         raw?.let { s -> s.split(',').filter { it.isNotBlank() }.mapNotNull { it.toIntOrNull() }.toSet() } ?: default
+
+    companion object {
+        /** "pushup=3,leg_push=2" — ladder ids are lower_snake_case (validator-enforced), so no escaping is needed. */
+        internal fun encodeLadderRungs(rungs: Map<String, Int>): String =
+            rungs.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${it.value}" }
+
+        internal fun decodeLadderRungs(raw: String?): Map<String, Int> =
+            raw?.split(',')?.mapNotNull { pair ->
+                val (k, v) = pair.split('=').takeIf { it.size == 2 } ?: return@mapNotNull null
+                val rung = v.toIntOrNull() ?: return@mapNotNull null
+                if (k.isBlank() || rung < 1) null else k to rung
+            }?.toMap() ?: emptyMap()
+    }
 }

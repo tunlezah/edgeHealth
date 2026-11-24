@@ -212,11 +212,13 @@ class HealthConnectManager @Inject constructor(
         client.insertRecords(records)
     }
 
-    private fun exerciseTypeFor(block: CompletedBlock): Int = when {
+    internal fun exerciseTypeFor(block: CompletedBlock): Int = when {
         block.isHiit -> ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING
         block.category == "SPIN" -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY
         block.category == "ELLIPTICAL" -> ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL
         block.category == "REFORMER" -> ExerciseSessionRecord.EXERCISE_TYPE_PILATES
+        // Set-based mat work is strength training; reformer sets stay Pilates, which is what they are.
+        block.isResistance -> ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING
         else -> ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS
     }
 

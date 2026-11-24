@@ -41,6 +41,7 @@ import au.mark.kinetiq.data.model.displayName
 import au.mark.kinetiq.data.model.GeneratedSession
 import au.mark.kinetiq.data.model.GeneratorConfig
 import au.mark.kinetiq.data.model.Intensity
+import au.mark.kinetiq.data.model.SessionFocus
 import au.mark.kinetiq.data.model.SessionStep
 import au.mark.kinetiq.data.model.StepType
 import au.mark.kinetiq.data.repo.ExerciseRepository
@@ -73,6 +74,8 @@ data class BuilderUiState(
     /** The user hand-edited the preview (reorder/swap/remove). */
     val edited: Boolean = false,
     val showContinuousNotice: Boolean = false,
+    /** Heaviest hand weight owned (Settings → Equipment), for the hand-weights chip caption. */
+    val handWeightMaxKg: Float = 2f,
 )
 
 @HiltViewModel
@@ -80,6 +83,7 @@ class BuilderViewModel @Inject constructor(
     private val exerciseRepository: ExerciseRepository,
     private val settingsRepository: SettingsRepository,
     private val measurementRepository: MeasurementRepository,
+    private val workoutRepository: au.mark.kinetiq.data.repo.WorkoutRepository,
     private val json: Json,
 ) : ViewModel() {
 
@@ -96,6 +100,11 @@ class BuilderViewModel @Inject constructor(
                 config = restored
                     ?: uiState.value.config.copy(restMode = settingsRepository.current().defaultRestMode),
             )
+        }
+        viewModelScope.launch {
+            settingsRepository.settings.collect {
+                uiState.value = uiState.value.copy(handWeightMaxKg = it.equipment.handWeightMaxKg)
+            }
         }
     }
 
@@ -136,6 +145,12 @@ class BuilderViewModel @Inject constructor(
             val metrics = if (uiState.value.config.useHealthData) measurementRepository.bodyMetrics() else null
             val exercises = exerciseRepository.exercises()
             val routines = exerciseRepository.routines()
+            // Only a retention session needs the week so far; a general one must not pay for it.
+            val weeklySets = if (uiState.value.config.isMuscleRetention) {
+                runCatching {
+                    au.mark.kinetiq.domain.plan.WeeklyPlanEngine.weeklyMuscleSets(workoutRepository.history().first())
+                }.getOrDefault(emptyMap())
+            } else emptyMap()
             // Snapshot what we are generating for, so a config edit mid-generation cannot make the
             // result describe a different configuration than the one that was saved.
             val config = uiState.value.config
@@ -153,6 +168,8 @@ class BuilderViewModel @Inject constructor(
                         metrics = metrics,
                         ownedEquipment = settings.equipment.owned,
                         handWeightMaxKg = settings.equipment.handWeightMaxKg,
+                        ladderRungs = settings.ladderRungs,
+                        weeklyMuscleSets = weeklySets,
                     ),
                 )
             }
@@ -193,7 +210,7 @@ class BuilderViewModel @Inject constructor(
             // Same gates the generator applies (ExerciseEligibility) — including equipment, so a
             // swap can never introduce a hand-weight exercise into a session built without them.
             val kit = ExerciseEligibility.kitFor(
-                settings.equipment.owned, settings.equipment.handWeightMaxKg, session.config.handWeights,
+                settings.equipment.owned, settings.equipment.handWeightMaxKg, session.config.usesHandWeights,
             )
             val inCategory = exerciseRepository.byCategory(step.category)
             if (step.isResistanceSet) {
@@ -272,8 +289,9 @@ class BuilderViewModel @Inject constructor(
 
     fun start(context: android.content.Context) {
         val session = uiState.value.preview ?: return
-        val name = "${session.config.totalDurationMin} min " +
-            session.config.categories.joinToString("+") { it.displayName() }
+        val stations = session.config.categories.joinToString("+") { it.displayName() }
+        val name = if (session.config.isMuscleRetention) "${session.config.totalDurationMin} min Muscle retention ($stations)"
+        else "${session.config.totalDurationMin} min $stations"
         WorkoutSessionService.start(context, json.encodeToString(GeneratedSession.serializer(), session), name)
     }
 }
@@ -283,6 +301,7 @@ class BuilderViewModel @Inject constructor(
 fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     val config = state.config
+    val retention = config.isMuscleRetention
     val context = LocalContext.current
     var confirmRegenerate by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
@@ -328,6 +347,61 @@ fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderV
             Text("Workout builder", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 16.dp))
         }
         item {
+            SectionHeader("Session focus")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = !retention,
+                    onClick = { viewModel.updateConfig { it.copy(focus = SessionFocus.GENERAL) } },
+                    label = { Text("General fitness") },
+                )
+                FilterChip(
+                    selected = retention,
+                    onClick = { viewModel.updateConfig { it.copy(focus = SessionFocus.MUSCLE_RETENTION) } },
+                    label = { Text("Muscle retention") },
+                )
+            }
+            if (retention) {
+                Text(
+                    "Repeated sets taken close to your limit, to hold on to muscle while you lose fat. " +
+                        "Built from Floor and Reformer work — bike and elliptical blocks stay as cardio and " +
+                        "do not count as resistance sets.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                    FilterChip(
+                        selected = config.handWeights,
+                        onClick = { viewModel.updateConfig { it.copy(handWeights = !it.handWeights) } },
+                        label = { Text("Hand weights") },
+                    )
+                    FilterChip(
+                        selected = config.easeIn,
+                        onClick = { viewModel.updateConfig { it.copy(easeIn = !it.easeIn) } },
+                        label = { Text("Easing in") },
+                    )
+                    FilterChip(
+                        selected = config.allowLimitedGapFill,
+                        onClick = { viewModel.updateConfig { it.copy(allowLimitedGapFill = !it.allowLimitedGapFill) } },
+                        label = { Text("Limited-evidence fillers") },
+                    )
+                }
+                Text(
+                    buildString {
+                        if (config.handWeights) append(
+                            "Hand weights: up to ${formatKg(state.handWeightMaxKg)} kg (Settings → Equipment). " +
+                                "Exercises that need more than that are left out. "
+                        )
+                        if (config.easeIn) append("Easing in: stop each set with 3–4 reps in hand while you learn the moves. ")
+                        if (config.allowLimitedGapFill) append(
+                            "Fillers: a limited-evidence exercise may cover a muscle group nothing better can, always labelled."
+                        )
+                    }.ifBlank { "Hand weights, an easier first few weeks, and labelled low-evidence fillers are optional." },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        item {
             SectionHeader("Duration: ${config.totalDurationMin} min")
             Slider(
                 value = config.totalDurationMin.toFloat(),
@@ -364,7 +438,7 @@ fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderV
             )
         }
         item {
-            SectionHeader("Rest between exercises")
+            SectionHeader(if (retention) "Rest between sets" else "Rest between exercises")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 au.mark.kinetiq.data.model.RestMode.entries.forEach { mode ->
                     FilterChip(
@@ -373,9 +447,9 @@ fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderV
                         label = {
                             Text(
                                 when (mode) {
-                                    au.mark.kinetiq.data.model.RestMode.STANDARD -> "Standard"
-                                    au.mark.kinetiq.data.model.RestMode.RECOVERY -> "Recovery"
-                                    au.mark.kinetiq.data.model.RestMode.CONTINUOUS -> "Continuous"
+                                    au.mark.kinetiq.data.model.RestMode.STANDARD -> if (retention) "Paired sets" else "Standard"
+                                    au.mark.kinetiq.data.model.RestMode.RECOVERY -> if (retention) "Straight sets" else "Recovery"
+                                    au.mark.kinetiq.data.model.RestMode.CONTINUOUS -> if (retention) "Short rests" else "Continuous"
                                 }
                             )
                         },
@@ -383,7 +457,14 @@ fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderV
                 }
             }
             Text(
-                when (config.restMode) {
+                if (retention) when (config.restMode) {
+                    au.mark.kinetiq.data.model.RestMode.STANDARD ->
+                        "Two exercises alternate with 30 s between them, 60 s before repeating the same one — the time-efficient default"
+                    au.mark.kinetiq.data.model.RestMode.RECOVERY ->
+                        "All sets of one exercise before the next, 75 s between sets"
+                    au.mark.kinetiq.data.model.RestMode.CONTINUOUS ->
+                        "Alternating with 20 s between exercises, 45 s before repeating — harder, slightly less effective per set"
+                } else when (config.restMode) {
                     au.mark.kinetiq.data.model.RestMode.STANDARD -> "15–20 s transitions between exercises"
                     au.mark.kinetiq.data.model.RestMode.RECOVERY -> "30–45 s rests, scaled to intensity"
                     au.mark.kinetiq.data.model.RestMode.CONTINUOUS -> "No rests — the next exercise is announced over the last 5 s"
@@ -402,6 +483,13 @@ fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderV
                         label = { Text(level.name.lowercase().replace('_', ' ')) },
                     )
                 }
+            }
+            if (retention) {
+                Text(
+                    "Applies to cardio and back-care blocks. Resistance sets use the spoken effort target instead.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         item {
@@ -449,7 +537,16 @@ fun BuilderScreen(onStarted: () -> Unit, onBack: () -> Unit, viewModel: BuilderV
         }
         state.preview?.let { session ->
             item {
-                SectionHeader("Preview — ${session.plan.totalSec / 60} min, ${session.plan.steps.count { it.type == StepType.WORK }} exercises")
+                val sets = session.plan.steps.count { it.isResistanceSet }
+                val work = session.plan.steps.count { it.type == StepType.WORK }
+                val distinct = session.plan.steps.filter { it.isResistanceSet }.mapNotNull { it.exerciseId }.distinct().size
+                SectionHeader(
+                    when {
+                        sets == 0 -> "Preview — ${session.plan.totalSec / 60} min, $work exercises"
+                        sets == work -> "Preview — ${session.plan.totalSec / 60} min, $sets sets of $distinct exercises"
+                        else -> "Preview — ${session.plan.totalSec / 60} min, $sets sets of $distinct exercises + ${work - sets} other"
+                    }
+                )
             }
             itemsIndexed(session.plan.steps) { index, step ->
                 PreviewStepRow(
@@ -485,8 +582,10 @@ private fun PreviewStepRow(
     ) {
         Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
+                val setLabel = if (step.setIndex != null && step.setCount != null)
+                    " · set ${step.setIndex} of ${step.setCount}" else ""
                 Text(
-                    "${stepLabel(step.type)}${step.exerciseName}",
+                    "${stepLabel(step.type)}${step.exerciseName}$setLabel",
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
@@ -504,6 +603,9 @@ private fun PreviewStepRow(
         }
     }
 }
+
+/** "2" for 2.0, "1.5" for 1.5 — hand weights come in halves, not hundredths. */
+private fun formatKg(kg: Float): String = if (kg % 1f == 0f) kg.toInt().toString() else "%.1f".format(kg)
 
 private fun stepLabel(type: StepType): String = when (type) {
     StepType.WARMUP -> "Warm-up · "

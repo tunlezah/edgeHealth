@@ -25,8 +25,23 @@ data class PlayerState(
     val caloriesSoFar: Double = 0.0,
     val startedAtEpochMs: Long = 0,
     val weightKg: Double = 80.0,
+    /** Step indices of resistance sets performed so far (mirrors the engine). */
+    val completedSets: Set<Int> = emptySet(),
+    /** Post-set effort ratings by step index. */
+    val setRatings: Map<Int, au.mark.kinetiq.data.model.EffortRating> = emptyMap(),
 ) {
     val currentStep get() = session.plan.steps.getOrNull(stepIndex)
+    /**
+     * The set the user can rate right now: the one just performed, while its rest is running.
+     * Null on any other step, and for a set that was skipped rather than done.
+     */
+    val rateableSetIndex: Int?
+        get() {
+            val step = currentStep ?: return null
+            if (step.type != au.mark.kinetiq.data.model.StepType.REST) return null
+            val prev = stepIndex - 1
+            return prev.takeIf { it in completedSets }
+        }
     val nextStep get() = session.plan.steps.getOrNull(stepIndex + 1)
     val totalSteps get() = session.plan.steps.size
     val inPrepare get() = prepareRemainingMs > 0
@@ -47,6 +62,9 @@ data class CompletedSummary(
     val session: GeneratedSession,
     /** True when the user stopped early — the summary offers a short-lived resume. */
     val stoppedEarly: Boolean = false,
+    /** Resistance sets performed and how they were rated — drives the summary's progression advice. */
+    val completedSets: Set<Int> = emptySet(),
+    val setRatings: Map<Int, au.mark.kinetiq.data.model.EffortRating> = emptyMap(),
 )
 
 @Singleton
@@ -84,4 +102,8 @@ data class SessionSnapshot(
     val blockBounds: Map<Int, List<Long>> = emptyMap(),
     val prepareRemainingMs: Long = 0,
     val sessionId: String = "",
+    /** Step indices of resistance sets already performed (see SessionEngine.EngineState). */
+    val completedSets: List<Int> = emptyList(),
+    /** Post-set effort ratings by step index: EffortRating names. */
+    val setRatings: Map<Int, String> = emptyMap(),
 )
