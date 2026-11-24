@@ -67,3 +67,61 @@
   and parallax shoulder/hip offsets, feet and hands, a radial contact shadow and a breathing overlay so holds
   never freeze. A geometry test suite (floor penetration, joint limits, loop continuity, velocity caps) runs
   over every registry animation in CI.
+- **D-20 Muscle retention is a session focus, not a sixth category.** Categories say *where* you train
+  (mat, reformer, bike, elliptical); the focus says *how the block is built*. `GeneratorConfig.focus`
+  defaults to GENERAL, so every stored config, saved workout, history row, snapshot and export means
+  exactly what it meant before. With the focus on, FLOOR and REFORMER blocks are built by
+  `ResistanceBlockBuilder` as repeated sets; the circuit generator's code path is untouched, and a test
+  asserts general sessions are byte-identical when content the user has no equipment for is added.
+- **D-21 A separate retention tier.** `Exercise.resistance.tier` grades one claim — "an effective
+  resistance exercise for maintaining its target muscles" — apart from `evidenceTier`. Reusing the
+  general tier would have shipped reformer footwork, the pelvic curl and feet-in-straps as
+  MODERATE/STRONG muscle-retention work on the strength of flexibility and back-pain evidence. Same
+  honesty rule as the general tier: STRONG/MODERATE need a reference of their own, LIMITED a candid note.
+- **D-22 Sets, not bouts; the clock is only a container.** A 40 s bout with a 15 s rest is conditioning.
+  Set windows are derived from rep-based studies, not found in any: 45–75 s for light loads (body
+  weight, springs, light hand weights) at a slow continuous tempo, 30–45 s for a load failed at in 8–15
+  reps, 20–45 s for holds, the window per side for unilateral work; 2–3 sets (a fourth only when nothing
+  else can fill the block). Rests: 60 s before repeating an exercise (75 s in straight-set mode), 30 s
+  when alternating a non-competing pair. What makes a set count is how it ends, so the effort target is
+  always shown and spoken, and "Set done" — unlike Skip — keeps the rest and records the set.
+- **D-23 Cardio machines contribute zero resistance sets, and get no resistance content** (user
+  decision after the evidence review). Cycling shows small quadriceps gains in previously inactive
+  people in small uncontrolled studies and is clearly inferior to resistance training; elliptical
+  data are three DXA studies from one lab; nothing measures upper-body loading from the handles. In a
+  muscle-retention session SPIN/ELLIPTICAL blocks are generated exactly as before, the generator
+  advises doing resistance first, and the visceral-fat "under half cardio" warning is not raised.
+- **D-24 Hand weights are a per-session choice gated by a useful minimum.** The Builder chip switches
+  them on for one session; Settings stores the heaviest weight owned (default 2 kg — the user has 1,
+  1.5 and 2 kg). Each hand-weight exercise states `minUsefulKg`; below it the exercise is not
+  generated at all, because a set that cannot get hard is worse than no set. Those minimums are
+  planning estimates, not study findings, and say so. At 2 kg only shoulder raises, curls, triceps
+  extensions and prone raises qualify; rows, presses and loaded leg work need heavier weights and are
+  deliberately not shipped yet. Hand weights never count outside a muscle-retention session.
+- **D-25 Limited-evidence exercises are gap fillers only.** In a muscle-retention session a LIMITED
+  exercise is used only for a region nothing better can cover with the available equipment, only when
+  the global low-evidence setting or the session's "Limited-evidence fillers" chip is on, and never in
+  place of a better-graded one. When it is off the generator names the uncovered region and offers the
+  fix. This matters most for upper-body pulling: with no adequate hand weights the one-arm reformer
+  strap row (LIMITED) is the best option there is, and the app says exactly that.
+- **D-26 What counts as a hard set.** Performed (ran its window, or ended with "Set done" after at
+  least 15 s) and not rated "4 or more reps left". Unrated sets count — the rating is optional. One set
+  per primary muscle, half per secondary (the convention of the dose-response meta-regressions).
+  Weekly target 6 hard sets per muscle group with a floor of 4: the floor is Iversen 2021's minimum,
+  the target a judgment call below the ~10 where growth-oriented curves flatten. No trial has tested
+  a minimum dose in an energy deficit; the Plan screen says so and promises "minimise", not "prevent".
+- **D-27 Progression is advice, not automation, and lives in DataStore.** After a session the Summary
+  suggests moving up a ladder only when at least two sets were rated and every one was "4 or more left"
+  (self-rated reps in reserve are noisy), and the user applies it with one tap. Ladder levels are a
+  small DataStore string; set outcomes ride on `CompletedBlock` as additive JSON. **No Room change** —
+  Room stays at version 1, so Phase 4's planned `MIGRATION_1_2` is unaffected.
+- **D-28 Phase 3 overlap built here.** Six exercises Phase 3 specifies (split squat, single-leg glute
+  bridge, single-leg Romanian deadlift, calf raise, pike push-up, single-leg footwork) and their
+  animations were built in this work to that spec, with retention profiles added, and the asset moved
+  to `schemaVersion: 3`. Phase 3's remaining content therefore lands at `schemaVersion: 4` with its
+  exact-count gates renumbered — see `docs/plan/DEVIATIONS.md` and `PHASE_R_MUSCLE_RETENTION.md`.
+- **D-29 Two fixes made in passing.** (a) The "Halfway cue" and "Spoken how-to descriptions" toggles
+  were never consulted for the mid-step and in-rest cues — both were always spoken; they now honour
+  the settings. (b) CI had been failing since the `android-actions/setup-android` default package
+  list began requesting the removed `tools` SDK package; the workflow now requests `platform-tools` only.
+

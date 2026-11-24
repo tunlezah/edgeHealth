@@ -153,3 +153,46 @@ object ProgressionAdvisor {
         }
     }
 }
+
+/**
+ * Progression ladders as the user sees them: an ordered run of versions of one movement, easier
+ * to harder. Derived from the bundled exercises, so adding a rung to the database adds it here.
+ */
+object Ladders {
+
+    data class Rung(val rung: Int, val names: List<String>)
+
+    data class Ladder(val id: String, val rungs: List<Rung>) {
+        /** The rung in use for a stored level: the nearest one that exists, the easier on a tie. */
+        fun current(stored: Int?): Rung {
+            val target = stored ?: DEFAULT_RUNG
+            return rungs.minWith(compareBy({ kotlin.math.abs(it.rung - target) }, { it.rung }))
+        }
+
+        /** The next rung down ([delta] < 0) or up, or null at the end of the ladder. */
+        fun step(stored: Int?, delta: Int): Rung? {
+            val i = rungs.indexOf(current(stored)) + if (delta < 0) -1 else 1
+            return rungs.getOrNull(i)
+        }
+    }
+
+    /** Same default the block builder uses for a ladder the user has never set. */
+    const val DEFAULT_RUNG = 2
+
+    /** Every ladder with more than one rung, in movement-slot order. */
+    fun from(exercises: List<Exercise>): List<Ladder> =
+        exercises.filter { it.resistance?.ladder != null }
+            .groupBy { it.resistance!!.ladder!! }
+            .map { (id, members) ->
+                val slot = members.first().resistance!!.slot
+                slot to Ladder(
+                    id = id,
+                    rungs = members.groupBy { it.resistance!!.rung }.toSortedMap()
+                        .map { (rung, at) -> Rung(rung, at.map { it.name }) },
+                )
+            }
+            .filter { it.second.rungs.size > 1 }
+            .sortedWith(compareBy({ it.first.ordinal }, { it.second.id }))
+            .map { it.second }
+}
+

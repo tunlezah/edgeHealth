@@ -30,6 +30,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import au.mark.kinetiq.ui.theme.KinetiqPalettes
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -78,10 +79,22 @@ class SettingsViewModel @Inject constructor(
     private val exportImport: ExportImportManager,
     private val reminderScheduler: ReminderScheduler,
     private val voiceCoach: VoiceCoach,
+    private val exerciseRepository: au.mark.kinetiq.data.repo.ExerciseRepository,
 ) : ViewModel() {
 
     val settings = repo.settings.stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
     val ioMessage = MutableStateFlow<String?>(null)
+
+    /** Progression ladders from the bundled exercises, for the "Resistance levels" section. */
+    val ladders = MutableStateFlow<List<au.mark.kinetiq.domain.resistance.Ladders.Ladder>>(emptyList())
+
+    init {
+        viewModelScope.launch {
+            ladders.value = runCatching {
+                au.mark.kinetiq.domain.resistance.Ladders.from(exerciseRepository.exercises())
+            }.getOrDefault(emptyList())
+        }
+    }
 
     fun set(block: suspend SettingsRepository.() -> Unit) {
         viewModelScope.launch { repo.block() }
@@ -366,6 +379,44 @@ fun SettingsScreen(
             "Ankle anchor", equipment.ankleAnchor,
             subtitle = "Something immovable to hook your heels under, for Nordic hamstring curls",
         ) { v -> viewModel.set { setEquipment(equipment.copy(ankleAnchor = v)) } }
+
+        val ladders by viewModel.ladders.collectAsState()
+        if (ladders.isNotEmpty()) {
+            SectionHeader("Resistance levels")
+            Text(
+                "Each ladder runs from an easier version of a movement to a harder one. Muscle-retention " +
+                    "sessions use the level shown. Move down if a version is beyond you, up when it stops " +
+                    "getting hard — the ratings you give after your sets will suggest moves too.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            ladders.forEach { ladder ->
+                val stored = settings.ladderRungs[ladder.id]
+                val current = ladder.current(stored)
+                val easier = ladder.step(stored, -1)
+                val harder = ladder.step(stored, +1)
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(current.names.joinToString(" / "), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            ladder.rungs.joinToString("  →  ") { it.names.joinToString(" / ") },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { easier?.let { r -> viewModel.set { setLadderRung(ladder.id, r.rung) } } },
+                                enabled = easier != null,
+                            ) { Text("Easier") }
+                            OutlinedButton(
+                                onClick = { harder?.let { r -> viewModel.set { setLadderRung(ladder.id, r.rung) } } },
+                                enabled = harder != null,
+                            ) { Text("Harder") }
+                        }
+                    }
+                }
+            }
+        }
 
         SectionHeader("Workout defaults")
         Text("Rest between exercises (new workouts)", style = MaterialTheme.typography.bodyMedium)

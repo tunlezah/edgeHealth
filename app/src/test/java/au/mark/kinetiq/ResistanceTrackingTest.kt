@@ -301,6 +301,36 @@ class ResistanceTrackingTest {
     }
 
     @Test
+    fun `ladders list their rungs in order and step within their ends`() {
+        val library = listOf(
+            set("pushup", MovementSlot.UPPER_PUSH, ladder = "pushup", rung = 3),
+            set("knee_pushup", MovementSlot.UPPER_PUSH, ladder = "pushup", rung = 2),
+            set("lunge", MovementSlot.LOWER_PUSH, ladder = "leg_push", rung = 2),
+            set("split_squat", MovementSlot.LOWER_PUSH, ladder = "leg_push", rung = 2),
+            set("squat", MovementSlot.LOWER_PUSH, ladder = "leg_push", rung = 1),
+            set("lonely", MovementSlot.CALVES, ladder = "calf", rung = 1), // one rung: not a ladder
+            set("solo", MovementSlot.SHOULDERS),
+        )
+        val ladders = au.mark.kinetiq.domain.resistance.Ladders.from(library)
+        // Movement-slot order: leg push before upper push.
+        assertThat(ladders.map { it.id }).containsExactly("leg_push", "pushup").inOrder()
+        val legs = ladders[0]
+        assertThat(legs.rungs.map { it.rung }).containsExactly(1, 2).inOrder()
+        assertThat(legs.rungs[1].names).containsExactly("Set lunge", "Set split_squat")
+        // Unset: the default level. Out of range: the nearest rung that exists.
+        assertThat(legs.current(null).rung).isEqualTo(2)
+        assertThat(legs.current(7).rung).isEqualTo(2)
+        assertThat(legs.step(null, -1)!!.rung).isEqualTo(1)
+        assertThat(legs.step(null, +1)).isNull()
+        assertThat(legs.step(1, -1)).isNull()
+        val push = ladders[1]
+        assertThat(push.current(null).rung).isEqualTo(2)
+        assertThat(push.step(2, +1)!!.names).containsExactly("Set pushup")
+        // The Settings default and the generator's default are one number.
+        assertThat(au.mark.kinetiq.domain.resistance.Ladders.DEFAULT_RUNG).isEqualTo(ResistanceBlockBuilder.DEFAULT_RUNG)
+    }
+
+    @Test
     fun `ladder levels survive storage`() {
         val rungs = mapOf("pushup" to 3, "leg_push" to 2)
         val encoded = SettingsRepository.encodeLadderRungs(rungs)

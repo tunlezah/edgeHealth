@@ -201,6 +201,27 @@ class ResistanceBlockBuilderTest {
     }
 
     @Test
+    fun `a level the user chose is honoured even when it is a limited-evidence regression`() {
+        // prone_raise rung 1 is LIMITED. By default it is only ever a gap filler…
+        repeat(10) { seed -> assertThat(generate(retention(45), seed = seed).ids()).doesNotContain("prone_ytw") }
+        // …but a user who has put themselves on that rung gets it, weights or not.
+        val chosen = WorkoutGenerator.Profile(ladderRungs = mapOf("prone_raise" to 1))
+        repeat(10) { seed ->
+            assertThat(generate(retention(45), seed = seed, profile = chosen).ids()).contains("prone_ytw")
+            val withWeights = generate(retention(45, handWeights = true), seed = seed, profile = chosen).ids()
+            assertThat(withWeights).contains("prone_ytw")
+            assertThat(withWeights).doesNotContain("prone_ytw_weighted")
+        }
+    }
+
+    @Test
+    fun `capping exercises per category explains a short block and offers to lift the cap`() {
+        val result = generate(retention(45, perCategory = 1))
+        val warning = result.warnings.single { it.message.startsWith("With 1 exercise per category") }
+        assertThat(warning.fixedConfig!!.exercisesPerCategory).isNull()
+    }
+
+    @Test
     fun `limited-tier exercises never appear by default and never displace a better option`() {
         val limited = both.filter { it.resistance?.tier == EvidenceTier.LIMITED }.map { it.id }.toSet()
         val cats = listOf(Category.FLOOR, Category.REFORMER)

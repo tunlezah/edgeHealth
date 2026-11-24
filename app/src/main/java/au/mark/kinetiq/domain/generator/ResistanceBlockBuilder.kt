@@ -16,6 +16,7 @@ import au.mark.kinetiq.data.model.SessionStep
 import au.mark.kinetiq.data.model.StepType
 import au.mark.kinetiq.data.repo.MachineSettings
 import au.mark.kinetiq.domain.MachineCueRenderer
+import au.mark.kinetiq.domain.resistance.Ladders
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -103,17 +104,23 @@ internal class ResistanceBlockBuilder(
 
         val unfilled = mutableMapOf<MovementSlot, Unfilled>()
         val options: Map<MovementSlot, List<Exercise>> = MovementSlot.entries.associateWith { slot ->
-            val inSlot = eligible.filter { it.resistance?.slot == slot }
-            val better = inSlot.filter { it.resistance?.tier != EvidenceTier.LIMITED }
+            // One candidate per ladder first — the rung is the user's level, whatever its tier —
+            // and only then the evidence gate. A level the user chose for themselves is honoured
+            // even when it is a limited-evidence regression: it is their call that the harder rung
+            // is not yet doable. Anything else LIMITED is a gap filler at most.
+            val candidates = representatives(eligible.filter { it.resistance?.slot == slot }, ladderRungs)
+            val better = candidates.filter { ex ->
+                ex.resistance?.tier != EvidenceTier.LIMITED || ex.resistance.ladder in ladderRungs
+            }
             val usable = when {
                 better.isNotEmpty() -> better
-                includeLimited -> inSlot
+                includeLimited -> candidates
                 else -> emptyList()
             }
             if (usable.isEmpty()) {
-                unfilled[slot] = if (inSlot.isNotEmpty()) Unfilled.LIMITED_ONLY else Unfilled.NOTHING
+                unfilled[slot] = if (candidates.isNotEmpty()) Unfilled.LIMITED_ONLY else Unfilled.NOTHING
             }
-            rankOptions(usable, ladderRungs)
+            ranked(usable)
         }
         val available = options.filterValues { it.isNotEmpty() }.keys
 
@@ -188,10 +195,16 @@ internal class ResistanceBlockBuilder(
         val actual = works.sum() + rests.sum()
         if (blockSec - actual > blockSec / 20) {
             val n = picks.size
-            warnings += GeneratorWarning(
+            val runs = "that block runs ${actual / 60} min ${actual % 60}s instead of the ${blockSec / 60} min planned"
+            val capped = picks.size >= maxDistinct
+            warnings += if (capped) GeneratorWarning(
+                message = "With $n exercise${if (n == 1) "" else "s"} per category, $runs. " +
+                    "More sets of the same few exercises would add fatigue, not benefit.",
+                fixLabel = "Choose exercises automatically",
+                fixedConfig = config.copy(exercisesPerCategory = null),
+            ) else GeneratorWarning(
                 message = "Only $n resistance exercise${if (n == 1) "" else "s"} on $station " +
-                    "match${if (n == 1) "es" else ""} your equipment, so that block runs " +
-                    "${actual / 60} min ${actual % 60}s instead of the ${blockSec / 60} min planned. " +
+                    "match${if (n == 1) "es" else ""} your equipment, so $runs. " +
                     "More sets than this would add fatigue, not benefit.",
                 fixLabel = limitedFix?.first,
                 fixedConfig = limitedFix?.second,
@@ -219,12 +232,11 @@ internal class ResistanceBlockBuilder(
     }
 
     /**
-     * One exercise per ladder (the rung nearest the user's level, easier on a tie), best retention
-     * tier first, random within a tier so sessions vary.
+     * One exercise per ladder: the rung nearest the user's level (the easier one on a tie), a
+     * random pick among same-rung alternatives so sessions vary. Exercises on no ladder stand alone.
      */
-    private fun rankOptions(usable: List<Exercise>, ladderRungs: Map<String, Int>): List<Exercise> {
-        if (usable.isEmpty()) return emptyList()
-        val representatives = usable.groupBy { it.resistance?.ladder ?: "solo:${it.id}" }.map { (ladder, members) ->
+    private fun representatives(inSlot: List<Exercise>, ladderRungs: Map<String, Int>): List<Exercise> =
+        inSlot.groupBy { it.resistance?.ladder ?: "solo:${it.id}" }.map { (ladder, members) ->
             if (members.size == 1) members.first()
             else {
                 val target = ladderRungs[ladder] ?: DEFAULT_RUNG
@@ -234,8 +246,10 @@ internal class ResistanceBlockBuilder(
                 atRung[random.nextInt(atRung.size)]
             }
         }
-        return representatives.shuffled(random).sortedBy { tierRank(it.resistance!!.tier) }
-    }
+
+    /** Best retention tier first, random within a tier. */
+    private fun ranked(usable: List<Exercise>): List<Exercise> =
+        usable.shuffled(random).sortedBy { tierRank(it.resistance!!.tier) }
 
     /** Add one set at a time, in order, to the named picks while the block still fits. */
     private fun topUp(picks: List<Pick>, ids: List<String>, cap: Int, fits: (List<Pick>) -> Boolean): List<Pick> {
@@ -312,7 +326,7 @@ internal class ResistanceBlockBuilder(
         )
 
         /** Ladder rung used until the user's own level is known: the middle of most ladders. */
-        const val DEFAULT_RUNG = 2
+        const val DEFAULT_RUNG = Ladders.DEFAULT_RUNG
         const val BASE_SETS = 2
         const val MAX_SETS = 3
         const val LAST_RESORT_SETS = 4
