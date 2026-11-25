@@ -63,21 +63,21 @@ See [`WALKTHROUGH.md`](WALKTHROUGH.md) for the screen-by-screen detail.
 
 ## Bundled content
 
-`app/src/main/assets/exercise_db.json` (schema version 3, ~207 KB) ships:
+`app/src/main/assets/exercise_db.json` (schema version 3, ~246 KB) ships:
 
 | | Count |
 |---|---|
-| Exercises | **96** |
+| Exercises | **105** |
 | Machine routines | **12** |
-| Total entries | **108** |
-| Exercises graded as muscle-retention sets | **30** |
-| Citations across exercises (general and muscle-retention) | 180 |
-| Procedural animations (`anim/AnimationRegistry.kt`) | **85** |
+| Total entries | **117** |
+| Exercises graded as muscle-retention sets | **39** |
+| Citations across exercises (general and muscle-retention) | 224 |
+| Procedural animations (`anim/AnimationRegistry.kt`) | **95** |
 
-Exercises by category: Floor 41 · Reformer 21 · Back care 13 · Spin 12 · Elliptical 9.
-By evidence tier: Moderate 54 · Strong 36 · Limited 6. Limited-tier entries are hidden until the user
+Exercises by category: Floor 49 · Reformer 22 · Back care 13 · Spin 12 · Elliptical 9.
+By evidence tier: Moderate 59 · Strong 40 · Limited 6. Limited-tier entries are hidden until the user
 opts in via Settings.
-By muscle-retention tier (graded separately — see below): Strong 5 · Moderate 12 · Limited 13.
+By muscle-retention tier (graded separately — see below): Strong 9 · Moderate 17 · Limited 13.
 
 The database is validated at load time by `data/DatabaseValidator.kt` under a hard `check()` — roughly
 50 field, range and cross-reference rules, including that every `animationId` resolves against the
@@ -104,6 +104,10 @@ smoothed over (full detail in [`RESEARCH.md`](RESEARCH.md) §12):
   curls, triceps extensions and prone raises; rows, presses and loaded leg work need heavier weights
   and are not shipped. Without adequate weights, upper-body pulling is a real gap, and the generator
   says so instead of filling it with something ineffective.
+- **Other equipment is off until switched on.** A sturdy chair, a step, an ankle anchor and the reformer
+  long box each unlock specific exercises in Settings → Equipment — harder push-up and single-leg
+  rungs, a full-range calf raise, the Nordic hamstring curl, and a moderate-evidence upper-back pull on
+  the reformer. None of them fixes the lats.
 - **The promise is "minimise", not "prevent".** Weekly targets (6 hard sets per muscle group, floor 4)
   are sensible derivations; no trial has tested a minimum dose during fat loss.
 
@@ -160,8 +164,8 @@ app/src/main/java/au/mark/kinetiq/
   voice/      TTS coach (en-AU preferred, audio-focus ducking, tone-generator beeps)
   widget/     Glance home-screen widget (repeat last workout + streak)
   di/         Hilt modules
-app/src/main/assets/exercise_db.json   versioned exercise/routine database (108 entries, all cited)
-app/src/test/                          28 unit-test classes, 243 tests
+app/src/main/assets/exercise_db.json   versioned exercise/routine database (117 entries, all cited)
+app/src/test/                          28 unit-test classes, 259 tests
 docs/audit/                            security and Android reliability audit reports
 docs/plan/                             phased implementation plan and progress tracking
 ```
@@ -204,7 +208,7 @@ artifacts on every push.
 ./gradlew testDebugUnitTest
 ```
 
-243 tests across 28 classes, running offline under Robolectric (the `android-all` runtime jar is
+259 tests across 28 classes, running offline under Robolectric (the `android-all` runtime jar is
 resolved through Gradle rather than Robolectric's own fetcher, so CI needs no network).
 
 | Test class | Covers |
@@ -385,7 +389,7 @@ shipped tag's `Entities.kt` rather than `HEAD`.
 
 ## Acceptance checks
 
-- `./gradlew testDebugUnitTest` — 243 tests green (DB validator included).
+- `./gradlew testDebugUnitTest` — 259 tests green (DB validator included).
 - `./gradlew assembleRelease` — prints `OK: merged release manifest has no INTERNET permission.`
 - `aapt dump permissions app-release.apk` — no `android.permission.INTERNET` (CI does this too).
 - Hidden animation-QA screen: Settings → long-press the version row.

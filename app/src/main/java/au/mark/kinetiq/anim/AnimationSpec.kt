@@ -72,6 +72,8 @@ data class KeyframeAnim(
     val keyframes: List<Keyframe>,
     /** Draw a small dumbbell at each wrist — hand-weight exercises. */
     val handWeights: Boolean = false,
+    /** One-arm strap work: draw only the working (near) hand's strap, not one to the resting hand. */
+    val singleStrap: Boolean = false,
 ) : ExerciseAnim {
 
     init {

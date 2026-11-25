@@ -36,4 +36,8 @@ Record format: item / what the spec said / what was done / why.
   ones predate the reformer foot fix); `fl_single_leg_rdl` keeps a flat back; `fl_calf_raise` uses
   38° of plantarflexion; `fl_bridge_single` uses its own solved top pose / the Phase 3 document itself
   says its numbers are sketches to be solved numerically, and the geometry tests are the oracle.
+- **P3-2.4** / one `Prop.BENCH` with `BENCH_Y = 0.22f` and a `drawBench` helper / Phase R shipped
+  `Prop.BENCH_FRONT` and `Prop.BENCH_BACK` (same `BENCH_Y`), plus `STEP`, `ANCHOR` and
+  `REFORMER_BOX_ARM_STRAPS` / its chair exercises need the bench on either side of the figure. Phase 3
+  should reuse these.
 

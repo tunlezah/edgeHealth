@@ -157,6 +157,95 @@ class ResistanceContentTest {
         }
     }
 
+    // ------------------------------------------------------------------ equipment
+
+    private val needsKit get() = db.exercises.filter { it.equipment.any { e -> e != Equipment.HAND_WEIGHTS } }
+
+    @Test
+    fun `nothing that needs a chair, step, anchor or box is generated until it is switched on`() {
+        val gated = needsKit.map { it.id }.toSet()
+        assertThat(gated).isNotEmpty()
+        val cats = listOf(Category.FLOOR, Category.REFORMER)
+        repeat(25) { seed ->
+            // Retention sessions, with every chip on and limited evidence allowed…
+            val retention = generate(
+                retention(60, cats, handWeights = true, gapFill = true), seed,
+                WorkoutGenerator.Profile(includeLowEvidence = true),
+            )
+            assertThat(retention.setIds().intersect(gated)).isEmpty()
+            // …and general sessions.
+            val general = generate(
+                GeneratorConfig(totalDurationMin = 60, categories = cats, useHealthData = false), seed,
+                WorkoutGenerator.Profile(includeLowEvidence = true),
+            )
+            assertThat(general.session.plan.steps.mapNotNull { it.exerciseId }.toSet().intersect(gated)).isEmpty()
+        }
+    }
+
+    @Test
+    fun `each piece of equipment unlocks what the app says it does`() {
+        fun unlockedBy(equipment: Equipment) = db.exercises.filter { it.equipment == listOf(equipment) }.map { it.id }
+        assertThat(unlockedBy(Equipment.CHAIR)).containsExactly(
+            "floor_incline_pushup", "floor_feet_elevated_pushup", "floor_rfe_split_squat",
+            "floor_single_leg_squat_to_chair", "floor_single_leg_hip_thrust",
+        )
+        assertThat(unlockedBy(Equipment.STEP)).containsExactly("floor_step_calf_raise")
+        assertThat(unlockedBy(Equipment.ANKLE_ANCHOR)).containsExactly("floor_nordic_curl")
+        assertThat(unlockedBy(Equipment.REFORMER_BOX)).containsExactly("ref_long_box_pulling_straps")
+        // No entry needs two pieces of kit at once.
+        assertThat(db.exercises.none { it.equipment.size > 1 }).isTrue()
+    }
+
+    @Test
+    fun `the long box gives the reformer a moderate-evidence pull, so the limited row is no longer needed`() {
+        val withBox = WorkoutGenerator.Profile(ownedEquipment = setOf(Equipment.REFORMER_BOX))
+        repeat(25) { seed ->
+            val result = generate(retention(45, listOf(Category.FLOOR, Category.REFORMER), gapFill = true), seed, withBox)
+            assertThat(result.setIds()).contains("ref_long_box_pulling_straps")
+            assertThat(result.setIds()).containsNoneOf("ref_strap_row_single", "ref_rowing_back")
+            assertThat(result.warnings.none { it.message.contains("muscles") }).isTrue()
+        }
+    }
+
+    @Test
+    fun `an ankle anchor brings in the strong-evidence hamstring exercise as a short, stop-short set`() {
+        val withAnchor = WorkoutGenerator.Profile(ownedEquipment = setOf(Equipment.ANKLE_ANCHOR))
+        var seen = false
+        repeat(25) { seed ->
+            val sets = generate(retention(45, listOf(Category.FLOOR)), seed, withAnchor).session.plan.steps
+                .filter { it.exerciseId == "floor_nordic_curl" }
+            if (sets.isNotEmpty()) {
+                seen = true
+                for (set in sets) {
+                    assertThat(set.durationSec).isIn(30..45)
+                    assertThat(set.effortCue).isEqualTo(ResistanceBlockBuilder.CUE_MODERATE_LOAD)
+                }
+            }
+        }
+        assertThat(seen).isTrue()
+    }
+
+    @Test
+    fun `a chair extends the push-up and leg ladders to four rungs`() {
+        val ladders = Ladders.from(db.exercises).associateBy { it.id }
+        assertThat(ladders.getValue("pushup").rungs.map { it.rung }).containsExactly(1, 2, 3, 4).inOrder()
+        assertThat(ladders.getValue("leg_push").rungs.map { it.rung }).containsExactly(1, 2, 3, 4).inOrder()
+        assertThat(ladders.getValue("hip_bridge").rungs.map { it.rung }).containsExactly(1, 2, 3).inOrder()
+        assertThat(ladders.getValue("calf").rungs.map { it.rung }).containsExactly(1, 2, 3).inOrder()
+        // At the top of the push-up ladder with a chair, the feet-elevated version is used; without
+        // one the generator falls back to the hardest rung the kit allows.
+        val top = mapOf("pushup" to 4)
+        val chair = WorkoutGenerator.Profile(ownedEquipment = setOf(Equipment.CHAIR), ladderRungs = top)
+        val none = WorkoutGenerator.Profile(ladderRungs = top)
+        repeat(15) { seed ->
+            assertThat(generate(retention(40, listOf(Category.FLOOR)), seed, chair).setIds())
+                .contains("floor_feet_elevated_pushup")
+            val fallback = generate(retention(40, listOf(Category.FLOOR)), seed, none).setIds()
+            assertThat(fallback).contains("floor_pushup")
+            assertThat(fallback).doesNotContain("floor_feet_elevated_pushup")
+        }
+    }
+
     @Test
     fun `ladders run in consecutive rungs and include the default level`() {
         val ladders = Ladders.from(db.exercises)

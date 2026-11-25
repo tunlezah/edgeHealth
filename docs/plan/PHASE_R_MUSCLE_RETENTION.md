@@ -46,7 +46,7 @@ and ELLIPTICAL blocks are generated exactly as before; cardio machines count as 
 | R-2a | Which sets count; hard sets per muscle on `CompletedBlock`; weekly meter on the Plan screen; deficit-first slot order | `domain/resistance`, `domain/plan`, `ui/screens/plan` |
 | R-2b | Post-set effort rating; progression advice on the Summary; ladder levels in Settings | `service`, `ui/screens/summary`, `ui/screens/settings` |
 | R-2c | Health Connect: set-based mat blocks written as strength training | `health/HealthConnectManager.kt` |
-| R-3 | Equipment-dependent exercises: chair, step, ankle anchor, reformer long box | `assets`, `anim/` |
+| R-3 | Equipment-dependent exercises, all off until switched on in Settings → Equipment: incline and feet-elevated push-ups, rear-foot-elevated split squat, single-leg squat to a chair, single-leg hip thrust (chair); single-leg calf raise off a step (step); Nordic hamstring curl (ankle anchor); long-box pulling straps (reformer long box); plus the reverse Nordic, which needs nothing. Props `BENCH_FRONT`, `BENCH_BACK`, `STEP`, `ANCHOR`, `REFORMER_BOX_ARM_STRAPS`; one-arm strap animations draw a single strap | `assets`, `anim/` |
 
 Tests: `ResistanceFoundationTest`, `ResistanceBlockBuilderTest`, `ResistanceContentTest`,
 `ResistanceTrackingTest`, `HealthConnectTypeTest`, plus the additions to `AnimGeometryTest`.
@@ -75,9 +75,12 @@ Phase R built six of Phase 3's exercises and their animations to the Phase 3 spe
 - **New entries need a decision about retention.** Any Phase 3 exercise that is plausibly a resistance
   set (the Copenhagen plank, for one) should get a `resistance` profile graded on its own evidence, or
   deliberately none.
-- **`Prop.BENCH`:** Phase 3 §2.4 specifies a single bench prop. Phase R's equipment exercises need the
-  bench both in front of and behind the figure; whichever lands first defines the constants and the
-  other reuses them.
+- **`Prop.BENCH`:** Phase 3 §2.4 specifies a single `Prop.BENCH`. Phase R needed the bench both in
+  front of and behind the figure and shipped `Prop.BENCH_FRONT` / `Prop.BENCH_BACK` with
+  `BENCH_Y = 0.22f` (the Phase 3 value) and their x-extents as constants on `AnimationRegistry`, drawn
+  by `drawBench`. Phase 3's Copenhagen plank and soleus push-up should use those rather than add a
+  third bench. Surfaces are authored as contact heights like `GY`; the renderer draws their top edge
+  0.026 lower.
 
 ## What this changes for Phase 4
 

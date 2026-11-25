@@ -66,7 +66,7 @@ Built ahead of Phases 3 and 4. Items it took from Phase 3 are marked on the Phas
 - [x] R-2a Counted sets, per-muscle credit on CompletedBlock, weekly meter on Plan, deficit-first slot order + ResistanceTrackingTest
 - [x] R-2b Post-set effort rating, progression advice on Summary, resistance levels in Settings
 - [x] R-2c Health Connect strength-training type for set-based mat blocks + HealthConnectTypeTest
-- [ ] R-3 Equipment-dependent exercises (chair, step, ankle anchor, reformer long box) with animations and props
+- [x] R-3 Equipment-dependent exercises (chair, step, ankle anchor, reformer long box): 9 entries, 10 animations, one-arm strap revisions, bench/step/anchor/long-box props
 
 ## Phase 3 — Database & animations (PHASE3_DATABASE_ANIMATIONS.md)
 

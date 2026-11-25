@@ -1649,7 +1649,7 @@ object AnimationRegistry {
 
     /** One-arm strap biceps curl: arm long toward the pulley, the elbow folds the hand in; the upper arm holds still. */
     private val rfBicepsCurl = KeyframeAnim(
-        id = "rf_biceps_curl", durationMs = 3200, prop = Prop.REFORMER_ARM_STRAPS, muscle = MuscleGroup.ARMS,
+        id = "rf_biceps_curl", durationMs = 3200, prop = Prop.REFORMER_ARM_STRAPS, singleStrap = true, muscle = MuscleGroup.ARMS,
         pathJoint = PathJoint.WRIST,
         keyframes = listOf(
             Keyframe(0f, strapSeat(0.20f, 59f, 8f)),
@@ -1661,7 +1661,7 @@ object AnimationRegistry {
 
     /** One-arm strap row: the near elbow drives back past the ribs, hand finishing beside the waist. */
     private val rfRowSingle = KeyframeAnim(
-        id = "rf_row_single", durationMs = 3200, prop = Prop.REFORMER_ARM_STRAPS, muscle = MuscleGroup.BACK,
+        id = "rf_row_single", durationMs = 3200, prop = Prop.REFORMER_ARM_STRAPS, singleStrap = true, muscle = MuscleGroup.BACK,
         pathJoint = PathJoint.WRIST,
         keyframes = listOf(
             Keyframe(0f, strapSeat(0.20f, 55f, 6f)),
@@ -1691,7 +1691,7 @@ object AnimationRegistry {
      * over the shoulder to the pulley, so pressing draws the carriage toward the risers.
      */
     private val rfTricepsPress = KeyframeAnim(
-        id = "rf_triceps_press", durationMs = 3200, prop = Prop.REFORMER_ARM_STRAPS, muscle = MuscleGroup.ARMS,
+        id = "rf_triceps_press", durationMs = 3200, prop = Prop.REFORMER_ARM_STRAPS, singleStrap = true, muscle = MuscleGroup.ARMS,
         pathJoint = PathJoint.WRIST,
         keyframes = listOf(
             Keyframe(0f, strapSeatAway(0.20f, -138f, -266f)),
@@ -1724,7 +1724,7 @@ object AnimationRegistry {
 
     /** Long-box pulling straps, one arm: the near arm sweeps from long-forward back to the hip as the carriage travels. */
     private val rfBoxPull = KeyframeAnim(
-        id = "rf_box_pull", durationMs = 3400, prop = Prop.REFORMER_BOX_ARM_STRAPS, muscle = MuscleGroup.BACK,
+        id = "rf_box_pull", durationMs = 3400, prop = Prop.REFORMER_BOX_ARM_STRAPS, singleStrap = true, muscle = MuscleGroup.BACK,
         pathJoint = PathJoint.WRIST,
         keyframes = via(0f, 0.40f, bxLong, bxUnder) +
             Keyframe(0.40f, bxHip) +                         // hold the lift

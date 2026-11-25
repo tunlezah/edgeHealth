@@ -365,10 +365,64 @@ private fun DrawScope.drawReformer(style: RenderStyle, carriage: Float) {
 }
 
 /** Straps from the riser pulley to the given joints (drawn behind the figure). */
-private fun DrawScope.drawStraps(style: RenderStyle, near: Joint, far: Joint) {
+/** [far] is null for one-arm work, where a strap to the resting hand would run through the body. */
+private fun DrawScope.drawStraps(style: RenderStyle, near: Joint, far: Joint?) {
     val pulley = Joint(0.52f, AnimationRegistry.GY + 0.02f - 0.12f)
-    limb(pulley, far, style.prop.copy(alpha = 0.35f), scale(0.008f))
+    if (far != null) limb(pulley, far, style.prop.copy(alpha = 0.35f), scale(0.008f))
     limb(pulley, near, style.prop.copy(alpha = 0.55f), scale(0.009f))
+}
+
+// Surfaces a joint rests on are authored as contact heights, like GY: the drawn top edge sits one
+// limb radius further down the screen, exactly as the ground line does under GY.
+private const val SURFACE_DROP = 0.026f
+
+/** A chair or bench seat: a top surface with two legs to the ground. */
+private fun DrawScope.drawBench(style: RenderStyle, x0: Float, x1: Float) {
+    val seat = 0.024f
+    val seatY = AnimationRegistry.BENCH_Y + SURFACE_DROP + seat / 2f
+    limbLine(x0, seatY, x1, seatY, style.prop, scale(seat))
+    val inset = 0.03f
+    limbLine(x0 + inset, seatY, x0 + inset, GROUND_Y, style.prop, scale(0.02f))
+    limbLine(x1 - inset, seatY, x1 - inset, GROUND_Y, style.prop, scale(0.02f))
+}
+
+/** A low solid step; the working foot stands on its edge at [AnimationRegistry.STEP_X0]. */
+private fun DrawScope.drawStep(style: RenderStyle) {
+    val top = AnimationRegistry.STEP_Y + SURFACE_DROP
+    drawRect(
+        color = style.prop.copy(alpha = 0.85f),
+        topLeft = Offset(mapX(AnimationRegistry.STEP_X0), mapY(top)),
+        size = androidx.compose.ui.geometry.Size(
+            mapX(AnimationRegistry.STEP_X1) - mapX(AnimationRegistry.STEP_X0),
+            mapY(GROUND_Y) - mapY(top),
+        ),
+    )
+}
+
+/** Ankle anchor for the Nordic curl: a bar seen end-on over the ankles, on a short post behind the heels. */
+private fun DrawScope.drawAnchor(style: RenderStyle) {
+    val barX = AnimationRegistry.ANCHOR_X
+    val barY = AnimationRegistry.ANCHOR_Y
+    val postX = barX - 0.045f
+    limbLine(postX, MAT_Y, postX, barY, style.prop, scale(0.018f))
+    limbLine(postX, barY, barX, barY, style.prop, scale(0.018f))
+    drawCircle(style.prop, radius = scale(0.017f), center = Offset(mapX(barX), mapY(barY)))
+}
+
+/** The long box on the reformer carriage, riding it; a body lying on it rests on its top. */
+private fun DrawScope.drawReformerBox(style: RenderStyle, carriage: Float) {
+    val railY = AnimationRegistry.GY + 0.02f
+    val cx = -0.16f + 0.24f * carriage
+    val deckTop = railY - 0.035f - 0.0175f
+    val top = AnimationRegistry.CARRIAGE_LIE - AnimationRegistry.BOX_H + SURFACE_DROP
+    drawRect(
+        color = style.prop.copy(alpha = 0.55f),
+        topLeft = Offset(mapX(cx - AnimationRegistry.BOX_HALF_LENGTH), mapY(top)),
+        size = androidx.compose.ui.geometry.Size(
+            mapX(cx + AnimationRegistry.BOX_HALF_LENGTH) - mapX(cx - AnimationRegistry.BOX_HALF_LENGTH),
+            mapY(deckTop) - mapY(top),
+        ),
+    )
 }
 
 private fun DrawScope.limb(a: Joint, b: Joint, color: Color, width: Float) {
@@ -407,7 +461,28 @@ private fun DrawScope.drawKeyframeAnim(
         }
         Prop.REFORMER_ARM_STRAPS -> {
             drawReformer(style, pose.prop)
-            drawStraps(style, sk.near.wrist, sk.far.wrist)
+            drawStraps(style, sk.near.wrist, sk.far.wrist.takeUnless { anim.singleStrap })
+        }
+        Prop.REFORMER_BOX_ARM_STRAPS -> {
+            drawReformer(style, pose.prop)
+            drawReformerBox(style, pose.prop)
+            drawStraps(style, sk.near.wrist, sk.far.wrist.takeUnless { anim.singleStrap })
+        }
+        Prop.BENCH_FRONT -> {
+            drawGround(style)
+            drawBench(style, AnimationRegistry.BENCH_FRONT_X0, AnimationRegistry.BENCH_FRONT_X1)
+        }
+        Prop.BENCH_BACK -> {
+            drawGround(style)
+            drawBench(style, AnimationRegistry.BENCH_BACK_X0, AnimationRegistry.BENCH_BACK_X1)
+        }
+        Prop.STEP -> {
+            drawGround(style)
+            drawStep(style)
+        }
+        Prop.ANCHOR -> {
+            drawMat(style)
+            drawAnchor(style)
         }
         else -> drawGround(style)
     }

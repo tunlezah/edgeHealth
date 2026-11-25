@@ -630,7 +630,7 @@
       "resistance": {
         "slot": "CALVES", "primary": ["CALVES"], "tier": "MODERATE",
         "unilateral": true, "ladder": "calf", "rung": 2,
-        "note": "Calf-raise training has good muscle-growth evidence, including with light loads, but those trials used machines and a full stretch at the bottom. This flat-floor version has no stretch below level, the half of the range one trial found most productive, so it is graded a step down. The better-evidenced version, with the heel dropping off a step, will be added when step equipment is supported.",
+        "note": "Calf-raise training has good muscle-growth evidence, including with light loads, but those trials used machines and a full stretch at the bottom. This flat-floor version has no stretch below level, the half of the range one trial found most productive, so it is graded a step down. The single-leg raise off a step, the next rung up, is the better-evidenced version.",
         "references": [
           {"title": "Triceps surae muscle hypertrophy is greater after standing versus seated calf-raise training", "authors": "Kinoshita M, Maeo S, Kobayashi Y, et al.", "year": 2023, "journal": "Frontiers in Physiology 14:1272106", "doiOrPmid": "10.3389/fphys.2023.1272106", "finding": "In 14 untrained adults, 12 weeks of standing straight-knee calf raises at 70% of maximum increased gastrocnemius volume on MRI by about 9 to 12%, far more than seated raises did."},
           {"title": "Do the anatomical and physiological properties of a muscle determine its adaptive response to different loading protocols?", "authors": "Schoenfeld BJ, Vigotsky AD, Grgic J, et al.", "year": 2020, "journal": "Physiological Reports 8(9):e14427", "doiOrPmid": "10.14814/phy2.14427", "finding": "Over eight weeks in 26 untrained young men, light loads (20 to 30 repetition maximum) and heavy loads (6 to 10 repetition maximum) produced similar calf muscle growth and strength gains."},
@@ -782,6 +782,210 @@
         "note": "The grade rests on one 12-week trial of the same movement on a cable machine at 70% of maximum; a hand weight loads the range differently and has not been trialled. It assumes a weight that makes the set hard within about 30 reps, and 2 kg is the very bottom of the useful range. If you can do more than about 30 clean reps, the weight is too light for the set to count. The 2 kg minimum is a planning estimate, not a study finding.",
         "references": [
           {"title": "Triceps brachii hypertrophy is substantially greater after elbow extension training performed in the overhead versus neutral arm position", "authors": "Maeo S, Wu Y, Huang M, Sakurai H, Kusagawa Y, Sugiyama T, Kanehisa H, Isaka T", "year": 2023, "journal": "European Journal of Sport Science 23(7):1240-1250", "doiOrPmid": "10.1080/17461391.2022.2100279", "finding": "In 21 adults, 12 weeks of cable elbow extensions performed overhead increased whole-triceps volume by 19.9%, against 13.9% with the arm at the side, despite lighter loads."}
+        ]
+      }
+    },
+    {
+      "id": "floor_incline_pushup", "name": "Incline push-up", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Low-load bench press and push-up induce similar muscle hypertrophy and strength gain", "authors": "Kikuchi N, Nakazato K", "year": 2017, "journal": "Journal of Exercise Science & Fitness 15(1):37-42", "doiOrPmid": "10.1016/j.jesf.2017.06.003", "finding": "In 18 young men, eight weeks of twice-weekly push-ups, with the position adjusted (for example by kneeling) to match a bench press at 40% of maximum, increased triceps and chest muscle thickness and bench press strength, as bench pressing did."},
+        {"title": "Kinetic analysis of several variations of push-ups", "authors": "Ebben WP, Wurm B, VanderZanden TL, Spadavecchia ML, Durocher JJ, Bickham CT, Petushek EJ", "year": 2011, "journal": "Journal of Strength and Conditioning Research 25(10):2891-2894", "doiOrPmid": "10.1519/JSC.0b013e31820c8587", "finding": "Force-plate measurements in 23 adults showed that feet-elevated push-ups put the most load through the hands and knee or hands-elevated push-ups the least, so push-up load can be progressed as a fraction of body mass."}
+      ],
+      "summary": "The easiest rung of the push-up ladder: hands on a chair seat, body in one line, so your arms carry less of your weight.",
+      "voiceName": "Incline push-ups",
+      "voiceHowTo": "Push a sturdy chair against a wall so it cannot slide, and place your hands on the front edge of the seat. Walk your feet back until your body is one straight line from head to heels. Lower your chest to the seat slowly, elbows about forty five degrees from your ribs, then press back until your arms are straight.",
+      "voiceFormCues": ["Chair braced against the wall.", "One straight line, head to heels.", "Chest to the seat, slowly."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 3.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH", "CORE"], "contraindications": ["WRIST", "SHOULDER"],
+      "equipment": ["CHAIR"],
+      "animationId": "fl_incline_pushup",
+      "resistance": {
+        "slot": "UPPER_PUSH", "primary": ["CHEST"], "secondary": ["TRICEPS", "SHOULDERS"], "tier": "STRONG",
+        "ladder": "pushup", "rung": 1,
+        "note": "Rung one of four on the push-up ladder, the easiest. The ladder is graded on small trials in young adults in which push-ups matched the bench press when the variation was hard enough, and with the hands raised the arms carry less of your weight than in a full push-up. It counts only while a set gets hard within about 30 reps, so move up to the knee push-up once more than about 30 clean reps are possible.",
+        "references": [
+          {"title": "Low-load bench press and push-up induce similar muscle hypertrophy and strength gain", "authors": "Kikuchi N, Nakazato K", "year": 2017, "journal": "Journal of Exercise Science & Fitness 15(1):37-42", "doiOrPmid": "10.1016/j.jesf.2017.06.003", "finding": "In 18 young men, eight weeks of twice-weekly push-ups, with the position adjusted (for example by kneeling) to match a bench press at 40% of maximum, increased triceps and chest muscle thickness and bench press strength, as bench pressing did."},
+          {"title": "Effect of Progressive Calisthenic Push-up Training on Muscle Strength and Thickness", "authors": "Kotarsky CJ, Christensen BK, Miller JS, Hackney KJ", "year": 2018, "journal": "Journal of Strength and Conditioning Research 32(3):651-659", "doiOrPmid": "10.1519/JSC.0000000000002345", "finding": "Four weeks of progressive push-up variations improved bench press strength, as bench press training did, in moderately trained men; muscle thickness did not change in either group over that time."},
+          {"title": "Kinetic analysis of several variations of push-ups", "authors": "Ebben WP, Wurm B, VanderZanden TL, Spadavecchia ML, Durocher JJ, Bickham CT, Petushek EJ", "year": 2011, "journal": "Journal of Strength and Conditioning Research 25(10):2891-2894", "doiOrPmid": "10.1519/JSC.0b013e31820c8587", "finding": "Force-plate measurements in 23 adults showed that feet-elevated push-ups put the most load through the hands and knee or hands-elevated push-ups the least, so push-up load can be progressed as a fraction of body mass."}
+        ]
+      }
+    },
+    {
+      "id": "floor_feet_elevated_pushup", "name": "Feet-elevated push-up", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Effect of Progressive Calisthenic Push-up Training on Muscle Strength and Thickness", "authors": "Kotarsky CJ, Christensen BK, Miller JS, Hackney KJ", "year": 2018, "journal": "Journal of Strength and Conditioning Research 32(3):651-659", "doiOrPmid": "10.1519/JSC.0000000000002345", "finding": "Four weeks of progressive push-up variations improved bench press strength, as bench press training did, in moderately trained men; muscle thickness did not change in either group over that time."},
+        {"title": "Kinetic analysis of several variations of push-ups", "authors": "Ebben WP, Wurm B, VanderZanden TL, Spadavecchia ML, Durocher JJ, Bickham CT, Petushek EJ", "year": 2011, "journal": "Journal of Strength and Conditioning Research 25(10):2891-2894", "doiOrPmid": "10.1519/JSC.0b013e31820c8587", "finding": "Force-plate measurements in 23 adults showed that feet-elevated push-ups put the most load through the hands and knee or hands-elevated push-ups the least, so push-up load can be progressed as a fraction of body mass."}
+      ],
+      "summary": "The hardest rung of the push-up ladder: feet on a chair, hands on the floor, so more of your weight is on your arms and shoulders.",
+      "voiceName": "Feet-elevated push-ups",
+      "voiceHowTo": "Push a sturdy chair against a wall so it cannot slide. Kneel in front of it with your hands on the floor under your shoulders, then put your toes on the seat one foot at a time and make one straight line from head to heels. Lower your chest toward the floor slowly, then press the floor away. Step down as soon as your hips start to sag.",
+      "voiceFormCues": ["Chair braced against the wall.", "Hips level, no sagging.", "Chest to the floor, slowly."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 60,
+      "met": 3.8, "intensity": "HIGH", "impact": "LOW",
+      "targets": ["STRENGTH", "CORE"], "contraindications": ["WRIST", "SHOULDER"],
+      "equipment": ["CHAIR"],
+      "animationId": "fl_decline_pushup",
+      "resistance": {
+        "slot": "UPPER_PUSH", "primary": ["CHEST"], "secondary": ["TRICEPS", "SHOULDERS"], "tier": "STRONG",
+        "ladder": "pushup", "rung": 4,
+        "note": "Rung four of four on the push-up ladder, the hardest. The ladder is graded on small trials in young adults in which push-ups matched the bench press when they were hard enough. No trial has isolated this variation, but force-plate data show that raising the feet puts the most load through the hands of the variations measured, and the wrists and shoulders take that extra load too.",
+        "references": [
+          {"title": "Low-load bench press and push-up induce similar muscle hypertrophy and strength gain", "authors": "Kikuchi N, Nakazato K", "year": 2017, "journal": "Journal of Exercise Science & Fitness 15(1):37-42", "doiOrPmid": "10.1016/j.jesf.2017.06.003", "finding": "In 18 young men, eight weeks of twice-weekly push-ups, with the position adjusted (for example by kneeling) to match a bench press at 40% of maximum, increased triceps and chest muscle thickness and bench press strength, as bench pressing did."},
+          {"title": "Bench press and push-up at comparable levels of muscle activity results in similar strength gains", "authors": "Calatayud J, Borreani S, Colado JC, Martin F, Tella V, Andersen LL", "year": 2015, "journal": "Journal of Strength and Conditioning Research 29(1):246-253", "doiOrPmid": "10.1519/JSC.0000000000000589", "finding": "Five weeks of elastic-band-loaded push-ups at a six-repetition-maximum load produced strength gains similar to bench pressing at the same relative load in resistance-trained students."},
+          {"title": "Kinetic analysis of several variations of push-ups", "authors": "Ebben WP, Wurm B, VanderZanden TL, Spadavecchia ML, Durocher JJ, Bickham CT, Petushek EJ", "year": 2011, "journal": "Journal of Strength and Conditioning Research 25(10):2891-2894", "doiOrPmid": "10.1519/JSC.0b013e31820c8587", "finding": "Force-plate measurements in 23 adults showed that feet-elevated push-ups put the most load through the hands and knee or hands-elevated push-ups the least, so push-up load can be progressed as a fraction of body mass."}
+        ]
+      }
+    },
+    {
+      "id": "floor_rfe_split_squat", "name": "Rear-foot-elevated split squat", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Unilateral vs. Bilateral Squat Training for Strength, Sprints, and Agility in Academy Rugby Players", "authors": "Speirs DE, Bennett MA, Finn CV, Turner AP", "year": 2016, "journal": "Journal of Strength and Conditioning Research 30(2):386-392", "doiOrPmid": "10.1519/JSC.0000000000001096", "finding": "Five weeks of training only the loaded rear-foot-elevated split squat improved squat and split-squat strength as much as training only the back squat in 18 academy rugby players."},
+        {"title": "Unilateral low-load blood flow restriction vs. high-load training in the Bulgarian split squat: a randomized within-subject design on strength, hypertrophy, and asymmetry", "authors": "Wang Y, Zhao X, Zhang L, Gao X, Zheng Z, Wang S", "year": 2026, "journal": "Frontiers in Physiology 17:1786733", "doiOrPmid": "10.3389/fphys.2026.1786733", "finding": "Six weeks of Bulgarian split squats at 80% of maximum increased outer-quadriceps muscle thickness by 9.3% and split-squat strength by 13% in resistance-trained men."}
+      ],
+      "summary": "A split squat with the back foot resting on a chair, so nearly all of your weight goes through the front leg.",
+      "voiceName": "Rear-foot-elevated split squats",
+      "voiceHowTo": "Push a sturdy chair against a wall, stand a long step in front of it and rest the top of one foot on the seat behind you. Keeping most of your weight on the front foot, drop straight down slowly until the front thigh is about level, then drive up through the whole front foot. Keep a hand near a wall for balance, and swap legs at the halfway cue.",
+      "voiceFormCues": ["Most of your weight on the front foot.", "Drop straight down, knee tracking over your toes.", "Drive up through the whole front foot."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 3.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH", "BALANCE"], "contraindications": ["KNEE", "HIP", "ANKLE"],
+      "equipment": ["CHAIR"],
+      "animationId": "fl_rfe_split_squat",
+      "resistance": {
+        "slot": "LOWER_PUSH", "primary": ["QUADS", "GLUTES"], "tier": "MODERATE",
+        "unilateral": true, "ladder": "leg_push", "rung": 3,
+        "note": "The strong evidence is for loaded versions: with added weight, trials in young trained men found strength gains equal to back squats and quadriceps growth. The bodyweight version has not been trialled on its own, hence the lower grade. Balance, not leg strength, is often what ends the set, so keep a hand near a wall and slow the lowering to make it hard.",
+        "references": [
+          {"title": "Unilateral vs. Bilateral Squat Training for Strength, Sprints, and Agility in Academy Rugby Players", "authors": "Speirs DE, Bennett MA, Finn CV, Turner AP", "year": 2016, "journal": "Journal of Strength and Conditioning Research 30(2):386-392", "doiOrPmid": "10.1519/JSC.0000000000001096", "finding": "Five weeks of training only the loaded rear-foot-elevated split squat improved squat and split-squat strength as much as training only the back squat in 18 academy rugby players."},
+          {"title": "Unilateral low-load blood flow restriction vs. high-load training in the Bulgarian split squat: a randomized within-subject design on strength, hypertrophy, and asymmetry", "authors": "Wang Y, Zhao X, Zhang L, Gao X, Zheng Z, Wang S", "year": 2026, "journal": "Frontiers in Physiology 17:1786733", "doiOrPmid": "10.3389/fphys.2026.1786733", "finding": "Six weeks of Bulgarian split squats at 80% of maximum increased outer-quadriceps muscle thickness by 9.3% and split-squat strength by 13% in resistance-trained men."},
+          {"title": "Biomechanical Differences Between the Bulgarian Split-Squat and Back Squat", "authors": "Mackey ER, Riemann BL", "year": 2021, "journal": "International Journal of Exercise Science 14(1):533-543", "doiOrPmid": "10.70252/CIYT8956", "finding": "In 20 resistance-trained men, the Bulgarian split squat was hip-dominant, like the back squat, and placed less demand on the knee."}
+        ]
+      }
+    },
+    {
+      "id": "floor_single_leg_squat_to_chair", "name": "Single-leg squat to a chair", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Effects of progressive body-weight versus barbell back squat training on strength, hypertrophy and body fat among sedentary young women", "authors": "Wei W, Zhu J, Ren S, Jan YK, Zhang W, Su R, He L", "year": 2023, "journal": "Scientific Reports 13(1):13505", "doiOrPmid": "10.1038/s41598-023-40319-x", "finding": "A six-week bodyweight squat progression from two-leg to one-leg variations increased thigh, gluteal and calf muscle thickness and knee strength as much as barbell squats in 13 sedentary young women."},
+        {"title": "Hip-muscle activation during the lunge, single-leg squat, and step-up-and-over exercises", "authors": "Boudreau SN, Dwyer MK, Mattacola CG, Lattermann C, Uhl TL, McKeon JM", "year": 2009, "journal": "Journal of Sport Rehabilitation 18(1):91-103", "doiOrPmid": "10.1123/jsr.18.1.91", "finding": "In 44 healthy adults, quadriceps (rectus femoris), gluteus maximus and gluteus medius activity rose in steps from the step-up to the lunge to the single-leg squat."}
+      ],
+      "summary": "Sit back on one leg until you touch a chair seat, then stand without rocking: the hardest rung of the leg ladder.",
+      "voiceName": "Single-leg squats to a chair",
+      "voiceHowTo": "Push a sturdy chair against a wall and stand just in front of it on one leg, with the other foot lifted in front of you. Sit back slowly until you touch the seat, then stand up without rocking or pushing off. Keep a hand near a wall for balance, and swap legs at the halfway cue. If you cannot stand up on one leg yet, lower on one and stand on two.",
+      "voiceFormCues": ["Reach your hips back, slow and controlled.", "Knee points the same way as your toes.", "Touch the seat, stand without rocking."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 3.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH", "BALANCE"], "contraindications": ["KNEE", "HIP", "ANKLE"],
+      "equipment": ["CHAIR"],
+      "animationId": "fl_chair_squat_single",
+      "resistance": {
+        "slot": "LOWER_PUSH", "primary": ["QUADS", "GLUTES"], "tier": "MODERATE",
+        "unilateral": true, "ladder": "leg_push", "rung": 4,
+        "note": "Rests on one small trial (13 sedentary young women, six of them in the bodyweight group) in which a squat progression ending in one-leg work matched barbell squats for muscle growth, plus muscle-activity recordings that rank the single-leg squat above the lunge and step-up. No trial has trained this exercise on its own, with or without added weight.",
+        "references": [
+          {"title": "Effects of progressive body-weight versus barbell back squat training on strength, hypertrophy and body fat among sedentary young women", "authors": "Wei W, Zhu J, Ren S, Jan YK, Zhang W, Su R, He L", "year": 2023, "journal": "Scientific Reports 13(1):13505", "doiOrPmid": "10.1038/s41598-023-40319-x", "finding": "A six-week bodyweight squat progression from two-leg to one-leg variations increased thigh, gluteal and calf muscle thickness and knee strength as much as barbell squats in 13 sedentary young women."},
+          {"title": "Hip-muscle activation during the lunge, single-leg squat, and step-up-and-over exercises", "authors": "Boudreau SN, Dwyer MK, Mattacola CG, Lattermann C, Uhl TL, McKeon JM", "year": 2009, "journal": "Journal of Sport Rehabilitation 18(1):91-103", "doiOrPmid": "10.1123/jsr.18.1.91", "finding": "In 44 healthy adults, quadriceps (rectus femoris), gluteus maximus and gluteus medius activity rose in steps from the step-up to the lunge to the single-leg squat."},
+          {"title": "Electromyographical analysis of selected lower extremity muscles during 5 unilateral weight-bearing exercises", "authors": "Ayotte NW, Stetts DM, Keenan G, Greenway EH", "year": 2007, "journal": "Journal of Orthopaedic & Sports Physical Therapy 37(2):48-55", "doiOrPmid": "10.2519/jospt.2007.2354", "finding": "Of five one-leg weight-bearing exercises tested in 23 healthy adults, a wall squat produced the highest gluteal and quadriceps activity, and every muscle measured except the hamstrings reached levels the authors judged sufficient for strengthening."}
+        ]
+      }
+    },
+    {
+      "id": "floor_single_leg_hip_thrust", "name": "Single-leg hip thrust", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Hip thrust and back squat training elicit similar gluteus muscle hypertrophy and transfer similarly to the deadlift", "authors": "Plotkin DL, Rodas MA, Vigotsky AD, et al.", "year": 2023, "journal": "Frontiers in Physiology 14:1279170", "doiOrPmid": "10.3389/fphys.2023.1279170", "finding": "Nine weeks of barbell hip thrust training grew the gluteal muscles on MRI about as much as back squat training in untrained young adults, and higher gluteal muscle activity did not consistently predict that growth."},
+        {"title": "Building a better gluteal bridge: electromyographic analysis of hip muscle activity during modified single-leg bridges", "authors": "Lehecka BJ, Edwards M, Haverkamp R, Martin L, Porter K, Thach K, Sack RJ, Hakansson NA", "year": 2017, "journal": "International Journal of Sports Physical Therapy 12(4):543-549", "doiOrPmid": "PMID 28900560", "finding": "In 28 healthy adults, a single-leg bridge produced about 51% of maximum gluteus maximus activity and 58% of maximum gluteus medius activity; bringing the heel closer to the hips cut hamstring activity while gluteal activity stayed similar."}
+      ],
+      "summary": "A single-leg bridge with your shoulders on a chair or sofa edge: more range for the glutes, one leg doing the lifting.",
+      "voiceName": "Single-leg hip thrusts",
+      "voiceHowTo": "Brace a sturdy chair against a wall, or use a sofa edge, and rest your shoulder blades on the front of the seat with your knees bent and feet flat. Lift one foot, then push through the other heel and raise your hips until hip and knee are in line, ribs down. Squeeze for two seconds at the top, lower slowly, and swap legs at the halfway cue.",
+      "voiceFormCues": ["Ribs down, push through your heel.", "Lift until hip and knee are in line, not higher.", "Squeeze for two seconds at the top."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 2.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH", "CORE"], "contraindications": ["LOWER_BACK", "NECK"],
+      "equipment": ["CHAIR"],
+      "animationId": "fl_hip_thrust_single",
+      "resistance": {
+        "slot": "LOWER_PULL", "primary": ["GLUTES"], "secondary": ["HAMSTRINGS"], "tier": "MODERATE",
+        "unilateral": true, "ladder": "hip_bridge", "rung": 3,
+        "note": "The strong evidence is for loaded hip thrusts, which grew the glutes about as much as squats. No trial has used the unloaded single-leg version, and in the one trial that checked, higher muscle activity did not reliably predict growth. Raising the shoulders adds range over the floor bridge. Hamstring cramp is common: bring your heel closer to your hips if it starts.",
+        "references": [
+          {"title": "Hip thrust and back squat training elicit similar gluteus muscle hypertrophy and transfer similarly to the deadlift", "authors": "Plotkin DL, Rodas MA, Vigotsky AD, et al.", "year": 2023, "journal": "Frontiers in Physiology 14:1279170", "doiOrPmid": "10.3389/fphys.2023.1279170", "finding": "Nine weeks of barbell hip thrust training grew the gluteal muscles on MRI about as much as back squat training in untrained young adults, and higher gluteal muscle activity did not consistently predict that growth."},
+          {"title": "The impact of resistance training on gluteus maximus hypertrophy: a systematic review and meta-analysis", "authors": "Krause Neto W, Krause TLV, Gama EF", "year": 2025, "journal": "Frontiers in Physiology 16:1542334", "doiOrPmid": "10.3389/fphys.2025.1542334", "finding": "A meta-analysis of 11 studies found a moderate effect of externally loaded hip-extension training on gluteus maximus muscle growth."},
+          {"title": "Building a better gluteal bridge: electromyographic analysis of hip muscle activity during modified single-leg bridges", "authors": "Lehecka BJ, Edwards M, Haverkamp R, Martin L, Porter K, Thach K, Sack RJ, Hakansson NA", "year": 2017, "journal": "International Journal of Sports Physical Therapy 12(4):543-549", "doiOrPmid": "PMID 28900560", "finding": "In 28 healthy adults, a single-leg bridge produced about 51% of maximum gluteus maximus activity and 58% of maximum gluteus medius activity; bringing the heel closer to the hips cut hamstring activity while gluteal activity stayed similar."}
+        ]
+      }
+    },
+    {
+      "id": "floor_step_calf_raise", "name": "Single-leg calf raise off a step", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Triceps surae muscle hypertrophy is greater after standing versus seated calf-raise training", "authors": "Kinoshita M, Maeo S, Kobayashi Y, et al.", "year": 2023, "journal": "Frontiers in Physiology 14:1272106", "doiOrPmid": "10.3389/fphys.2023.1272106", "finding": "In 14 untrained adults, 12 weeks of standing straight-knee calf raises at 70% of maximum increased gastrocnemius volume on MRI by about 9 to 12%, far more than seated raises did."},
+        {"title": "Do the anatomical and physiological properties of a muscle determine its adaptive response to different loading protocols?", "authors": "Schoenfeld BJ, Vigotsky AD, Grgic J, et al.", "year": 2020, "journal": "Physiological Reports 8(9):e14427", "doiOrPmid": "10.14814/phy2.14427", "finding": "Over eight weeks in 26 untrained young men, light loads (20 to 30 repetition maximum) and heavy loads (6 to 10 repetition maximum) produced similar calf muscle growth and strength gains."}
+      ],
+      "summary": "One-leg heel raises on the edge of a step: the heel drops below the edge for a full stretch, then rises as high as it can.",
+      "voiceName": "Single-leg calf raises off a step",
+      "voiceHowTo": "Stand on the edge of a step or bottom stair on the ball of one foot, with a hand on a wall or rail for balance only. Keeping the knee straight, let your heel drop slowly below the edge and pause in the stretch, then rise onto the ball of your foot as high as you can. Stay on one leg, and swap legs at the halfway cue.",
+      "voiceFormCues": ["Knee straight, heel drops below the step.", "Pause in the stretch.", "Rise as high as you can."],
+      "defaultWorkSec": 40, "defaultRestSec": 20, "minSec": 20, "maxSec": 90,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH", "BALANCE"], "contraindications": ["ANKLE"],
+      "equipment": ["STEP"],
+      "animationId": "fl_calf_raise_step",
+      "resistance": {
+        "slot": "CALVES", "primary": ["CALVES"], "tier": "STRONG",
+        "unilateral": true, "ladder": "calf", "rung": 3,
+        "note": "Standing calf raises through a full range have repeated muscle-growth evidence, and light loads worked as well as heavy ones for the calves. Those trials used machines, so this is the same movement at a body-weight load: if more than about 30 clean reps are possible, slow the lowering, pause longer in the stretch and finish with bottom-half reps.",
+        "references": [
+          {"title": "Triceps surae muscle hypertrophy is greater after standing versus seated calf-raise training", "authors": "Kinoshita M, Maeo S, Kobayashi Y, et al.", "year": 2023, "journal": "Frontiers in Physiology 14:1272106", "doiOrPmid": "10.3389/fphys.2023.1272106", "finding": "In 14 untrained adults, 12 weeks of standing straight-knee calf raises at 70% of maximum increased gastrocnemius volume on MRI by about 9 to 12%, far more than seated raises did."},
+          {"title": "Do the anatomical and physiological properties of a muscle determine its adaptive response to different loading protocols?", "authors": "Schoenfeld BJ, Vigotsky AD, Grgic J, et al.", "year": 2020, "journal": "Physiological Reports 8(9):e14427", "doiOrPmid": "10.14814/phy2.14427", "finding": "Over eight weeks in 26 untrained young men, light loads (20 to 30 repetition maximum) and heavy loads (6 to 10 repetition maximum) produced similar calf muscle growth and strength gains."},
+          {"title": "Greater Gastrocnemius Muscle Hypertrophy After Partial Range of Motion Training Performed at Long Muscle Lengths", "authors": "Kassiano W, Costa B, Kunevaliki G, et al.", "year": 2023, "journal": "Journal of Strength and Conditioning Research 37(9):1746-1753", "doiOrPmid": "10.1519/JSC.0000000000004460", "finding": "In 42 young women, calf raises limited to the stretched half of the range increased inner-calf muscle thickness more than full-range raises (15.2% against 6.7%)."}
+        ]
+      }
+    },
+    {
+      "id": "floor_nordic_curl", "name": "Nordic hamstring curl", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "STRONG",
+      "references": [
+        {"title": "Minimal Role of Hamstring Hypertrophy in Strength Transfer Between Nordic Hamstring and Stiff-Leg Deadlift: A Blinded Randomized Controlled Trial", "authors": "Morin T, Doguet V, Nordez A, Caillet A, Lacourpaille L", "year": 2025, "journal": "Journal of Strength and Conditioning Research 39(9):924-932", "doiOrPmid": "10.1519/JSC.0000000000005159", "finding": "In a blinded randomised trial of 36 untrained adults, nine weeks of Nordic training three times a week increased whole-hamstring volume by 11.4% and semitendinosus volume by 24.3%."},
+        {"title": "Including the Nordic hamstring exercise in injury prevention programmes halves the rate of hamstring injuries: a systematic review and meta-analysis of 8459 athletes", "authors": "van Dyk N, Behan FP, Whiteley R", "year": 2019, "journal": "British Journal of Sports Medicine 53(21):1362-1370", "doiOrPmid": "10.1136/bjsports-2018-100045", "finding": "Across 15 studies and 8,459 athletes, injury-prevention programs that included the Nordic hamstring exercise roughly halved hamstring injury rates (risk ratio 0.49)."}
+      ],
+      "summary": "Kneeling with your ankles held down, lower your body toward the floor as slowly as you can: the best-evidenced bodyweight hamstring exercise, and a hard one.",
+      "voiceName": "Nordic hamstring curls",
+      "voiceHowTo": "Kneel on a pad with your ankles held down by something that cannot move, your body in one straight line from knees to head. Lower yourself toward the floor as slowly as you can, catch yourself with your hands, then push back up with your hands. Start with only a few reps, because this exercise causes marked soreness in the first weeks.",
+      "voiceFormCues": ["Straight line from knees to head.", "Fight the floor all the way down.", "Catch with your hands and push back up."],
+      "defaultWorkSec": 30, "defaultRestSec": 30, "minSec": 15, "maxSec": 60,
+      "met": 2.8, "intensity": "HIGH", "impact": "LOW",
+      "targets": ["STRENGTH"], "contraindications": ["KNEE"],
+      "equipment": ["ANKLE_ANCHOR"],
+      "animationId": "fl_nordic",
+      "resistance": {
+        "slot": "LOWER_PULL", "primary": ["HAMSTRINGS"], "tier": "STRONG",
+        "loadClass": "MODERATE",
+        "note": "Needs an ankle anchor that genuinely cannot move; without one, do the sliding leg curl instead. Expect marked soreness and some cramping in the first weeks, so start with a few slow lowers: low and high volumes gave the same gains in one trial. The trials are in young adults and athletes. On its own it under-trains part of the hamstrings (it grows the semitendinosus most and the biceps femoris long head least), so pair it with a bridge or hip-hinge exercise.",
+        "references": [
+          {"title": "Impact of the Nordic hamstring and hip extension exercises on hamstring architecture and morphology: implications for injury prevention", "authors": "Bourne MN, Duhig SJ, Timmins RG, Williams MD, Opar DA, Al Najjar A, Kerr GK, Shield AJ", "year": 2017, "journal": "British Journal of Sports Medicine 51(5):469-477", "doiOrPmid": "10.1136/bjsports-2016-096130", "finding": "In 30 recreationally active men, ten weeks of Nordic training increased semitendinosus volume and lengthened biceps femoris long head fascicles compared with no training, while hip-extension training grew the biceps femoris long head more."},
+          {"title": "Minimal Role of Hamstring Hypertrophy in Strength Transfer Between Nordic Hamstring and Stiff-Leg Deadlift: A Blinded Randomized Controlled Trial", "authors": "Morin T, Doguet V, Nordez A, Caillet A, Lacourpaille L", "year": 2025, "journal": "Journal of Strength and Conditioning Research 39(9):924-932", "doiOrPmid": "10.1519/JSC.0000000000005159", "finding": "In a blinded randomised trial of 36 untrained adults, nine weeks of Nordic training three times a week increased whole-hamstring volume by 11.4% and semitendinosus volume by 24.3%."},
+          {"title": "The effect of Nordic hamstring exercise training volume on biceps femoris long head architectural adaptation", "authors": "Presland JD, Timmins RG, Bourne MN, Williams MD, Opar DA", "year": 2018, "journal": "Scandinavian Journal of Medicine & Science in Sports 28(7):1775-1783", "doiOrPmid": "10.1111/sms.13085", "finding": "In 20 recreationally active men, low-volume and high-volume Nordic training produced similar gains in eccentric knee-flexor strength and biceps femoris fascicle length over six weeks."},
+          {"title": "Hamstrings Hypertrophy Is Specific to the Training Exercise: Nordic Hamstring versus Lengthened State Eccentric Training", "authors": "Maeo S, Balshaw TG, Nin DZ, et al.", "year": 2024, "journal": "Medicine & Science in Sports & Exercise 56(10):1893-1905", "doiOrPmid": "10.1249/MSS.0000000000003490", "finding": "In 42 young men over 12 weeks, Nordic training increased hamstring volume by 11% but biceps femoris long head volume by only 5%, less than eccentric training in a lengthened, hip-flexed position (18% and 19%)."}
+        ]
+      }
+    },
+    {
+      "id": "floor_reverse_nordic", "name": "Reverse Nordic", "category": "FLOOR", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Changes in rectus femoris architecture induced by the reverse nordic hamstring exercises", "authors": "Alonso-Fernandez D, Fernandez-Rodriguez R, Abalo-Núñez R", "year": 2019, "journal": "The Journal of Sports Medicine and Physical Fitness 59(4):640-647", "doiOrPmid": "10.23736/S0022-4707.18.08873-4", "finding": "In 26 people, eight weeks of reverse Nordic training increased rectus femoris muscle thickness, cross-sectional area and fascicle length on ultrasound, and the changes reversed after four weeks without training; there was no control group."}
+      ],
+      "summary": "Kneeling tall, lean back in one line from knees to head and return: the front of the thigh works while it lengthens. Hard on the knees.",
+      "voiceName": "Reverse Nordics",
+      "voiceHowTo": "Kneel tall on a pad with your hips pushed forward and your toes pointing back. Lean back slowly in one straight line from knees to head, only as far as you can control, then squeeze your thighs to come back up. Keep the range small at first, and stop if your knees hurt.",
+      "voiceFormCues": ["Kneel tall, hips forward.", "Lean back in one line, knees to head.", "Squeeze your thighs to come back up."],
+      "defaultWorkSec": 30, "defaultRestSec": 20, "minSec": 15, "maxSec": 60,
+      "met": 2.8, "intensity": "MODERATE", "impact": "LOW",
+      "targets": ["STRENGTH"], "contraindications": ["KNEE", "LOWER_BACK", "ANKLE"],
+      "animationId": "fl_reverse_nordic",
+      "resistance": {
+        "slot": "LOWER_PUSH", "primary": ["QUADS"], "tier": "MODERATE",
+        "note": "Rests on a single small study: 26 people, eight weeks, no control group, with gains measured in one of the four quadriceps muscles (rectus femoris) that reversed after four weeks off. It loads the knee in a deep bend under body weight, plus kneeling pressure, so it is not for anyone with a knee problem.",
+        "references": [
+          {"title": "Changes in rectus femoris architecture induced by the reverse nordic hamstring exercises", "authors": "Alonso-Fernandez D, Fernandez-Rodriguez R, Abalo-Núñez R", "year": 2019, "journal": "The Journal of Sports Medicine and Physical Fitness 59(4):640-647", "doiOrPmid": "10.23736/S0022-4707.18.08873-4", "finding": "In 26 people, eight weeks of reverse Nordic training increased rectus femoris muscle thickness, cross-sectional area and fascicle length on ultrasound, and the changes reversed after four weeks without training; there was no control group."}
         ]
       }
     },
@@ -1081,7 +1285,7 @@
         {"title": "A systematic review of the effects of Pilates method of exercise in healthy people", "authors": "Cruz-Ferreira A, Fernandes J, Laranjo L, Bernardo LM, Silva A", "year": 2011, "journal": "Archives of Physical Medicine and Rehabilitation 92(12):2071-2081", "doiOrPmid": "PMID 22030232", "finding": "Across 16 trials in healthy people, Pilates showed strong evidence for improving flexibility and dynamic balance and moderate evidence for muscular endurance; study quality was low."},
         {"title": "ACSM Position Stand: Progression models in resistance training for healthy adults", "authors": "American College of Sports Medicine (Ratamess NA et al.)", "year": 2009, "journal": "Medicine & Science in Sports & Exercise 41(3):687-708", "doiOrPmid": "10.1249/MSS.0b013e3181915670", "finding": "Lists unilateral as well as bilateral exercises among the characteristics of an effective strength program, with progressive overload needed for continued adaptation; it does not assess reformer exercises."}
       ],
-      "summary": "Footwork one leg at a time on the same springs: one leg takes the load two were sharing, and left-right differences show straight away.",
+      "summary": "Footwork one leg at a time on the same springs: one leg takes the load two were sharing, with double the honesty about left-right differences.",
       "voiceName": "Single-leg footwork",
       "voiceHowTo": "Keep the springs you use for two-leg footwork, centre one heel on the bar and float the other leg to tabletop. Press the carriage out long without locking the knee, then resist it home, keeping the pelvis carved-in-stone still. Swap legs at the halfway cue and notice which side wobbles.",
       "voiceFormCues": ["Pelvis stays carved in stone.", "Knee tracks straight down the rail.", "Swap legs at halfway."],
@@ -1114,7 +1318,7 @@
       "met": 2.8, "intensity": "LOW", "impact": "LOW",
       "targets": ["STRENGTH", "CORE"], "contraindications": ["SHOULDER", "LOWER_BACK"],
       "machine": {"reformer": {"springs": "HEAVY_3", "bodyPosition": "seated tall on the carriage, facing the straps, one strap in one hand"}},
-      "animationId": "rf_rowing",
+      "animationId": "rf_row_single",
       "resistance": {
         "slot": "UPPER_PULL", "primary": ["BACK"], "secondary": ["BICEPS"], "tier": "LIMITED",
         "unilateral": true, "ladder": "strap_row", "rung": 2,
@@ -1171,6 +1375,34 @@
           {"title": "Pilates increases isokinetic muscular strength of the elbow flexor and extensor muscles of older women: A randomized controlled clinical trial", "authors": "Oliveira LC, Pires-Oliveira DA, Abucarub AC, Oliveira LS, Oliveira RG", "year": 2017, "journal": "Journal of Bodywork and Movement Therapies 21(1):2-10", "doiOrPmid": "10.1016/j.jbmt.2016.03.002", "finding": "Twelve weeks of twice-weekly Pilates improved isokinetic elbow flexor and extensor strength compared with a control group in 30 older women; the abstract does not list the exercises used."},
           {"title": "Effects of Pilates on muscle strength, postural balance and quality of life of older adults: a randomized, controlled, clinical trial", "authors": "Campos de Oliveira L, Gonçalves de Oliveira R, Pires-Oliveira DA", "year": 2015, "journal": "Journal of Physical Therapy Science 27(3):871-876", "doiOrPmid": "10.1589/jpts.27.871", "finding": "In 32 older adults, 12 weeks of twice-weekly Pilates improved isokinetic knee strength compared with a stretching group; the published protocol (full text) was apparatus-based, with one set of ten repetitions per exercise at moderate effort and spring load progressed, and included reformer arm curls and triceps work."},
           {"title": "Triceps brachii hypertrophy is substantially greater after elbow extension training performed in the overhead versus neutral arm position", "authors": "Maeo S, Wu Y, Huang M, Sakurai H, Kusagawa Y, Sugiyama T, Kanehisa H, Isaka T", "year": 2023, "journal": "European Journal of Sport Science 23(7):1240-1250", "doiOrPmid": "10.1080/17461391.2022.2100279", "finding": "In 21 adults, 12 weeks of cable elbow extensions performed overhead increased whole-triceps volume by 19.9%, against 13.9% with the arm at the side, despite lighter loads."}
+        ]
+      }
+    },
+    {
+      "id": "ref_long_box_pulling_straps", "name": "Long-box pulling straps", "category": "REFORMER", "kind": "DISCRETE", "evidenceTier": "MODERATE",
+      "references": [
+        {"title": "Rehabilitation of scapular muscle balance: which exercises to prescribe?", "authors": "Cools AM, Dewitte V, Lanszweert F, Notebaert D, Roets A, Soetens B, Cagnie B, Witvrouw EE", "year": 2007, "journal": "The American Journal of Sports Medicine 35(10):1744-1751", "doiOrPmid": "10.1177/0363546507303560", "finding": "Of 12 scapular exercises tested in 45 healthy adults, prone horizontal abduction with external rotation and prone extension were among the four that best activated the middle and lower trapezius relative to the upper trapezius."},
+        {"title": "Increased strength of the scapular stabilizer and lumbar muscles after twelve weeks of Pilates training using the Reformer machine: A pilot study", "authors": "Dos Santos NT, Raimundo KC, da Silva SA, Souza LA, Ferreira KC, Borges Santo Urbano ZF, Gasparini AL, Bertoncello D", "year": 2017, "journal": "Journal of Bodywork and Movement Therapies 21(1):74-80", "doiOrPmid": "10.1016/j.jbmt.2016.05.005", "finding": "After twelve sessions of reformer Pilates, shoulder-blade (scapular stabiliser) and lumbar extensor strength improved compared with a control group in 24 young women who did not exercise regularly; the abstract does not list the exercises."}
+      ],
+      "summary": "Lying face down on the long box, sweep one straight arm back to your hip against a heavy spring: rear-shoulder and upper-back work. Not a lat exercise.",
+      "voiceName": "Long-box pulling straps",
+      "voiceHowTo": "Lie face down on the long box with your chest just past the front edge and your head toward the straps, holding one strap with a straight arm hanging toward the floor. Work one arm at a time: sweep the straight arm back to your hip, squeeze the shoulder blade in for two seconds, then return slowly. You can also sweep the arm out wide to a T, which works the rear of the shoulder harder. Keep your neck long, and swap arms at the halfway cue.",
+      "voiceFormCues": ["Long neck, eyes down.", "Straight arm, squeeze the shoulder blade in.", "Return slowly."],
+      "defaultWorkSec": 45, "defaultRestSec": 15, "minSec": 25, "maxSec": 100,
+      "met": 2.8, "intensity": "LOW", "impact": "LOW",
+      "targets": ["STRENGTH"], "contraindications": ["SHOULDER", "NECK", "LOWER_BACK"],
+      "machine": {"reformer": {"springs": "HEAVY_1", "bodyPosition": "lying prone on the long box, head toward the straps, one strap in one hand"}},
+      "equipment": ["REFORMER_BOX"],
+      "animationId": "rf_box_pull",
+      "resistance": {
+        "slot": "UPPER_PULL", "primary": ["BACK", "SHOULDERS"], "tier": "MODERATE",
+        "unilateral": true,
+        "note": "Trains the rear of the shoulder and the middle and lower trapezius. It is not a lat exercise: the load on the lats is small. The support is muscle-activity recordings of the same prone arm movements, plus one small pilot of a reformer program that improved shoulder-blade muscle strength in young women; there is no muscle-size data. Two straps on a light spring is a very light load, so use one arm on a heavy spring and add springs if the last reps are not hard.",
+        "references": [
+          {"title": "Rehabilitation of scapular muscle balance: which exercises to prescribe?", "authors": "Cools AM, Dewitte V, Lanszweert F, Notebaert D, Roets A, Soetens B, Cagnie B, Witvrouw EE", "year": 2007, "journal": "The American Journal of Sports Medicine 35(10):1744-1751", "doiOrPmid": "10.1177/0363546507303560", "finding": "Of 12 scapular exercises tested in 45 healthy adults, prone horizontal abduction with external rotation and prone extension were among the four that best activated the middle and lower trapezius relative to the upper trapezius."},
+          {"title": "Surface electromyographic analysis of exercises for the trapezius and serratus anterior muscles", "authors": "Ekstrom RA, Donatelli RA, Soderberg GL", "year": 2003, "journal": "Journal of Orthopaedic & Sports Physical Therapy 33(5):247-258", "doiOrPmid": "10.2519/jospt.2003.33.5.247", "finding": "Of ten exercises tested in 30 healthy adults, a prone overhead arm raise produced the greatest lower trapezius activity, and it and prone horizontal extension with external rotation produced the greatest middle trapezius activity."},
+          {"title": "Increased strength of the scapular stabilizer and lumbar muscles after twelve weeks of Pilates training using the Reformer machine: A pilot study", "authors": "Dos Santos NT, Raimundo KC, da Silva SA, Souza LA, Ferreira KC, Borges Santo Urbano ZF, Gasparini AL, Bertoncello D", "year": 2017, "journal": "Journal of Bodywork and Movement Therapies 21(1):74-80", "doiOrPmid": "10.1016/j.jbmt.2016.05.005", "finding": "After twelve sessions of reformer Pilates, shoulder-blade (scapular stabiliser) and lumbar extensor strength improved compared with a control group in 24 young women who did not exercise regularly; the abstract does not list the exercises."},
+          {"title": "Scapular Muscle Activation at Different Shoulder Abduction Angles During Pilates Reformer Arm Work Exercise", "authors": "Mun WL, Jung EY, Lei S, Roh SY", "year": 2025, "journal": "Medicina (Kaunas) 61(4):645", "doiOrPmid": "10.3390/medicina61040645", "finding": "In 26 men doing reformer arm work at four shoulder angles, middle trapezius and rear deltoid activity peaked with the arms out at 90 degrees, and lower trapezius activity at 135 degrees."}
         ]
       }
     },

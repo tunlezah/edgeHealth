@@ -116,14 +116,19 @@ muscle-retention session starts with whichever region is furthest behind.
 - **Body constraints** editing; **Include low-evidence exercises** toggle.
 - **Machines**: GR7/VG50BS max levels, spring notation.
 - **Equipment**: heaviest single hand weight (kg, default 2), sturdy chair or bench, step or bottom stair, reformer long
-  box, ankle anchor. Muscle-retention sessions only use what is switched on here.
+  box, ankle anchor — each off until switched on, each unlocking specific exercises (a chair: harder
+  push-ups, split squats, single-leg squats and hip thrusts; a step: full-range calf raises; an
+  anchor: the Nordic hamstring curl; the long box: prone pulling straps, the reformer's best
+  upper-back exercise). Muscle-retention sessions only use what is switched on here.
+- **Resistance levels**: each progression ladder (push-up, leg push, hip bridge, calf, …) with Easier
+  and Harder buttons. The set ratings suggest moves up; this is also how to move down.
 - **Reminders**: day chips + time picker (WorkManager; reschedules itself, survives reboot).
 - **Streak rest days**: days that never break a streak.
 - **Units & goals**: metric units, visceral-fat goal, fallback weight for calories.
 - **Disclaimer**: view dialog + toggle for the spoken pre-workout reminder line.
 - **Data**: Export / Import JSON via the system file picker (SAF, no storage permissions); import
   validates and lists every problem, or reports exactly what was added (duplicates skipped).
-- **Hidden QA**: long-press the version row → animation QA screen cycling all 85 rig animations.
+- **Hidden QA**: long-press the version row → animation QA screen cycling all 95 rig animations.
 
 ## 10. Home-screen widget
 Glance widget: one-tap **repeat last workout** (jumps straight into the player) + current streak.

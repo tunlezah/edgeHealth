@@ -834,4 +834,16 @@ class AnimGeometryTest {
             assertWithMessage(id).that(travel).isAtLeast(0.15f)
         }
     }
+
+    @Test
+    fun `one-arm strap work draws a single strap and nothing else does`() {
+        val keyframed = AnimationRegistry.all.filterIsInstance<KeyframeAnim>()
+        val single = keyframed.filter { it.singleStrap }
+        assertThat(single.map { it.id }).containsExactly("rf_biceps_curl", "rf_row_single", "rf_triceps_press", "rf_box_pull")
+        // The flag only means something on a prop that draws arm straps.
+        for (anim in single) {
+            assertWithMessage(anim.id).that(anim.prop)
+                .isAnyOf(au.mark.kinetiq.anim.Prop.REFORMER_ARM_STRAPS, au.mark.kinetiq.anim.Prop.REFORMER_BOX_ARM_STRAPS)
+        }
+    }
 }

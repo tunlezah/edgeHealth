@@ -272,7 +272,9 @@ Added November 2026 with schema v3. This section backs the `resistance` profile 
 muscle-retention session builder. The profile's *retention tier* grades one claim only — "an effective
 resistance exercise for maintaining its target muscles" — and is kept separate from the general
 `evidenceTier` of §1–§11. Equipment in scope: body weight on a mat, a Pilates reformer, and hand weights
-of 1, 1.5 and 2 kg. Cardio machines appear only to explain why they do not count (§12.7).
+of 1, 1.5 and 2 kg, plus four optional items the user can tick in Settings — a sturdy chair, a step, an
+ankle anchor and the reformer long box. Cardio machines appear only to explain why they do not count
+(§12.7).
 
 Verification: two literature reviews were run for this section (programming principles; exercise-level
 evidence). Every paper cited below was retrieved from PubMed and its abstract read, and its DOI (where
@@ -570,14 +572,24 @@ rule in §12.9.
   work a resistance stimulus. No kilogram figures are shown in the app.
 - **What this means in the database.** No reformer exercise is graded STRONG for retention. Strap biceps
   curl and strap triceps press are MODERATE (strength evidence in older women only; one arm, heavy
-  springs). Footwork (two-leg and single-leg), the two-arm row and the one-arm strap row are LIMITED;
-  the one-arm strap row is kept because it is the best pulling option available without weights, and is
-  labelled as not a substitute for a loaded row. The hundred and knee stretches are LIMITED as
-  resistance work: the abdominal result above is for a whole Pilates program, and **Queiroz BC, Cagliari
-  MF, Amorim CF, Sacco IC 2010** (Arch Phys Med Rehabil 91(1):86–92, DOI 10.1016/j.apmr.2009.09.016,
-  PMID 20103401) found comparatively low rectus abdominis activation across knee-stretch variations.
-  Feet in straps, frog, leg circles, elephant, pelvic curl, mermaid and side splits carry no retention
-  profile and stay mobility and control work. §4's general tiers are unchanged.
+  springs). Long-box pulling straps (which need the long box) are MODERATE for the rear shoulder and the
+  middle and lower trapezius and LIMITED for the lats: the prone arm movements have EMG support off the
+  reformer (§12.9); **Mun WL, Jung EY, Lei S, Roh SY 2025** (Medicina (Kaunas) 61(4):645, DOI
+  10.3390/medicina61040645, PMID 40282934) found that in reformer arm work middle trapezius and rear
+  deltoid activity peaked with the arms out at 90° and lower trapezius activity at 135° (26 men); and
+  **Dos Santos NT, Raimundo KC, da Silva SA, et al. 2017** (J Bodyw Mov Ther 21(1):74–80, DOI
+  10.1016/j.jbmt.2016.05.005, PMID 28167194) found scapular-stabiliser and lumbar-extensor strength
+  improved against a control group after twelve sessions of reformer Pilates in 24 young women (the
+  abstract does not list the exercises). There is no muscle-size data, and the entry is cued one arm at
+  a time on a heavy spring. Footwork (two-leg and single-leg), the two-arm row and the one-arm strap row
+  are LIMITED; the one-arm strap row is kept because it is the best pulling option available without
+  weights, and is labelled as not a substitute for a loaded row. The hundred and knee stretches are
+  LIMITED as resistance work: the abdominal result above is for a whole Pilates program, and **Queiroz
+  BC, Cagliari MF, Amorim CF, Sacco IC 2010** (Arch Phys Med Rehabil 91(1):86–92, DOI
+  10.1016/j.apmr.2009.09.016, PMID 20103401) found comparatively low rectus abdominis activation across
+  knee-stretch variations. Feet in straps, frog, leg circles, elephant, pelvic curl, mermaid and side
+  splits carry no retention profile and stay mobility and control work. §4's general tiers are
+  unchanged.
 
 ### 12.9 Exercise-level evidence behind the retention tiers
 
@@ -589,21 +601,24 @@ not a load guarantee. No exercise-level trial below was run in a calorie deficit
 hypertrophy — in the hip-thrust trial cited below, higher gluteal EMG did not consistently predict
 growth.
 
-- **Push-ups (STRONG: knee and full).** **Kikuchi N, Nakazato K 2017** (J Exerc Sci Fit 15(1):37–42, DOI
-  10.1016/j.jesf.2017.06.003, PMID 29541130): 18 young men, 8 weeks — push-ups adjusted (by kneeling,
-  for example) to a 40% 1RM bench-press load increased triceps and chest thickness and bench 1RM as
-  bench pressing did. Nine per group; the chest-thickness figures in the abstract are identical for both
-  groups, a probable reporting error, so they are not quoted anywhere in the app. **Calatayud J,
-  Borreani S, Colado JC, et al. 2015** (J Strength Cond Res 29(1):246–253, DOI
+- **Push-ups (STRONG as a ladder: incline, knee, full, feet-elevated).** **Kikuchi N, Nakazato K 2017**
+  (J Exerc Sci Fit 15(1):37–42, DOI 10.1016/j.jesf.2017.06.003, PMID 29541130): 18 young men, 8 weeks —
+  push-ups adjusted (by kneeling, for example) to a 40% 1RM bench-press load increased triceps and chest
+  thickness and bench 1RM as bench pressing did. Nine per group; the chest-thickness figures in the
+  abstract are identical for both groups, a probable reporting error, so they are not quoted anywhere in
+  the app. **Calatayud J, Borreani S, Colado JC, et al. 2015** (J Strength Cond Res 29(1):246–253, DOI
   10.1519/JSC.0000000000000589, PMID 24983847): band-loaded push-ups at 6RM matched the bench press for
   strength over 5 weeks in trained students. **Kotarsky CJ, Christensen BK, Miller JS, Hackney KJ 2018**
   (J Strength Cond Res 32(3):651–659, DOI 10.1519/JSC.0000000000002345, PMID 29466268): 4 weeks of
   progressive push-up variations improved bench 1RM as bench training did; muscle thickness did not
-  change in either group. **Close-grip (MODERATE):** a narrow hand position gave higher triceps and
-  chest EMG (**Cogley RM, Archambault TA, Fibeger JF, et al. 2005** (J Strength Cond Res 19(3):628–633,
-  DOI 10.1519/15094.1, PMID 16095413), n=40; **Marcolin G, Petrone N, Moro T, et al. 2015** (J Athl
-  Train 50(11):1126–1132, DOI 10.4085/1062-6050-50.9.09, PMID 26488636), n=8) but has never been trained
-  on its own. **Pike push-up (LIMITED):** no EMG or training study found.
+  change in either group. The incline rung (hands on a chair seat) and the feet-elevated rung (feet on a
+  chair) sit at the two ends of the measured load range (Ebben 2011, §12.6); neither has been trialled
+  on its own, and the incline rung counts only while a set gets hard within about 30 reps. **Close-grip
+  (MODERATE):** a narrow hand position gave higher triceps and chest EMG (**Cogley RM, Archambault TA,
+  Fibeger JF, et al. 2005** (J Strength Cond Res 19(3):628–633, DOI 10.1519/15094.1, PMID 16095413),
+  n=40; **Marcolin G, Petrone N, Moro T, et al. 2015** (J Athl Train 50(11):1126–1132, DOI
+  10.4085/1062-6050-50.9.09, PMID 26488636), n=8) but has never been trained on its own. **Pike push-up
+  (LIMITED):** no EMG or training study found.
 - **Squat and lunge patterns (MODERATE with body weight).** Tsuzuku 2018 (§12.4; adults ≥70). **Takai Y,
   Fukunaga Y, Fujita E, et al. 2013** (J Sports Sci Med 12(1):60–65, PMID 24149726; no DOI in PubMed):
   100 bodyweight squats a day for 8 weeks increased thigh muscle thickness 3.2% in adolescent boys.
@@ -616,13 +631,25 @@ growth.
   10.1519/JSC.0b013e3181a00d98, PMID 19387378): 6 weeks of walking lunges improved hamstring strength in
   young soccer players. **Boudreau SN, Dwyer MK, Mattacola CG, et al. 2009** (J Sport Rehabil
   18(1):91–103, DOI 10.1123/jsr.18.1.91, PMID 19321909): quadriceps and gluteal EMG rose from step-up to
-  lunge to single-leg squat. **Split squat:** the training evidence is loaded and rear-foot-elevated —
-  **Speirs DE, Bennett MA, Finn CV, Turner AP 2016** (J Strength Cond Res 30(2):386–392, DOI
-  10.1519/JSC.0000000000001096, PMID 26200193) (5 weeks, strength gains equal to the back squat in
-  academy rugby players) and **Wang Y, Zhao X, Zhang L, et al. 2026** (Front Physiol 17:1786733, DOI
-  10.3389/fphys.2026.1786733, PMID 41983008) (6 weeks at 80% 1RM, vastus lateralis thickness +9.3% in
-  trained men); the bodyweight flat-floor version is untrialled. **Wall sit:** MODERATE only at 90° of
-  knee bend or deeper, by analogy with long-length isometric training (Oranchuk 2019).
+  lunge to single-leg squat. **Split squats (MODERATE unloaded):** the training evidence is loaded and
+  rear-foot-elevated — **Speirs DE, Bennett MA, Finn CV, Turner AP 2016** (J Strength Cond Res
+  30(2):386–392, DOI 10.1519/JSC.0000000000001096, PMID 26200193) (5 weeks, strength gains equal to the
+  back squat in academy rugby players) and **Wang Y, Zhao X, Zhang L, et al. 2026** (Front Physiol
+  17:1786733, DOI 10.3389/fphys.2026.1786733, PMID 41983008) (6 weeks at 80% 1RM, vastus lateralis
+  thickness +9.3% in trained men); **Mackey ER, Riemann BL 2021** (Int J Exerc Sci 14(1):533–543, DOI
+  10.70252/CIYT8956, PMID 34055144) found the exercise hip-dominant, with less knee demand than the back
+  squat (20 trained men). Neither the flat-floor version nor the rear-foot-elevated version (which needs
+  a chair) has been trialled without added weight. **Single-leg squat to a chair (MODERATE):** Wei 2023
+  and Boudreau 2009 above, plus **Ayotte NW, Stetts DM, Keenan G, Greenway EH 2007** (J Orthop Sports
+  Phys Ther 37(2):48–55, DOI 10.2519/jospt.2007.2354, PMID 17366959) — a one-leg wall squat gave the
+  highest gluteal and quadriceps activation of five one-leg exercises in 23 adults; the exercise has not
+  been trained on its own. **Reverse Nordic (MODERATE, on one study):** **Alonso-Fernandez D,
+  Fernandez-Rodriguez R, Abalo-Núñez R 2019** (J Sports Med Phys Fitness 59(4):640–647, DOI
+  10.23736/S0022-4707.18.08873-4, PMID 30293403) — 26 people, 8 weeks, rectus femoris thickness,
+  cross-sectional area and fascicle length increased and then reversed after 4 weeks off, with no
+  control group; it loads the knee in deep flexion and is excluded for knee constraints. **Wall sit:**
+  MODERATE only at 90° of knee bend or deeper, by analogy with long-length isometric training (Oranchuk
+  2019).
 - **Glutes and hamstrings.** Single-leg bridge (MODERATE): **Lehecka BJ, Edwards M, Haverkamp R, et al.
   2017** (Int J Sports Phys Ther 12(4):543–549, PMID 28900560; no DOI in PubMed) — about 51% of maximum
   gluteus maximus and 58% of maximum gluteus medius EMG; loaded hip-extension training grows the glutes
@@ -631,14 +658,35 @@ growth.
   growth on MRI; a 2026 correction, Front Physiol 17:1987823, DOI 10.3389/fphys.2026.1987823, PMID
   43017308, discloses retrospective registration and donated equipment, results unchanged; **Krause Neto
   W, Krause TLV, Gama EF 2025** (Front Physiol 16:1542334, DOI 10.3389/fphys.2025.1542334, PMID
-  40276368): meta-analysis of 11 studies, SMD 0.71). Two-leg bridge: LIMITED (too light). Sliding leg
-  curl (MODERATE): **Orishimo KF, McHugh MP 2015** (J Strength Cond Res 29(3):772–778, DOI
-  10.1519/JSC.0000000000000666, PMID 25226327) — highest hamstring EMG of four home exercises, and a
-  4-week program of the four raised knee-flexor strength 9% (n=12, no control group); **Tsaklis P,
-  Malliaropoulos N, Mendiguchia J, et al. 2015** (Open Access J Sports Med 6:209–217, DOI
-  10.2147/OAJSM.S79189, PMID 26170726) — classed as high intensity alongside the Nordic in 20 elite
-  female track athletes. Unloaded single-leg Romanian deadlift (LIMITED): among the lowest for hamstring
-  EMG in Orishimo & McHugh 2015 — without load it is a balance drill.
+  40276368): meta-analysis of 11 studies, SMD 0.71). Single-leg hip thrust with the shoulders on a chair
+  (MODERATE): the same evidence, with more range than the floor bridge; what was trialled is the loaded
+  hip thrust. Two-leg bridge: LIMITED (too light). Nordic hamstring curl (STRONG; needs an ankle
+  anchor): **Bourne MN, Duhig SJ, Timmins RG, et al. 2017** (Br J Sports Med 51(5):469–477, DOI
+  10.1136/bjsports-2016-096130, PMID 27660368) — 30 men, 10 weeks, semitendinosus volume up against
+  control and biceps femoris long head fascicles lengthened, while hip-extension training grew the
+  biceps femoris long head more; **Morin T, Doguet V, Nordez A, et al. 2025** (J Strength Cond Res
+  39(9):924–932, DOI 10.1519/JSC.0000000000005159, PMID 40644669) — blinded RCT, 36 untrained adults, 9
+  weeks, whole-hamstring volume +11.4% and semitendinosus +24.3% (the companion report, **Morin T,
+  Caillet AH, Nordez A, et al. 2025** (J Appl Physiol (1985) 139(1):296–307, DOI
+  10.1152/japplphysiol.00237.2025, PMID 40586278), gives a 1RM gain of about 37%); **van Dyk N, Behan
+  FP, Whiteley R 2019** (Br J Sports Med 53(21):1362–1370, DOI 10.1136/bjsports-2018-100045, PMID
+  30808663) — 15 studies, 8,459 athletes, programs that included the Nordic roughly halved hamstring
+  injuries (risk ratio 0.49). Two caveats travel with it: marked soreness, so it starts at very low
+  volume — low and high volumes gave the same adaptations in **Presland JD, Timmins RG, Bourne MN, et
+  al. 2018** (Scand J Med Sci Sports 28(7):1775–1783, DOI 10.1111/sms.13085, PMID 29572976) (20 men, 6
+  weeks) — and it under-trains the biceps femoris long head (**Maeo S, Balshaw TG, Nin DZ, et al. 2024**
+  (Med Sci Sports Exerc 56(10):1893–1905, DOI 10.1249/MSS.0000000000003490, PMID 38857522): +5% against
+  +19% with lengthened-position eccentric training, 42 men, 12 weeks), so it is paired with a bridge or
+  hinge and not treated as complete hamstring coverage. Because most people cannot yet control a full
+  rep, it is the one entry marked as a moderate load (`loadClass` MODERATE), which gives it the shorter
+  set window and the stop-short effort target of §12.4–12.5 *(derived)*. Sliding leg curl (MODERATE):
+  **Orishimo KF, McHugh MP 2015** (J Strength Cond Res 29(3):772–778, DOI 10.1519/JSC.0000000000000666,
+  PMID 25226327) — highest hamstring EMG of four home exercises, and a 4-week program of the four raised
+  knee-flexor strength 9% (n=12, no control group); **Tsaklis P, Malliaropoulos N, Mendiguchia J, et al.
+  2015** (Open Access J Sports Med 6:209–217, DOI 10.2147/OAJSM.S79189, PMID 26170726) — classed as high
+  intensity alongside the Nordic in 20 elite female track athletes. Unloaded single-leg Romanian
+  deadlift (LIMITED): among the lowest for hamstring EMG in Orishimo & McHugh 2015 — without load it is
+  a balance drill.
 - **Calves.** **Kinoshita M, Maeo S, Kobayashi Y, et al. 2023** (Front Physiol 14:1272106, DOI
   10.3389/fphys.2023.1272106, PMID 38156065): 12 weeks of machine-loaded standing calf raises increased
   gastrocnemius volume 9–12%, against 0.6–1.7% for seated raises. **Schoenfeld BJ, Vigotsky AD, Grgic J,
@@ -648,21 +696,23 @@ growth.
   stretched half of the range grew the medial gastrocnemius more than full range (15.2% vs 6.7%).
   **Fujiwara K, Toyama H, Asai H, et al. 2010** (J Physiol Anthropol 29(1):23–28, DOI
   10.2114/jpa2.29.23, PMID 20453430): 100 two-leg heel raises a day for two months increased soleus
-  thickness 12.7% in 49 women aged 60–79 (no control group described). Hence: flat-floor single-leg
-  raise MODERATE (no stretch below level); two-leg raise LIMITED for a healthy adult; the off-a-step
-  version (STRONG) waits for step equipment.
+  thickness 12.7% in 49 women aged 60–79 (no control group described). Hence: single-leg raise off a
+  step STRONG (needs a step or bottom stair; the trials used machines, so this is the same movement at a
+  body-weight load); flat-floor single-leg raise MODERATE (no stretch below level); two-leg raise
+  LIMITED for a healthy adult.
 - **Upper back (prone Y raise; rows).** **Ekstrom RA, Donatelli RA, Soderberg GL 2003** (J Orthop Sports
   Phys Ther 33(5):247–258, DOI 10.2519/jospt.2003.33.5.247, PMID 12774999) and **Cools AM, Dewitte V,
   Lanszweert F, et al. 2007** (Am J Sports Med 35(10):1744–1751, DOI 10.1177/0363546507303560, PMID
-  17606671): prone overhead arm raises and prone horizontal abduction with external rotation are among
-  the highest-activation exercises for the middle and lower trapezius — tested as high-intensity
-  exercises, whereas the arm's own weight is a small load. Unweighted: LIMITED; with light hand weights:
-  MODERATE. **Not a latissimus exercise.** Rows: **Lehman GJ, Buchan DD, Lundy A, et al. 2004** (Dyn Med
-  3(1):4, DOI 10.1186/1476-5918-3-4, PMID 15228624) — seated cable rows gave the highest middle
-  trapezius and rhomboid activity of four pulling exercises; **Fenwick CM, Brown SH, McGill SM 2009** (J
-  Strength Cond Res 23(2):350–358, DOI 10.1519/JSC.0b013e3181942019, PMID 19197209) — in seven men,
-  inverted and bent-over rows gave high latissimus and upper-back activity. Neither study was done on a
-  reformer.
+  17606671): prone overhead arm raises, prone horizontal abduction with external rotation and prone
+  extension are among the best exercises for activating the middle and lower trapezius — tested as
+  high-intensity exercises, whereas the arm's own weight is a small load. Unweighted: LIMITED; with
+  light hand weights: MODERATE; the same prone movements against a spring on the reformer's long box:
+  MODERATE (§12.8). **None of these is a latissimus exercise.** Rows: **Lehman GJ, Buchan DD, Lundy A,
+  et al. 2004** (Dyn Med 3(1):4, DOI 10.1186/1476-5918-3-4, PMID 15228624) — seated cable rows gave the
+  highest middle trapezius and rhomboid activity of four pulling exercises; **Fenwick CM, Brown SH,
+  McGill SM 2009** (J Strength Cond Res 23(2):350–358, DOI 10.1519/JSC.0b013e3181942019, PMID 19197209)
+  — in seven men, inverted and bent-over rows gave high latissimus and upper-back activity. Neither
+  study was done on a reformer.
 - **Hand weights (tiers assume an adequate load, §12.11).** Lateral raise (STRONG): **Larsen S, Wolf M,
   Schoenfeld BJ, et al. 2025** (Front Physiol 16:1611468, DOI 10.3389/fphys.2025.1611468, PMID 40692697)
   — 8 weeks, five sets to failure twice weekly, lateral deltoid thickness +3.3–4.6% in trained lifters,
@@ -682,16 +732,31 @@ growth.
   elbow extensions overhead grew the triceps 19.9% against 13.9% with the arm at the side; a hand weight
   loads the range differently.
 
-### 12.10 Coverage gaps without adequate hand weights
+### 12.10 Coverage: what each piece of kit adds, and the gaps without adequate hand weights
 
 - **Covered with a mat alone at MODERATE or better:** leg push (squat, lunges, split squat), upper push
   (knee and full push-up, with close-grip for triceps), hamstring/glute (single-leg bridge, sliding leg
   curl) and calves (single-leg raise). The first three are pinned by the database validator.
+- **What a chair adds.** The two outer rungs of the push-up ladder (incline for people who cannot yet do
+  knee push-ups, feet-elevated for people who have outgrown the full push-up), the two hardest leg rungs
+  (rear-foot-elevated split squat, single-leg squat to a chair) and the single-leg hip thrust. These are
+  harder versions of patterns the mat already covers; apart from the push-ups they are MODERATE without
+  added weight.
+- **What a step adds.** The single-leg calf raise through a full range — the STRONG calf exercise.
+- **What an ankle anchor adds.** The Nordic curl, the only STRONG hamstring exercise here. Without an
+  anchor the sliding leg curl carries the knee-bending role on one small uncontrolled study. With one,
+  the Nordic still under-trains the biceps femoris long head (§12.9), so a bridge or hip thrust stays in
+  the plan.
+- **What the reformer long box adds.** Prone pulling straps: MODERATE for the rear shoulder and the
+  middle and lower trapezius, on a heavy spring one arm at a time.
+- **What none of them adds.** A lat exercise, a biceps exercise, or anything for the side of the
+  shoulder.
 - **Lats and upper back — the weakest area.** No mat exercise trains the lats. The only bodyweight
   option with any support, the inverted row, needs a safe anchor most homes lack and is not shipped. The
-  reformer one-arm strap row is LIMITED, and the prone Y raise trains the middle and lower trapezius and
-  rear shoulder, not the lats. Even an adequately loaded dumbbell row would only be MODERATE (no
-  hypertrophy trial isolates it); nothing here reaches STRONG without a pull-up bar or cable machine.
+  reformer one-arm strap row is LIMITED, and the prone Y raise and long-box pulling straps train the
+  middle and lower trapezius and rear shoulder, not the lats. Even an adequately loaded dumbbell row
+  would only be MODERATE (no hypertrophy trial isolates it); nothing here reaches STRONG without a
+  pull-up bar or cable machine.
 - **Biceps.** There is no bodyweight exercise without a bar or anchor. The reformer strap curl
   (MODERATE; strength data in older women only; low, unmeasured load) is the only route without weights.
 - **Side of the shoulder (middle deltoid).** Nothing direct without weights — the pike push-up is
@@ -699,9 +764,9 @@ growth.
 - **What 1–2 kg hand weights do and do not fix.** They can turn the prone Y raise into a MODERATE
   upper-back and rear-shoulder exercise and, for some users, bring the lateral raise into a useful
   range. They do **not** provide a row — a one-arm row needs something like 6–12 kg (a planning
-  estimate) — so the lat gap stays open. At 2 kg, curls and overhead triceps extensions sit at the very
-  bottom of the useful range and will be too light for many adults; the 30-rep check (§12.3) decides.
-  Lower-body dumbbell work is not shipped at these weights.
+  estimate) — so the lat gap stays open whatever other kit is ticked. At 2 kg, curls and overhead
+  triceps extensions sit at the very bottom of the useful range and will be too light for many adults;
+  the 30-rep check (§12.3) decides. Lower-body dumbbell work is not shipped at these weights.
 - The generator warns about the pulling gap instead of papering over it.
 
 ### 12.11 `minUsefulKg` values are planning estimates
@@ -747,7 +812,8 @@ growth.
    2013; Lasevicius 2022 vs Nóbrega 2018).
 7. **Small samples and favourable populations.** Bodyweight evidence is strongest where users are
    weakest (older, sedentary, adolescent). Push-up hypertrophy rests on 9 men per group; bodyweight
-   versus barbell squats on 13 women; the sliding leg curl on 12 people with no control group; Pilates
-   abdominal growth on 9 women with no control group.
+   versus barbell squats on 13 women; the sliding leg curl on 12 people with no control group; the
+   reverse Nordic on one study of 26 people with no control group; Pilates abdominal growth on 9 women
+   with no control group.
 8. **Abstract-level reading.** Apart from the items marked "full text", findings are taken from
    abstracts; a full text should be checked before any specific effect size is shown in the app.
