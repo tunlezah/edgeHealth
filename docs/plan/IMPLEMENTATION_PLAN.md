@@ -12,6 +12,7 @@ ordering, cross-phase reconciliations, global conventions, and the definition of
 | 2 | [PHASE2_REST_PLAYER_THEMES.md](PHASE2_REST_PLAYER_THEMES.md) | Three-mode rest model (STANDARD/RECOVERY/CONTINUOUS), skippable rests, player polish, ~17 UX quick wins, 7 accent palettes × Light/Dark/AMOLED/System with contrast tests |
 | 3 | [PHASE3_DATABASE_ANIMATIONS.md](PHASE3_DATABASE_ANIMATIONS.md) | Exercise DB consistency fixes, 27 new exercises (complete JSON provided), 9 new routines (4×4, 10-20-30, SIT, recovery, MICT), 26 new stick-figure animations with geometry/contact tests, myth-buster insights |
 | 4 | [PHASE4_LEARNING_LOOP.md](PHASE4_LEARNING_LOOP.md) | Room migration (step events, preference table, sRPE columns), step-event logging, session-RPE capture, preference model, progression/deload engine, weekly MET-min dose meter, time-of-day nudge |
+| R | [PHASE_R_MUSCLE_RETENTION.md](PHASE_R_MUSCLE_RETENTION.md) | **Built out of sequence, ahead of Phases 3 and 4.** Muscle-retention sessions: set-based resistance blocks on the mat and reformer, evidence-graded separately, hand weights and other equipment, set tracking, weekly sets per muscle group, ladder progression |
 
 ## Rules of engagement (read first)
 
@@ -167,6 +168,13 @@ The work is complete when ALL of the following hold:
 6. Docs updated: README count line, DECISIONS.md D-20 (Phase 3 Step 7), RESEARCH.md §12,
    and WALKTHROUGH.md amended for: get-ready phase, rest modes, accent palettes, sRPE capture,
    preference learning + reset, progression card, dose meter, myth-buster cards.
+
+10. **Phase R landed before Phases 3 and 4.** It took asset `schemaVersion: 3` and built six of
+    Phase 3's exercises and animations. Phase 3 therefore lands as `schemaVersion: 4`, skips those
+    six, and recomputes every exact count (this file's Definition of done #4 included) from the
+    database as it then stands. Phase 4 is structurally unaffected — Room is still at version 1 —
+    but must record resistance sets through the engine hooks Phase R added and keep ladder
+    progression separate from its own. Details: PHASE_R_MUSCLE_RETENTION.md.
 
 ## What is explicitly OUT of scope
 

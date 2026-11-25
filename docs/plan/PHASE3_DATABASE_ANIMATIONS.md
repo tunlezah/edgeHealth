@@ -4,6 +4,15 @@ All exploration complete. Below is the full Phase 3 implementation plan.
 
 # Kinetiq Phase 3 — Exercise Database & Animation Upgrade: Implementation Plan
 
+> **Read first — superseded in part.** Phase R (`PHASE_R_MUSCLE_RETENTION.md`) was built before this
+> phase. Six exercises and their animations below already exist (`floor_split_squat`,
+> `floor_single_leg_bridge`, `floor_single_leg_rdl`, `floor_calf_raise`, `floor_pike_pushup`,
+> `ref_footwork_single_leg`); the asset is already at `schemaVersion: 3`, so this phase lands as 4;
+> every exact count in this document must be recomputed from the database; and the citations in the
+> JSON below must be re-verified before use — several `finding` sentences on the six entries already
+> built claimed things the cited papers do not say. See that document's "What this changes for
+> Phase 3" and `DEVIATIONS.md`.
+
 ## Verified ground truth (read before implementing)
 
 - The "dbVersion" field is **`schemaVersion`** (currently `2`) at the top of `/home/user/edgeHealth/app/src/main/assets/exercise_db.json`. `ExerciseRepository.loadAndSeed()` re-seeds Room whenever `dao.meta("schema_version") != parsed.schemaVersion` (any mismatch, not only newer), after first running `DatabaseValidator.validate(parsed, AnimationRegistry.ids)` and `check()`-crashing on failure. So: **bump `schemaVersion` to `3`** and the re-seed is automatic; no repository code change needed.

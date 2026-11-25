@@ -4,7 +4,9 @@ A fully offline native Android app (Kotlin + Jetpack Compose) for a single user 
 modalities — **Reformer Pilates, Elliptical (Infiniti VG50BS), Spin cycle (Horizon GR7), and
 Floor/bodyweight**, plus a physiotherapy-informed **Back care** category — that generates
 evidence-graded workout sessions with **en-AU voice coaching** and **locally rendered procedural
-exercise animations**. Primary goal: visceral fat reduction; secondary: general health.
+exercise animations**. Primary goal: visceral fat reduction; secondary: general health — and, since
+fat loss costs muscle unless something is done about it, **muscle-retention sessions**: set-based
+resistance work on the mat and reformer, with or without light hand weights.
 
 - **No network permission** — the APK declares **no INTERNET permission**, enforced by a Gradle task on
   the merged release manifest, a unit test, and a CI `aapt` check. All exercise data, citations,
@@ -13,7 +15,8 @@ exercise animations**. Primary goal: visceral fat reduction; secondary: general 
 - **Optional Health Connect** — reads Weight / Body Fat % / Height (BMI computed in-app), writes
   completed sessions (`ExerciseSessionRecord` per block + `TotalCaloriesBurnedRecord`). Off by default.
 - **Evidence-graded content** — every exercise carries an evidence tier and real citations
-  (author, year, journal, DOI/PMID), readable offline in the app.
+  (author, year, journal, DOI/PMID), readable offline in the app. Exercises usable as resistance sets
+  carry a second, separate grade for that one claim.
 
 Target device: **Motorola Edge 60 Fusion** (Android 15, 6.67" pOLED). `minSdk 34`, `targetSdk 36`.
 Current version: **1.1.0** (`versionCode 2`).
@@ -43,13 +46,13 @@ except onboarding.
 |---|---|
 | **Onboarding** | Medical disclaimer (must be acknowledged), body constraints, machine setup, optional Health Connect. Four steps, each with Back and a step indicator. |
 | **Home** | Streak, week totals, build/repeat/saved workouts, resume-interrupted-session card. |
-| **Builder** | Duration, categories, exercises per category, rest mode, intensity, warm-up/cool-down. Generates a preview you can reorder, swap and remove, with one-tap fixes for warnings. |
-| **Player** | 10-second get-ready lead-in, countdown timer, large machine cues, procedural animation, skippable rests, +30 s, pause/skip/stop, explain-again. Runs in a foreground service with notification controls; snapshots every 5 s for process-death restore. |
-| **Summary** | Active minutes, MET-estimated kcal, per-block breakdown, Health Connect write status, save-as-named-workout. |
+| **Builder** | Session focus (general fitness or muscle retention), duration, categories, exercises per category, rest mode, intensity, warm-up/cool-down. Muscle retention adds hand weights, an easing-in option and labelled limited-evidence fillers. Generates a preview you can reorder, swap and remove, with one-tap fixes for warnings. |
+| **Player** | 10-second get-ready lead-in, countdown timer, large machine cues, procedural animation, skippable rests, +30 s, pause/skip/stop, explain-again. Resistance sets add a set counter, the effort target, a "Set done" button and a one-tap effort rating in the rest. Runs in a foreground service with notification controls; snapshots every 5 s for process-death restore. |
+| **Summary** | Active minutes, MET-estimated kcal, per-block breakdown (with hard sets per muscle for resistance blocks), progression advice from the set ratings, Health Connect write status, save-as-named-workout. |
 | **History** | Streak, 4-week trends, month calendar, full session list with per-entry delete and Health Connect retry. |
-| **Library** | Filter by category / target / evidence tier, live animation thumbnails, full offline reference list per exercise. |
-| **Plan** | Rule-based weekly targets (WHO 2020 + visceral-fat dose evidence) with progress bars. |
-| **Settings** | Voice and sound (six cue toggles, rate, volume), theme, workout defaults, Health Connect, body constraints, machines, reminders, streak rest days, units and goals, disclaimer, JSON export/import. |
+| **Library** | Filter by category / target / evidence tier / muscle-retention grade, live animation thumbnails, full offline reference list per exercise. |
+| **Plan** | Rule-based weekly targets (WHO 2020 + visceral-fat dose evidence) with progress bars, plus the week's resistance sessions and hard sets per muscle group. |
+| **Settings** | Voice and sound (six cue toggles, rate, volume), theme, workout defaults, Health Connect, body constraints, machines, equipment, resistance levels, reminders, streak rest days, units and goals, disclaimer, JSON export/import. |
 | **Widget** | Glance home-screen widget: one-tap repeat-last-workout plus current streak. |
 
 Voice coaching uses the system TTS engine with an en-AU preference, ducks other audio while speaking,
@@ -60,23 +63,49 @@ See [`WALKTHROUGH.md`](WALKTHROUGH.md) for the screen-by-screen detail.
 
 ## Bundled content
 
-`app/src/main/assets/exercise_db.json` (schema version 2, ~128 KB) ships:
+`app/src/main/assets/exercise_db.json` (schema version 3, ~207 KB) ships:
 
 | | Count |
 |---|---|
-| Exercises | **78** |
+| Exercises | **96** |
 | Machine routines | **12** |
-| Total entries | **90** |
-| Citations across exercises | 93 |
-| Procedural animations (`anim/AnimationRegistry.kt`) | **69** |
+| Total entries | **108** |
+| Exercises graded as muscle-retention sets | **30** |
+| Citations across exercises (general and muscle-retention) | 180 |
+| Procedural animations (`anim/AnimationRegistry.kt`) | **85** |
 
-Exercises by category: Floor 27 · Reformer 17 · Back care 13 · Spin 12 · Elliptical 9.
-By evidence tier: Moderate 42 · Strong 32 · Limited 4. Limited-tier entries are hidden until the user
+Exercises by category: Floor 41 · Reformer 21 · Back care 13 · Spin 12 · Elliptical 9.
+By evidence tier: Moderate 54 · Strong 36 · Limited 6. Limited-tier entries are hidden until the user
 opts in via Settings.
+By muscle-retention tier (graded separately — see below): Strong 5 · Moderate 12 · Limited 13.
 
 The database is validated at load time by `data/DatabaseValidator.kt` under a hard `check()` — roughly
-40 field, range and cross-reference rules, including that every `animationId` resolves against the
-animation registry. A malformed asset fails fast rather than degrading silently.
+50 field, range and cross-reference rules, including that every `animationId` resolves against the
+animation registry, that every muscle-retention grade carries its own reference (or, if limited, a
+candid note), and that the mat-only coverage the app promises actually exists. A malformed asset
+fails fast rather than degrading silently.
+
+### Muscle-retention sessions
+
+A session's **focus** is either general fitness (the circuit/interval generator) or muscle retention.
+With the focus on, Floor and Reformer blocks are rebuilt as repeated sets taken close to failure — the
+stimulus that protects muscle in an energy deficit — balanced across leg push, upper push,
+hamstring/glute and upper pull. What the evidence does and does not support is stated in the app, not
+smoothed over (full detail in [`RESEARCH.md`](RESEARCH.md) §12):
+
+- **The grade is separate.** An exercise can be well supported for general health and weak for holding
+  on to muscle. Reformer work is never graded strong for it — no trial shows limb-muscle growth from
+  reformer training — and trunk work is limited.
+- **Cardio machines count as zero resistance sets.** Bike and elliptical blocks stay as cardio.
+- **Light loads only work when sets end near failure.** The clock is a container: the effort target is
+  spoken, "Set done" ends a set on the last good rep, and a one-tap rating after each set decides
+  whether it counted and when an exercise has become too easy.
+- **Hand weights are gated by a useful minimum.** With the default 2 kg they add shoulder raises,
+  curls, triceps extensions and prone raises; rows, presses and loaded leg work need heavier weights
+  and are not shipped. Without adequate weights, upper-body pulling is a real gap, and the generator
+  says so instead of filling it with something ineffective.
+- **The promise is "minimise", not "prevent".** Weekly targets (6 hard sets per muscle group, floor 4)
+  are sensible derivations; no trial has tested a minimum dose during fat loss.
 
 ## Architecture
 
@@ -105,6 +134,10 @@ Key decisions, all recorded with rationale in [`DECISIONS.md`](DECISIONS.md):
   serialized model plus indexable columns, avoiding a 40-column entity for read-only reference content.
 - **Process-death restore** persists a session snapshot every 5 s to a file (not Room), wiped on clean
   completion.
+- **Muscle retention is a session focus, not a category, and needed no migration.** Categories say
+  where you train; the focus says how the block is built. Every new field is additive with a default,
+  set outcomes ride on the existing JSON columns, and progression levels live in DataStore — so stored
+  sessions, history, snapshots and exports mean exactly what they did (DECISIONS D-20–D-28).
 
 **Tech stack:** Kotlin 2.0.21 · AGP 8.9.2 · Compose BOM 2024.12.01 · Material 3 · Navigation Compose
 2.8.5 · Room 2.6.1 · DataStore 1.1.1 · WorkManager 2.10.0 · Hilt 2.53.1 · Health Connect 1.1.0 ·
@@ -116,8 +149,9 @@ Glance 1.1.1 · kotlinx-serialization 1.7.3.
 app/src/main/java/au/mark/kinetiq/
   anim/       procedural 14-joint rig, keyframe + IK animations, Canvas renderer, registry
   data/       Room DB, models, repositories, bundled-DB validator, export/import codec
-  domain/     workout generator (duration solver, blocks, heuristics), MET calories,
-              machine cue renderer, streaks, weekly plan engine
+  domain/     workout generator (duration solver, blocks, heuristics), the set-based
+              muscle-retention block builder and its eligibility rules, set tracking and
+              progression advice, MET calories, machine cue renderer, streaks, weekly plan engine
   health/     Health Connect manager (connect-client 1.1.0)
   reminders/  WorkManager reminder scheduling
   service/    foreground workout session service + pure SessionEngine
@@ -126,8 +160,8 @@ app/src/main/java/au/mark/kinetiq/
   voice/      TTS coach (en-AU preferred, audio-focus ducking, tone-generator beeps)
   widget/     Glance home-screen widget (repeat last workout + streak)
   di/         Hilt modules
-app/src/main/assets/exercise_db.json   versioned exercise/routine database (90 entries, all cited)
-app/src/test/                          23 unit-test classes, 142 tests
+app/src/main/assets/exercise_db.json   versioned exercise/routine database (108 entries, all cited)
+app/src/test/                          28 unit-test classes, 243 tests
 docs/audit/                            security and Android reliability audit reports
 docs/plan/                             phased implementation plan and progress tracking
 ```
@@ -170,7 +204,7 @@ artifacts on every push.
 ./gradlew testDebugUnitTest
 ```
 
-142 tests across 23 classes, running offline under Robolectric (the `android-all` runtime jar is
+243 tests across 28 classes, running offline under Robolectric (the `android-all` runtime jar is
 resolved through Gradle rather than Robolectric's own fetcher, so CI needs no network).
 
 | Test class | Covers |
@@ -185,6 +219,11 @@ resolved through Gradle rather than Robolectric's own fetcher, so CI needs no ne
 | `VoiceCoachStatusTest` | TTS init status, retry and queue behaviour |
 | `ThemePaletteContrastTest` | WCAG contrast for all 7 palettes × 4 modes |
 | `ExportImportAndMiscTest` | Export/import round-trip and import validation |
+| `ResistanceFoundationTest` | Stored data from before the feature still decodes to what it meant; the one eligibility rule set; validator rules for retention content |
+| `ResistanceBlockBuilderTest` | Set structure, rests, slot coverage, ladders, limited-evidence gap filling, warnings and fixes, time budget — and that general sessions are byte-identical when unusable content is added |
+| `ResistanceContentTest` | What the bundled content actually delivers with the default kit, pinned to the claims in the app's copy |
+| `ResistanceTrackingTest` | "Set done", which sets count, credit per muscle, the weekly meter, progression advice, snapshot compatibility |
+| `HealthConnectTypeTest` | Exercise type written per block kind |
 | `HealthConnectIdTest` | Client record IDs and per-timestamp zone offsets |
 | `SettingsRoundTripTest`, `SummaryNavigationTest`, `DisplayNameTest` | Settings persistence, summary navigation identity, category display names |
 
@@ -298,7 +337,8 @@ Fixed since the audit:
 (`08f56f3ba29cad9950d877f4722be309`) has not been verified against a device carrying the previously
 shipped build. Do that before the next release — see [Database migrations](#database-migrations).
 
-Phase 3 of the implementation plan (database and animation expansion) is in progress — see
+Phase R (muscle-retention sessions) is built; Phase 3 of the implementation plan (database and animation
+expansion) is not started and now has to account for it — see
 [`docs/plan/PROGRESS.md`](docs/plan/PROGRESS.md) for the item-level state.
 
 ## Database migrations
@@ -341,11 +381,11 @@ shipped tag's `Entities.kt` rather than `HEAD`.
 | [`DECISIONS.md`](DECISIONS.md) | Judgment calls (D-01…D-19) with rationale |
 | [`RESEARCH.md`](RESEARCH.md) | Evidence base and citations behind the exercise database |
 | [`docs/audit/`](docs/audit/) | Security and reliability audit reports and fix designs |
-| [`docs/plan/`](docs/plan/) | Phased implementation plan, progress, deviations |
+| [`docs/plan/`](docs/plan/) | Phased implementation plan, progress, deviations — including `PHASE_R_MUSCLE_RETENTION.md` |
 
 ## Acceptance checks
 
-- `./gradlew testDebugUnitTest` — 142 tests green (DB validator included).
+- `./gradlew testDebugUnitTest` — 243 tests green (DB validator included).
 - `./gradlew assembleRelease` — prints `OK: merged release manifest has no INTERNET permission.`
 - `aapt dump permissions app-release.apk` — no `android.permission.INTERNET` (CI does this too).
 - Hidden animation-QA screen: Settings → long-press the version row.

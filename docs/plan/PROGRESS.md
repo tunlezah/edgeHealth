@@ -55,7 +55,23 @@ the work is not done. See IMPLEMENTATION_PLAN.md for rules.
 - [x] P2-C11 7 accent palettes × Light/Dark/AMOLED/System, full 21-role coverage, swatch row, MainActivity wiring
 - [x] P2-C12 ThemePaletteContrastTest + SettingsRoundTripTest
 
+## Phase R — Muscle-retention sessions (PHASE_R_MUSCLE_RETENTION.md)
+
+Built ahead of Phases 3 and 4. Items it took from Phase 3 are marked on the Phase 3 lines below.
+
+- [x] R-0 Additive model, ExerciseEligibility (generator pools + Builder swap), validator rules, equipment settings + ResistanceFoundationTest
+- [x] R-1a Evidence-graded content, asset schemaVersion 3, RESEARCH §12 + ResistanceContentTest
+- [x] R-1b Animations for the new exercises, KeyframeAnim.handWeights + dumbbell glyph, AnimGeometryTest contact assertions
+- [x] R-1c ResistanceBlockBuilder, retention warnings/fixes, Builder focus + chips, player set counter / effort target / Set done / Switch sides, set-aware voice cues + ResistanceBlockBuilderTest
+- [x] R-2a Counted sets, per-muscle credit on CompletedBlock, weekly meter on Plan, deficit-first slot order + ResistanceTrackingTest
+- [x] R-2b Post-set effort rating, progression advice on Summary, resistance levels in Settings
+- [x] R-2c Health Connect strength-training type for set-based mat blocks + HealthConnectTypeTest
+- [ ] R-3 Equipment-dependent exercises (chair, step, ankle anchor, reformer long box) with animations and props
+
 ## Phase 3 — Database & animations (PHASE3_DATABASE_ANIMATIONS.md)
+
+Read with the adjustments in PHASE_R_MUSCLE_RETENTION.md § "What this changes for Phase 3"
+(already-built entries, schemaVersion 4, recomputed counts, citation re-verification).
 
 - [ ] P3-1.1 Tier conflicts resolved (dead bug/bird dog MODERATE; bridges STRONG + Searle ref copy)
 - [ ] P3-1.2 Hamstring-stretch contradiction resolved (both MODERATE, aligned notes)
@@ -64,20 +80,20 @@ the work is not done. See IMPLEMENTATION_PLAN.md for rules.
 - [ ] P3-1.5 spin_recovery_soft resistance 0.18 + MET 3.5
 - [ ] P3-1.6 README count updated
 - [ ] P3-1.7 REFORMER/BACK warm-up flags (mermaid, lunge stretch, cat-cow, pelvic tilt)
-- [ ] P3-2.1 schemaVersion → 3
+- [ ] P3-2.1 schemaVersion → 4 (3 was taken by Phase R — DEVIATIONS.md)
 - [ ] P3-2.2 EllipticalCue.incline + renderer + validator
 - [ ] P3-2.3 Insights model + validator + Library myth-buster cards
 - [ ] P3-2.4 Prop.BENCH + drawBench + BENCH_Y
 - [ ] P3-2.5 Validator minimum counts raised
-- [ ] P3-3.1 Reused-family animations (13: squat thrust, split squat, single-leg bridge, single-leg RDL, side leg raise, donkey kick, bicycle, hollow, flutter, bridge march, single-leg footwork, reformer running, eccentric footwork)
-- [ ] P3-3.2 New pose families (6: shadow boxing, calf raise, pike push-up, Copenhagen, balance, soleus)
+- [ ] P3-3.1 Reused-family animations (13: squat thrust, split squat, single-leg bridge, single-leg RDL, side leg raise, donkey kick, bicycle, hollow, flutter, bridge march, single-leg footwork, reformer running, eccentric footwork) — 4 done in Phase R: split squat, single-leg bridge, single-leg RDL, single-leg footwork
+- [ ] P3-3.2 New pose families (6: shadow boxing, calf raise, pike push-up, Copenhagen, balance, soleus) — 2 done in Phase R: calf raise, pike push-up
 - [ ] P3-3.3 Parametric machine instances (7) + all registered in AnimationRegistry.all
 - [ ] P3-4.1 SPIN entries (4: 4x4, snap sprint, 10-20-30 block, standing sprint)
 - [ ] P3-4.2 ELLIPTICAL entries (3: 4x4 push, incline climb, reverse sprint)
-- [ ] P3-4.3 FLOOR strong/moderate entries (10)
+- [ ] P3-4.3 FLOOR strong/moderate entries (10) — 5 done in Phase R: split squat, single-leg bridge, single-leg RDL, calf raise, pike push-up
 - [ ] P3-4.4 FLOOR LIMITED entries (6)
 - [ ] P3-4.5 BACK entry (bridge march)
-- [ ] P3-4.6 REFORMER entries (3)
+- [ ] P3-4.6 REFORMER entries (3) — 1 done in Phase R: single-leg footwork
 - [ ] P3-5 Routines (9: Norwegian 4x4 ×2 + compacts, 10-20-30, SIT snaps, recovery ×2, 45-min MICT)
 - [ ] P3-6 Insights JSON (2 myth-busters)
 - [ ] P3-7 Docs (README, DECISIONS D-20, RESEARCH §12)

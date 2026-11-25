@@ -123,7 +123,7 @@ muscle-retention session starts with whichever region is furthest behind.
 - **Disclaimer**: view dialog + toggle for the spoken pre-workout reminder line.
 - **Data**: Export / Import JSON via the system file picker (SAF, no storage permissions); import
   validates and lists every problem, or reports exactly what was added (duplicates skipped).
-- **Hidden QA**: long-press the version row → animation QA screen cycling all 54 rig animations.
+- **Hidden QA**: long-press the version row → animation QA screen cycling all 85 rig animations.
 
 ## 10. Home-screen widget
 Glance widget: one-tap **repeat last workout** (jumps straight into the player) + current streak.
