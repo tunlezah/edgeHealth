@@ -1,7 +1,23 @@
 package au.mark.kinetiq.anim
 
-/** Prop drawn behind/with the figure. */
-enum class Prop { NONE, MAT, WALL, REFORMER, REFORMER_LEG_STRAPS, REFORMER_ARM_STRAPS, SPIN_BIKE, ELLIPTICAL }
+/**
+ * Prop drawn behind/with the figure. The geometry of the bench, step, anchor and long-box props is
+ * published as constants on [AnimationRegistry] (BENCH_*, STEP_*, ANCHOR_*, BOX_*); the poses are
+ * solved against those numbers, so the renderer draws exactly what they describe.
+ */
+enum class Prop {
+    NONE, MAT, WALL, REFORMER, REFORMER_LEG_STRAPS, REFORMER_ARM_STRAPS, SPIN_BIKE, ELLIPTICAL,
+    /** Chair/bench seat in front of (+X of) the figure, on the ground line. */
+    BENCH_FRONT,
+    /** Chair/bench seat behind (-X of) the figure, on the ground line. */
+    BENCH_BACK,
+    /** Low solid step on the ground line; the figure stands on its near edge. */
+    STEP,
+    /** Mat plus a low immovable bar across the back of the ankles. */
+    ANCHOR,
+    /** Reformer with the long box on the carriage, arm straps to the wrists. */
+    REFORMER_BOX_ARM_STRAPS,
+}
 
 /** Primary working muscle group — used for the optional highlight tint. */
 enum class MuscleGroup { LEGS, GLUTES, CORE, CHEST, BACK, SHOULDERS, ARMS, FULL_BODY }
