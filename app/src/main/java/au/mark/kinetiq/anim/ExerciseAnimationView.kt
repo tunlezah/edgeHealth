@@ -419,7 +419,33 @@ private fun DrawScope.drawKeyframeAnim(
     }
 
     drawFigure(sk, style, anim.muscle)
+
+    if (anim.handWeights) {
+        drawDumbbell(sk.far.elbow, sk.far.wrist, style.prop)
+        drawDumbbell(sk.near.elbow, sk.near.wrist, style.prop)
+    }
 }
+
+/**
+ * A small dumbbell in the fist: a short bar across the line of the forearm with a plate at each
+ * end. Lifted when it would sink below the floor line, so a hand resting on the mat holds a
+ * weight that rests on the mat too rather than one buried in it.
+ */
+private fun DrawScope.drawDumbbell(elbow: Joint, wrist: Joint, color: Color) {
+    val dx = wrist.x - elbow.x
+    val dy = wrist.y - elbow.y
+    val len = hypot(dx, dy).coerceAtLeast(1e-4f)
+    val px = -dy / len * DUMBBELL_HALF_LENGTH
+    val py = dx / len * DUMBBELL_HALF_LENGTH
+    val sink = (maxOf(wrist.y - py, wrist.y + py) + DUMBBELL_PLATE - AnimationRegistry.GY).coerceAtLeast(0f)
+    val cy = wrist.y - sink
+    limbLine(wrist.x - px, cy - py, wrist.x + px, cy + py, color, scale(0.016f))
+    drawCircle(color, radius = scale(DUMBBELL_PLATE), center = Offset(mapX(wrist.x - px), mapY(cy - py)))
+    drawCircle(color, radius = scale(DUMBBELL_PLATE), center = Offset(mapX(wrist.x + px), mapY(cy + py)))
+}
+
+private const val DUMBBELL_HALF_LENGTH = 0.034f
+private const val DUMBBELL_PLATE = 0.017f
 
 // ---------------------------------------------------------------------- spin bike
 
