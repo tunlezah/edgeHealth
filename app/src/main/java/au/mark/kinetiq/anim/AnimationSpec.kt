@@ -54,6 +54,8 @@ data class KeyframeAnim(
     override val muscle: MuscleGroup = MuscleGroup.FULL_BODY,
     val pathJoint: PathJoint = PathJoint.NONE,
     val keyframes: List<Keyframe>,
+    /** Draw a small dumbbell at each wrist — hand-weight exercises. */
+    val handWeights: Boolean = false,
 ) : ExerciseAnim {
 
     init {
