@@ -201,6 +201,26 @@ class ResistanceBlockBuilderTest {
     }
 
     @Test
+    fun `a region's first exercise is its compound movement, accessories only when there is time`() {
+        val library = listOf(
+            set("split_squat", MovementSlot.LOWER_PUSH, primary = listOf(au.mark.kinetiq.data.model.Muscle.QUADS, au.mark.kinetiq.data.model.Muscle.GLUTES)),
+            set("reverse_nordic", MovementSlot.LOWER_PUSH),
+            set("wall_sit", MovementSlot.LOWER_PUSH, isometric = true),
+        )
+        repeat(20) { seed ->
+            // A short session: whatever else squeezes in, the compound movement leads and gets the most sets.
+            val short = generate(retention(6), library, seed).sets()
+            assertThat(short.first().exerciseId).isEqualTo("split_squat")
+            assertThat(short.count { it.exerciseId == "split_squat" }).isAtLeast(2)
+            assertThat(short.mapNotNull { it.exerciseId }).doesNotContain("reverse_nordic")
+            // Plenty of room: the others follow, the hold last.
+            val order = generate(retention(40, restMode = RestMode.RECOVERY), library, seed)
+                .sets().mapNotNull { it.exerciseId }.distinct()
+            assertThat(order).containsExactly("split_squat", "reverse_nordic", "wall_sit").inOrder()
+        }
+    }
+
+    @Test
     fun `a level the user chose is honoured even when it is a limited-evidence regression`() {
         // prone_raise rung 1 is LIMITED. By default it is only ever a gap filler…
         repeat(10) { seed -> assertThat(generate(retention(45), seed = seed).ids()).doesNotContain("prone_ytw") }

@@ -124,4 +124,18 @@
   were never consulted for the mid-step and in-rest cues — both were always spoken; they now honour
   the settings. (b) CI had been failing since the `android-actions/setup-android` default package
   list began requesting the removed `tools` SDK package; the workflow now requests `platform-tools` only.
+- **D-30 Equipment-dependent exercises are off until switched on.** Nine exercises need a sturdy chair,
+  a step, an ankle anchor or the reformer long box (the user was asked which they have and answered
+  only for hand weights). Each sits behind its own Settings → Equipment switch, all off by default, so
+  nothing is ever cued that the user cannot safely set up. A chair and a step are separate switches:
+  a chair raises hands, feet or shoulders, but nobody should stand on the edge of one. What they add
+  is exactly what the mat and 2 kg weights lack — harder rungs for push-ups, single-leg squats and hip
+  thrusts, the only STRONG hamstring exercise (the Nordic, cued as short stop-short sets because the
+  evidence says to start it at very low volume), a full-range calf raise, and on the reformer a
+  MODERATE upper-back pull that makes the LIMITED strap row unnecessary. None of them fixes the lats.
+- **D-31 Animation props are drawn from registry constants, and the long box is taller than life.**
+  Bench, step, anchor and box geometry are public constants on `AnimationRegistry` that the poses were
+  solved against; the renderer draws exactly those. The drawn reformer carriage sits only 0.03 above
+  the floor, so a true-to-scale long box would leave no room for an arm to sweep under the shoulder —
+  `BOX_H` is 0.22 so the movement reads. One-arm strap animations draw only the working hand's strap.
 

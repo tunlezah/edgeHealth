@@ -247,9 +247,18 @@ internal class ResistanceBlockBuilder(
             }
         }
 
-    /** Best retention tier first, random within a tier. */
+    /**
+     * Best retention tier first. Within a tier a multi-muscle movement comes before a
+     * single-muscle one and a hold comes last, so a region's first exercise is its progressive
+     * compound lift and accessories (a wall sit, a reverse Nordic) only arrive when there is time
+     * for a second. Random beyond that.
+     */
     private fun ranked(usable: List<Exercise>): List<Exercise> =
-        usable.shuffled(random).sortedBy { tierRank(it.resistance!!.tier) }
+        usable.shuffled(random).sortedWith(
+            compareBy<Exercise>({ tierRank(it.resistance!!.tier) })
+                .thenByDescending { it.resistance!!.primary.size }
+                .thenBy { it.resistance!!.isometric },
+        )
 
     /** Add one set at a time, in order, to the named picks while the block still fits. */
     private fun topUp(picks: List<Pick>, ids: List<String>, cap: Int, fits: (List<Pick>) -> Boolean): List<Pick> {

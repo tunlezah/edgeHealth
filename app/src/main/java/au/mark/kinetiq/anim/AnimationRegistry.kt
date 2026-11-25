@@ -1,6 +1,7 @@
 package au.mark.kinetiq.anim
 
 import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Every exercise animation in the app, keyed by animationId.
@@ -28,7 +29,38 @@ object AnimationRegistry {
     /** Joint height of a body lying on the reformer carriage. */
     const val CARRIAGE_LIE = 0.40f
 
+    // ---- Prop geometry the poses are solved against. Surface heights are CONTACT heights in the
+    // same sense as GY: a joint resting on the surface is authored exactly AT this y, and the
+    // drawn top edge belongs one limb radius further down the screen (y + 0.026), which is where
+    // the ground line's top edge sits relative to GY.
+
+    /** Bench/chair seat: contact height of a wrist, toe, instep or hip resting on it (0.24 above the floor line, a ~42 cm chair). */
+    const val BENCH_Y = 0.22f
+    /** [Prop.BENCH_FRONT] seat, near edge (the edge toward the figure): hands and shoulder blades rest just inside it. */
+    const val BENCH_FRONT_X0 = 0.18f
+    /** [Prop.BENCH_FRONT] seat, far edge. */
+    const val BENCH_FRONT_X1 = 0.48f
+    /** [Prop.BENCH_BACK] seat, far edge. */
+    const val BENCH_BACK_X0 = -0.60f
+    /** [Prop.BENCH_BACK] seat, near edge (the edge toward the figure): toes, the rear instep and the hips meet the seat here. */
+    const val BENCH_BACK_X1 = -0.34f
+    /** [Prop.STEP] top: contact height of the forefoot standing on it (0.08 above the floor line; higher pushes the head out of the view at the top of a calf raise). */
+    const val STEP_Y = 0.38f
+    /** [Prop.STEP] near edge — the edge the heel hangs off; the block is solid from here to [STEP_X1] and down to the ground. */
+    const val STEP_X0 = 0f
+    /** [Prop.STEP] far edge. */
+    const val STEP_X1 = 0.34f
+    /** [Prop.ANCHOR] bar, seen end-on: X of its centre, directly over the kneeling figure's ankle joints. */
+    const val ANCHOR_X = -0.425f
+    /** [Prop.ANCHOR] bar: Y of its centre — it sits on the back of the ankles, whose joints lie at GY (a bar of radius <= 0.019 just touches them). */
+    const val ANCHOR_Y = 0.415f
+    /** [Prop.REFORMER_BOX_ARM_STRAPS] long box: height above the carriage deck, so a body lying on it has its joint line at CARRIAGE_LIE - BOX_H. */
+    const val BOX_H = 0.22f
+    /** Long box: half its length along the rail. It is centred on the carriage and rides with it, spanning carriage centre -/+ this. */
+    const val BOX_HALF_LENGTH = 0.17f
+
     private fun cosd(deg: Float) = cos(Math.toRadians(deg.toDouble())).toFloat()
+    private fun sind(deg: Float) = sin(Math.toRadians(deg.toDouble())).toFloat()
 
     /** Pelvis height that puts the support foot's ankle on the ground line. */
     private fun grounded(thigh: Float, knee: Float): Float =
@@ -36,6 +68,53 @@ object AnimationRegistry {
 
     /** Reformer carriage center X for a given prop value (0 = home, 1 = fully out). */
     private fun carriageX(prop: Float): Float = -0.16f + 0.24f * prop
+
+    /**
+     * One eased move through a contact-solved half-way pose (the caller supplies the end keyframe).
+     *
+     * A limb planted at both ends of a move is a closed chain: blending its joint angles straight
+     * from the start pose to the end pose lets the planted hand or foot wander by a centimetre or
+     * more in between. Passing through a pose solved on the same contacts keeps it put. ACCEL in
+     * and DECEL out are the two halves of the SMOOTH quintic, so the timing is exactly that of a
+     * single SMOOTH segment — nothing pauses at the waypoint.
+     */
+    private fun via(t0: Float, t1: Float, from: Pose, mid: Pose): List<Keyframe> = listOf(
+        Keyframe(t0, from, Ease.ACCEL),
+        Keyframe((t0 + t1) / 2f, mid, Ease.DECEL),
+    )
+
+    /**
+     * As above for long travel: waypoints solved at 2/9, 1/2 and 7/9 of the contact path, placed at
+     * 30/50/70 % of the move. That spacing is the one where ACCEL, LINEAR, LINEAR, DECEL join
+     * with no step in speed, so the move still reads as one eased stroke.
+     */
+    private fun via(t0: Float, t1: Float, from: Pose, a: Pose, b: Pose, c: Pose): List<Keyframe> {
+        val d = t1 - t0
+        return listOf(
+            Keyframe(t0, from, Ease.ACCEL),
+            Keyframe(t0 + 0.3f * d, a, Ease.LINEAR),
+            Keyframe(t0 + 0.5f * d, b, Ease.LINEAR),
+            Keyframe(t0 + 0.7f * d, c, Ease.DECEL),
+        )
+    }
+
+    /**
+     * Five waypoints, for a planted foot under a leg that starts near lockout — where a little
+     * hip travel is a lot of knee angle and three waypoints still let the foot sag. Waypoints sit
+     * at 13/32/50/68/87 % of the contact path and 20/35/50/65/80 % of the move (20 % ramps, constant
+     * speed between), again with no step in speed at any join.
+     */
+    private fun via(t0: Float, t1: Float, from: Pose, a: Pose, b: Pose, c: Pose, d: Pose, e: Pose): List<Keyframe> {
+        val span = t1 - t0
+        return listOf(
+            Keyframe(t0, from, Ease.ACCEL),
+            Keyframe(t0 + 0.20f * span, a, Ease.LINEAR),
+            Keyframe(t0 + 0.35f * span, b, Ease.LINEAR),
+            Keyframe(t0 + 0.50f * span, c, Ease.LINEAR),
+            Keyframe(t0 + 0.65f * span, d, Ease.LINEAR),
+            Keyframe(t0 + 0.80f * span, e, Ease.DECEL),
+        )
+    }
 
     // ------------------------------------------------------------------ FLOOR
 
@@ -593,6 +672,621 @@ object AnimationRegistry {
         ),
     )
 
+    // ------------------------------------------------------------------ FLOOR (strength work)
+    // In these poses BOTH sides are solved to their own contact: the far hip and shoulder sit a
+    // few millimetres behind and below the near ones (the rig's depth cheat), so a far limb that
+    // merely copied the near limb's angles would land under the floor — a far foot there makes
+    // the ground constraint lift the whole figure off its hands, and a far wrist there sits right
+    // on the wrist-clearance threshold and pops whenever it engages. The price is that a planted
+    // far arm reads a little more bent than the near one at lockout (its shoulder starts lower).
+
+    // Split squat: a static split stance, lungeBottom re-solved. The front (near) ankle and the
+    // ball of the rear (far) foot never move; the pelvis travels straight down between them.
+    // Hands rest on the hips, so the arms ride with the trunk.
+    private val ssTop = Pose(
+        pelvisY = 0.062f, torso = 5f, neck = -4f,
+        uArmL = -32.5f, uArmR = -33.2f, elbowL = 62.1f, elbowR = 60.7f,
+        thighR = 39.6f, kneeR = 24f, footR = -15.6f,     // front leg: shin leaning back, foot flat
+        thighL = -21.5f, kneeL = 30.6f, footL = 26.1f,   // rear leg: on the ball of the foot
+    )
+    private val ssA = ssTop.copy(
+        pelvisY = 0.09f, thighR = 51.4f, kneeR = 44.6f, footR = -6.7f,
+        thighL = -14.8f, kneeL = 49f, footL = 35.4f,
+    )
+    private val ssB = ssTop.copy(
+        pelvisY = 0.125f, thighR = 62f, kneeR = 61.3f, footR = -0.7f,
+        thighL = -10.4f, kneeL = 64.9f, footL = 43.8f,
+    )
+    private val ssC = ssTop.copy(
+        pelvisY = 0.159f, thighR = 71.1f, kneeR = 74.2f, footR = 3.1f,
+        thighL = -8.2f, kneeL = 77.3f, footL = 51f,
+    )
+    private val ssBot = ssTop.copy(
+        pelvisY = 0.187f, thighR = 78f, kneeR = 83.1f, footR = 5.1f,
+        thighL = -7.6f, kneeL = 85.7f, footL = 56.3f,
+    )
+
+    private val flSplitSquat = KeyframeAnim(
+        id = "fl_split_squat", durationMs = 3200, muscle = MuscleGroup.LEGS,
+        pathJoint = PathJoint.PELVIS,
+        keyframes = via(0f, 0.42f, ssTop, ssA, ssB, ssC) +  // eccentric
+            Keyframe(0.42f, ssBot) +                         // bottom dwell
+            via(0.54f, 0.94f, ssBot, ssC, ssB, ssA) +
+            Keyframe(0.94f, ssTop),
+    )
+
+    // Single-leg bridge: the shoulders are the pivot (pinned at GY) and the planted near foot
+    // keeps its spot, so the pelvis swings up on an arc about the shoulders until shoulder, hip
+    // and knee line up. The far leg stays long and clear of the mat throughout.
+    private val bsDn = Pose(
+        pelvisY = SUPINE_Y, torso = 92f, neck = -13f,
+        uArmL = 177f, uArmR = 177f, elbowL = 2f, elbowR = 2f,
+        thighR = -149.8f, kneeR = -131.2f, footR = -161.4f,
+        thighL = -120f, kneeL = -8f, footL = -100f,
+    )
+    private val bsMid = Pose(
+        pelvisX = 0.008f, pelvisY = 0.391f, torso = 103.7f, neck = -17.5f,
+        uArmL = 165.3f, uArmR = 165.3f, elbowL = 2f, elbowR = 2f,
+        thighR = -131.4f, kneeR = -125.8f, footR = -174.4f,
+        thighL = -118.5f, kneeL = -7f, footL = -100f,
+    )
+    private val bsUp = Pose(
+        pelvisX = 0.028f, pelvisY = 0.336f, torso = 115.4f, neck = -22f,
+        uArmL = 153.6f, uArmR = 153.6f, elbowL = 2f, elbowR = 2f,
+        thighR = -115.4f, kneeR = -114f, footR = -178.6f,
+        thighL = -117f, kneeL = -6f, footL = -100f,
+    )
+
+    private val flBridgeSingle = KeyframeAnim(
+        id = "fl_bridge_single", durationMs = 3600, prop = Prop.MAT, muscle = MuscleGroup.GLUTES,
+        pathJoint = PathJoint.PELVIS,
+        keyframes = via(0f, 0.32f, bsDn, bsMid) +
+            Keyframe(0.32f, bsUp) +                          // top squeeze
+            via(0.60f, 0.95f, bsUp, bsMid) +                 // slower lowering
+            Keyframe(0.95f, bsDn),
+    )
+
+    // Single-leg RDL: the support (near) ankle stays under a soft knee while the hips travel
+    // back; flat back and trailing leg tip as one line and the arms hang plumb.
+    private val rdlTop = Pose(
+        pelvisY = grounded(0f, 2f), torso = 3f, neck = -2f,
+        uArmL = 3f, uArmR = 3f, elbowL = 6f, elbowR = 6f,
+        thighR = 0f, kneeR = 2f, footR = 2f,
+        thighL = -10f, kneeL = 25f, footL = 10f,          // trailing toe hovers just off the floor
+    )
+    private val rdlBot = Pose(
+        pelvisX = -0.05f, pelvisY = 0.008f, torso = 75f, neck = -16f,
+        uArmL = -69f, uArmR = -69f, elbowL = 6f, elbowR = 6f,
+        thighR = 14.1f, kneeR = 18f, footR = 3.9f,
+        thighL = -68f, kneeL = 8f, footL = -5f,
+    )
+
+    private val flSingleLegRdl = KeyframeAnim(
+        id = "fl_single_leg_rdl", durationMs = 4000, muscle = MuscleGroup.GLUTES,
+        pathJoint = PathJoint.HEAD,
+        keyframes = listOf(
+            Keyframe(0f, rdlTop),
+            Keyframe(0.42f, rdlBot),
+            Keyframe(0.54f, rdlBot),   // dwell at the hinge
+            Keyframe(0.94f, rdlTop),
+        ),
+    )
+
+    // Heel raise: the toe is the pivot. Rolling 38 degrees onto the ball of the foot lifts the
+    // ankle FOOT * sin(38) = 0.046 and carries it FOOT * (1 - cos(38)) = 0.016 forward, which
+    // leaves the toe tip exactly where it was.
+    private val calfUp = standing.copy(
+        pelvisX = 0.016f, pelvisY = grounded(0f, 0f) - 0.046f, footL = -38f, footR = -38f,
+    )
+
+    private val flCalfRaise = KeyframeAnim(
+        id = "fl_calf_raise", durationMs = 2800, muscle = MuscleGroup.LEGS,
+        keyframes = listOf(
+            Keyframe(0f, standing),
+            Keyframe(0.36f, calfUp),
+            Keyframe(0.52f, calfUp),     // top dwell
+            Keyframe(0.95f, standing),   // slow eccentric
+        ),
+    )
+
+    // Single-leg version: same pivot, the far leg folded behind and clear of the floor all loop.
+    private val calfSingleDn = standing.copy(thighL = 12f, kneeL = 78f, footL = -22f)
+    private val calfSingleUp = calfSingleDn.copy(
+        pelvisX = 0.016f, pelvisY = grounded(0f, 0f) - 0.046f, footR = -38f,
+    )
+
+    private val flCalfRaiseSingle = KeyframeAnim(
+        id = "fl_calf_raise_single", durationMs = 2800, muscle = MuscleGroup.LEGS,
+        keyframes = listOf(
+            Keyframe(0f, calfSingleDn),
+            Keyframe(0.36f, calfSingleUp),
+            Keyframe(0.52f, calfSingleUp),
+            Keyframe(0.95f, calfSingleDn),
+        ),
+    )
+
+    // Pike push-up: wrists and toes pinned 0.50 apart. Top: hips the high apex, shoulders stacked
+    // behind the hands on near-straight arms. Bottom: shoulders travel forward and down past the
+    // wrists, elbows fold back, the head lands on the mat in front of the hands. The legs cannot
+    // lengthen, so the hips necessarily come forward and a little lower as the chest drops; the
+    // feet roll up onto the toes to follow. ppuA..C are solved along that path.
+    private val ppuTop = Pose(
+        pelvisX = -0.064f, pelvisY = -0.002f, torso = 130f, neck = 6f,
+        uArmL = -122.6f, uArmR = -114.8f, elbowL = 31.8f, elbowR = 14f,
+        thighL = -26.3f, kneeL = 5f, footL = -12.1f, thighR = -25.5f, kneeR = 5f, footR = -18.5f,
+    )
+    private val ppuA = Pose(
+        pelvisX = -0.023f, pelvisY = 0.018f, torso = 132.7f, neck = 0.6f,
+        uArmL = -146.5f, uArmR = -144f, elbowL = 67.8f, elbowR = 61f,
+        thighL = -32f, kneeL = 4.6f, footL = -9.8f, thighR = -31.2f, kneeR = 4.6f, footR = -15.9f,
+    )
+    private val ppuB = Pose(
+        pelvisX = 0.028f, pelvisY = 0.043f, torso = 136f, neck = -6.1f,
+        uArmL = -169.9f, uArmR = -168.1f, elbowL = 95.3f, elbowR = 90.1f,
+        thighL = -39f, kneeL = 4f, footL = -11.8f, thighR = -38.1f, kneeR = 4f, footR = -17.5f,
+    )
+    private val ppuC = Pose(
+        pelvisX = 0.08f, pelvisY = 0.07f, torso = 139.3f, neck = -12.8f,
+        uArmL = -193.6f, uArmR = -191.5f, elbowL = 115.5f, elbowR = 110.9f,
+        thighL = -45.5f, kneeL = 3.4f, footL = -19.4f, thighR = -44.5f, kneeR = 3.4f, footR = -25f,
+    )
+    private val ppuBot = Pose(
+        pelvisX = 0.121f, pelvisY = 0.091f, torso = 142f, neck = -18.1f,
+        uArmL = -214.8f, uArmR = -212.1f, elbowL = 127.3f, elbowR = 123.1f,
+        thighL = -50.1f, kneeL = 3f, footL = -30.3f, thighR = -48.9f, kneeR = 3f, footR = -36.2f,
+    )
+
+    private val flPikePushup = KeyframeAnim(
+        id = "fl_pike_pushup", durationMs = 3200, prop = Prop.MAT, muscle = MuscleGroup.SHOULDERS,
+        pathJoint = PathJoint.HEAD,
+        keyframes = via(0f, 0.42f, ppuTop, ppuA, ppuB, ppuC) +
+            Keyframe(0.42f, ppuBot) +                        // bottom dwell
+            via(0.52f, 0.92f, ppuBot, ppuC, ppuB, ppuA) +
+            Keyframe(0.92f, ppuTop),
+    )
+
+    // Knee push-up: both knee joints rest on the mat and are the pivot; knee, hip and shoulder
+    // stay one straight line that tips from 34 to 14 degrees while the wrists stay planted.
+    // Shins angle up behind. kpuA..C are solved along the arc.
+    private val kpuTop = Pose(
+        pelvisX = 0.004f, pelvisY = 0.328f, torso = 55.8f, neck = -43.8f,
+        uArmL = -69.1f, uArmR = -61.6f, elbowL = 35.8f, elbowR = 20f,
+        thighL = -58.2f, kneeL = 59.8f, footL = -50f, thighR = -55.8f, kneeR = 62.2f, footR = -50f,
+    )
+    private val kpuA = Pose(
+        pelvisX = 0.014f, pelvisY = 0.344f, torso = 60.4f, neck = -48.4f,
+        uArmL = -93.3f, uArmR = -89.8f, elbowL = 67.5f, elbowR = 60.2f,
+        thighL = -62.6f, kneeL = 56.7f, footL = -50f, thighR = -60.4f, kneeR = 59f, footR = -50f,
+    )
+    private val kpuB = Pose(
+        pelvisX = 0.025f, pelvisY = 0.365f, torso = 66f, neck = -54f,
+        uArmL = -118.1f, uArmR = -115.3f, elbowL = 94f, elbowR = 88.6f,
+        thighL = -68.2f, kneeL = 52.8f, footL = -50f, thighR = -66f, kneeR = 55f, footR = -50f,
+    )
+    private val kpuC = Pose(
+        pelvisX = 0.033f, pelvisY = 0.386f, torso = 71.7f, neck = -59.7f,
+        uArmL = -142.1f, uArmR = -139.3f, elbowL = 115.2f, elbowR = 110.8f,
+        thighL = -73.7f, kneeL = 48.9f, footL = -50f, thighR = -71.7f, kneeR = 51f, footR = -50f,
+    )
+    private val kpuBot = Pose(
+        pelvisX = 0.038f, pelvisY = 0.404f, torso = 76.2f, neck = -64.2f,
+        uArmL = -162.8f, uArmR = -159.4f, elbowL = 129.8f, elbowR = 125.9f,
+        thighL = -78.2f, kneeL = 45.8f, footL = -50f, thighR = -76.2f, kneeR = 47.8f, footR = -50f,
+    )
+
+    private val flKneePushup = KeyframeAnim(
+        id = "fl_knee_pushup", durationMs = 2600, prop = Prop.MAT, muscle = MuscleGroup.CHEST,
+        pathJoint = PathJoint.PELVIS,
+        keyframes = via(0f, 0.42f, kpuTop, kpuA, kpuB, kpuC) +
+            Keyframe(0.42f, kpuBot) +                        // bottom dwell
+            via(0.52f, 0.90f, kpuBot, kpuC, kpuB, kpuA) +
+            Keyframe(0.90f, kpuTop),
+    )
+
+    // Sliding leg curl: starts in the bridge (bsUp with both feet down) and the heels slide out
+    // along the floor until the legs are nearly straight, hips still off the mat. Shoulders stay
+    // pinned and both ankle joints stay at GY the whole way; toes up, weight on the heels.
+    private val scIn = bsUp.copy(
+        thighL = -117.5f, kneeL = -115.1f, footL = -193.6f, footR = -194.6f,
+    )
+    private val scA = Pose(
+        pelvisX = 0.022f, pelvisY = 0.35f, torso = 112.3f, neck = -20.8f,
+        uArmL = 156.7f, uArmR = 156.7f, elbowL = 2f, elbowR = 2f,
+        thighL = -119f, kneeL = -102.8f, footL = -194.4f, thighR = -117.1f, kneeR = -101.9f, footR = -195.4f,
+    )
+    private val scB = Pose(
+        pelvisX = 0.015f, pelvisY = 0.368f, torso = 108.5f, neck = -19.4f,
+        uArmL = 160.5f, uArmR = 160.5f, elbowL = 2f, elbowR = 2f,
+        thighL = -116.5f, kneeL = -83.6f, footL = -196.1f, thighR = -114.8f, kneeR = -82.8f, footR = -197f,
+    )
+    private val scC = Pose(
+        pelvisX = 0.01f, pelvisY = 0.386f, torso = 104.9f, neck = -17.9f,
+        uArmL = 164.1f, uArmR = 164.1f, elbowL = 2f, elbowR = 2f,
+        thighL = -108.5f, kneeL = -57.3f, footL = -196.1f, thighR = -107.1f, kneeR = -56.6f, footR = -196.9f,
+    )
+    private val scOut = Pose(
+        pelvisX = 0.006f, pelvisY = 0.4f, torso = 102f, neck = -16.8f,
+        uArmL = 167f, uArmR = 167f, elbowL = 2f, elbowR = 2f,
+        thighL = -92.1f, kneeL = -17.7f, footL = -187.6f, thighR = -90.3f, kneeR = -16f, footR = -187.7f,
+    )
+
+    private val flSlideCurl = KeyframeAnim(
+        id = "fl_slide_curl", durationMs = 3800, prop = Prop.MAT, muscle = MuscleGroup.LEGS,
+        pathJoint = PathJoint.ANKLE,
+        keyframes = via(0f, 0.50f, scIn, scA, scB, scC) +   // slow slide out (eccentric)
+            Keyframe(0.50f, scOut) +                         // long-lever dwell
+            via(0.58f, 0.92f, scOut, scC, scB, scA) +        // faster curl in
+            Keyframe(0.92f, scIn),
+    )
+
+    // Prone Y raise (head toward -X, same lie as the superman). Extension is POSITIVE spine for
+    // this chirality: the chest rises a few centimetres and the long arms lift off the floor to
+    // the line of the upper back. Legs stay heavy on the mat.
+    private val pyFlat = Pose(
+        pelvisX = 0.03f, pelvisY = SUPINE_Y, torso = -89f, spine = 1f, neck = 15f,
+        uArmL = -2f, uArmR = -0.1f, elbowL = 3f, elbowR = 3f,       // both wrists resting at GY
+        thighL = 90f, kneeL = -2f, footL = -100f, thighR = 90f, kneeR = -2f, footR = -100f,
+    )
+    private val pyLift = pyFlat.copy(torso = -87f, spine = 11f, neck = 8f, uArmL = -29f, uArmR = -29f)
+
+    private val flProneRaise = KeyframeAnim(
+        id = "fl_prone_raise", durationMs = 3400, prop = Prop.MAT, muscle = MuscleGroup.BACK,
+        pathJoint = PathJoint.WRIST,
+        keyframes = listOf(
+            Keyframe(0f, pyFlat),
+            Keyframe(0.32f, pyLift),
+            Keyframe(0.50f, pyLift),   // hold at the top
+            Keyframe(0.94f, pyFlat),   // slow lowering
+        ),
+    )
+
+    /** The same raise holding light hand weights. */
+    private val flProneRaiseW = flProneRaise.copy(id = "fl_prone_raise_w", handWeights = true)
+
+    // Lateral raise, front view (arm angles are abduction: 0 = hanging, 90 = level). A negative
+    // elbow keeps the forearm a touch below the upper arm, so the hand never climbs past the elbow.
+    private val latDown = Pose(
+        pelvisY = grounded(3f, 3f), thighL = 3f, thighR = 3f, kneeL = 3f, kneeR = 3f,
+        uArmL = 7f, uArmR = 7f, elbowL = 4f, elbowR = 4f,
+    )
+    private val latUp = latDown.copy(uArmL = 88f, uArmR = 88f, elbowL = -8f, elbowR = -8f)
+
+    private val flLateralRaise = KeyframeAnim(
+        id = "fl_lateral_raise", durationMs = 3000, facing = Facing.FRONT, muscle = MuscleGroup.SHOULDERS,
+        pathJoint = PathJoint.WRIST, handWeights = true,
+        keyframes = listOf(
+            Keyframe(0f, latDown),
+            Keyframe(0.34f, latUp),
+            Keyframe(0.46f, latUp),     // brief hold at shoulder height
+            Keyframe(0.94f, latDown),   // slow lowering
+        ),
+    )
+
+    // Standing base for the side-view hand-weight moves: tall, legs straight under the hips.
+    private val dbStand = Pose(pelvisY = grounded(0f, 0f), torso = 2f, neck = -2f)
+
+    // Biceps curl: uArm = -torso keeps the upper arm plumb; only the elbow moves.
+    private val curlLow = dbStand.copy(uArmL = -2f, uArmR = -2f, elbowL = 10f, elbowR = 10f)
+    private val curlHigh = dbStand.copy(uArmL = 1f, uArmR = 1f, elbowL = 140f, elbowR = 140f)
+
+    private val flBicepsCurl = KeyframeAnim(
+        id = "fl_biceps_curl", durationMs = 3000, muscle = MuscleGroup.ARMS,
+        pathJoint = PathJoint.WRIST, handWeights = true,
+        keyframes = listOf(
+            Keyframe(0f, curlLow),
+            Keyframe(0.34f, curlHigh),
+            Keyframe(0.44f, curlHigh),   // squeeze
+            Keyframe(0.94f, curlLow),    // slow lowering
+        ),
+    )
+
+    // Overhead triceps extension: upper arms stay by the ears; with the arm overhead, positive
+    // elbow flexion carries the forearm back and down behind the head.
+    private val triTop = dbStand.copy(uArmL = 174f, uArmR = 174f, elbowL = 8f, elbowR = 8f)
+    private val triBot = dbStand.copy(uArmL = 168f, uArmR = 168f, elbowL = 130f, elbowR = 130f)
+
+    private val flTricepsOverhead = KeyframeAnim(
+        id = "fl_triceps_overhead", durationMs = 3000, muscle = MuscleGroup.ARMS,
+        pathJoint = PathJoint.WRIST, handWeights = true,
+        keyframes = listOf(
+            Keyframe(0f, triTop),
+            Keyframe(0.44f, triBot),   // slow lowering behind the head
+            Keyframe(0.54f, triBot),   // stretch dwell
+            Keyframe(0.92f, triTop),
+        ),
+    )
+
+    // ------------------------------------------------------------------ FLOOR (bench, step, anchor)
+    // Contacts on the props are solved against the public BENCH_* / STEP_* / ANCHOR_* constants.
+    // Interior waypoints of a planted FOOT are solved 0.001 above the floor: the blend between
+    // waypoints sags by about that much, and a foot that sags past 0.002 wakes the knee-clearance
+    // constraint, which skates it. The end poses, where the eye rests, are exact.
+
+    // Incline push-up: hands on the bench's near edge, toes on the floor. Ankle, hip and shoulder
+    // are one rigid line pivoting on the ankle (heel up over a pinned toe), tipping 41 -> 26 degrees.
+    private val ipuTop = Pose(
+        pelvisX = -0.078f, pelvisY = 0.127f, torso = 48.8f, neck = -36.8f,
+        uArmL = -49.6f, uArmR = -42.8f, elbowL = 35.4f, elbowR = 20f,
+        thighL = -49.2f, footL = 29.7f, thighR = -48.8f, footR = 24.8f,
+    )
+    private val ipuA = Pose(
+        pelvisX = -0.061f, pelvisY = 0.147f, torso = 52.2f, neck = -40.2f,
+        uArmL = -73.6f, uArmR = -70.8f, elbowL = 69.9f, elbowR = 63f,
+        thighL = -52.6f, footL = 32.9f, thighR = -52.2f, footR = 28.2f,
+    )
+    private val ipuB = Pose(
+        pelvisX = -0.041f, pelvisY = 0.175f, torso = 56.4f, neck = -44.4f,
+        uArmL = -97.4f, uArmR = -95.3f, elbowL = 98.1f, elbowR = 92.9f,
+        thighL = -56.8f, footL = 36.9f, thighR = -56.4f, footR = 32.4f,
+    )
+    private val ipuC = Pose(
+        pelvisX = -0.024f, pelvisY = 0.204f, torso = 60.6f, neck = -48.6f,
+        uArmL = -120.9f, uArmR = -118.7f, elbowL = 120.5f, elbowR = 116f,
+        thighL = -61.1f, footL = 40.9f, thighR = -60.6f, footR = 36.6f,
+    )
+    private val ipuBot = Pose(
+        pelvisX = -0.011f, pelvisY = 0.227f, torso = 63.9f, neck = -51.9f,
+        uArmL = -142f, uArmR = -139.2f, elbowL = 135.6f, elbowR = 131.5f,
+        thighL = -64.4f, footL = 44f, thighR = -63.9f, footR = 39.9f,
+    )
+
+    private val flInclinePushup = KeyframeAnim(
+        id = "fl_incline_pushup", durationMs = 2800, prop = Prop.BENCH_FRONT, muscle = MuscleGroup.CHEST,
+        pathJoint = PathJoint.PELVIS,
+        keyframes = via(0f, 0.42f, ipuTop, ipuA, ipuB, ipuC) +
+            Keyframe(0.42f, ipuBot) +                        // chest at the bench edge: dwell
+            via(0.52f, 0.90f, ipuBot, ipuC, ipuB, ipuA) +
+            Keyframe(0.90f, ipuTop),
+    )
+
+    // Decline push-up: toes on the bench's near edge, hands on the floor. Same rigid line; it
+    // starts level and tips head-down to -11 degrees. Hands sit a little behind the shoulders at
+    // the top so the elbows fold back, not down, at the bottom.
+    private val dpuTop = Pose(
+        pelvisX = 0.021f, pelvisY = 0.176f, torso = 88.3f, neck = -76.3f,
+        uArmL = -113.6f, uArmR = -105.7f, elbowL = 35.7f, elbowR = 20f,
+        thighL = -89.3f, footL = 65.6f, thighR = -88.3f, footR = 64.3f,
+    )
+    private val dpuA = Pose(
+        pelvisX = 0.021f, pelvisY = 0.198f, torso = 91.1f, neck = -79.1f,
+        uArmL = -132.8f, uArmR = -129f, elbowL = 67.4f, elbowR = 60.3f,
+        thighL = -92.1f, footL = 67.7f, thighR = -91.1f, footR = 67.1f,
+    )
+    private val dpuB = Pose(
+        pelvisX = 0.02f, pelvisY = 0.226f, torso = 94.5f, neck = -82.5f,
+        uArmL = -150.2f, uArmR = -147.3f, elbowL = 94.1f, elbowR = 88.8f,
+        thighL = -95.8f, footL = 70.2f, thighR = -94.5f, footR = 70.5f,
+    )
+    private val dpuC = Pose(
+        pelvisX = 0.017f, pelvisY = 0.254f, torso = 98f, neck = -86f,
+        uArmL = -164.9f, uArmR = -162.2f, elbowL = 116f, elbowR = 111.5f,
+        thighL = -99.5f, footL = 72.3f, thighR = -98f, footR = 74f,
+    )
+    private val dpuBot = Pose(
+        pelvisX = 0.013f, pelvisY = 0.276f, torso = 100.8f, neck = -88.8f,
+        uArmL = -175.1f, uArmR = -172.5f, elbowL = 131.7f, elbowR = 127.6f,
+        thighL = -102.5f, footL = 73.7f, thighR = -100.8f, footR = 76.8f,
+    )
+
+    private val flDeclinePushup = KeyframeAnim(
+        id = "fl_decline_pushup", durationMs = 2800, prop = Prop.BENCH_BACK, muscle = MuscleGroup.CHEST,
+        pathJoint = PathJoint.PELVIS,
+        keyframes = via(0f, 0.42f, dpuTop, dpuA, dpuB, dpuC) +
+            Keyframe(0.42f, dpuBot) +                        // bottom dwell
+            via(0.52f, 0.90f, dpuBot, dpuC, dpuB, dpuA) +
+            Keyframe(0.90f, dpuTop),
+    )
+
+    // Rear-foot-elevated split squat: the rear (far) ankle rests instep-down on the bench's near
+    // edge with the toes along the seat; the front (near) foot stays flat on the floor. Trunk
+    // upright with hands on hips. Bottom: front thigh level, rear knee a hand above the floor.
+    private fun rfe(
+        px: Float, py: Float,
+        thighF: Float, kneeF: Float, footF: Float,
+        thighB: Float, kneeB: Float, footB: Float,
+    ) = Pose(
+        pelvisX = px, pelvisY = py, torso = 8f, neck = -6f,
+        uArmL = -39.5f, uArmR = -40.1f, elbowL = 63.5f, elbowR = 61.9f,
+        thighR = thighF, kneeR = kneeF, footR = footF,
+        thighL = thighB, kneeL = kneeB, footL = footB,
+    )
+
+    private val rfeTop = rfe(0.065f, 0.028f, 27.5f, 22f, -5.5f, -44.5f, 41.3f, -94.3f)
+    private val rfeA = rfe(0.062f, 0.038f, 33.3f, 32.3f, -1f, -43.2f, 46f, -90.8f)
+    private val rfeB = rfe(0.055f, 0.061f, 42.2f, 46.7f, 4.5f, -41.3f, 55f, -83.6f)
+    private val rfeC = rfe(0.045f, 0.092f, 52.1f, 61.1f, 9.1f, -40.3f, 65f, -74.7f)
+    private val rfeD = rfe(0.032f, 0.134f, 63.4f, 75.5f, 12.2f, -41f, 75.1f, -63.9f)
+    private val rfeE = rfe(0.016f, 0.187f, 77.2f, 90f, 12.8f, -44.8f, 84.5f, -50.8f)
+    private val rfeBot = rfe(0f, 0.239f, 90f, 100.2f, 10.2f, -50.9f, 90.1f, -39f)
+
+    private val flRfeSplitSquat = KeyframeAnim(
+        id = "fl_rfe_split_squat", durationMs = 3400, prop = Prop.BENCH_BACK, muscle = MuscleGroup.LEGS,
+        pathJoint = PathJoint.PELVIS,
+        keyframes = via(0f, 0.44f, rfeTop, rfeA, rfeB, rfeC, rfeD, rfeE) +   // eccentric
+            Keyframe(0.44f, rfeBot) +                                          // bottom dwell
+            via(0.56f, 0.94f, rfeBot, rfeE, rfeD, rfeC, rfeB, rfeA) +
+            Keyframe(0.94f, rfeTop),
+    )
+
+    // Single-leg squat to a chair: the support (near) foot stays flat while the hips reach back
+    // and down until they touch the seat just inside the bench's near edge; the far leg is held
+    // forward off the floor and the arms reach forward as the counterweight.
+    private val csTop = Pose(
+        pelvisX = -0.202f, pelvisY = 0.002f, torso = 4f, neck = -2f,
+        uArmL = 8f, uArmR = 8f, elbowL = 8f, elbowR = 8f,
+        thighR = 3.9f, kneeR = 10f, footR = 6.1f, thighL = 28f, kneeL = 10f, footL = 16f,
+    )
+    private val csA = Pose(
+        pelvisX = -0.208f, pelvisY = 0.007f, torso = 4.7f, neck = -2.5f,
+        uArmL = 8.9f, uArmR = 8.9f, elbowL = 8f, elbowR = 8f,
+        thighR = 10.2f, kneeR = 21.4f, footR = 11.2f, thighL = 29.2f, kneeL = 9.9f, footL = 15.8f,
+    )
+    private val csB = Pose(
+        pelvisX = -0.226f, pelvisY = 0.023f, torso = 7f, neck = -4.2f,
+        uArmL = 11.8f, uArmR = 11.8f, elbowL = 8f, elbowR = 8f,
+        thighR = 20.4f, kneeR = 37.3f, footR = 17f, thighL = 33.2f, kneeL = 9.6f, footL = 15f,
+    )
+    private val csC = Pose(
+        pelvisX = -0.255f, pelvisY = 0.05f, torso = 10.7f, neck = -6.9f,
+        uArmL = 16.4f, uArmR = 16.4f, elbowL = 8f, elbowR = 8f,
+        thighR = 32.2f, kneeR = 53.3f, footR = 21.1f, thighL = 39.5f, kneeL = 9.1f, footL = 13.8f,
+    )
+    private val csD = Pose(
+        pelvisX = -0.294f, pelvisY = 0.09f, torso = 16.1f, neck = -10.9f,
+        uArmL = 23.3f, uArmR = 23.3f, elbowL = 8f, elbowR = 8f,
+        thighR = 46.6f, kneeR = 69.3f, footR = 22.7f, thighL = 49f, kneeL = 8.4f, footL = 12f,
+    )
+    private val csE = Pose(
+        pelvisX = -0.347f, pelvisY = 0.149f, torso = 24.3f, neck = -16.9f,
+        uArmL = 33.7f, uArmR = 33.7f, elbowL = 8f, elbowR = 8f,
+        thighR = 65.3f, kneeR = 85.2f, footR = 20f, thighL = 63.1f, kneeL = 7.3f, footL = 9.2f,
+    )
+    private val csSeat = Pose(
+        pelvisX = -0.4f, pelvisY = BENCH_Y, torso = 34f, neck = -24f,
+        uArmL = 46f, uArmR = 46f, elbowL = 8f, elbowR = 8f,
+        thighR = 85.3f, kneeR = 96.6f, footR = 11.3f, thighL = 80f, kneeL = 6f, footL = 6f,
+    )
+
+    private val flChairSquatSingle = KeyframeAnim(
+        id = "fl_chair_squat_single", durationMs = 3800, prop = Prop.BENCH_BACK, muscle = MuscleGroup.LEGS,
+        pathJoint = PathJoint.PELVIS,
+        keyframes = via(0f, 0.46f, csTop, csA, csB, csC, csD, csE) +         // slow, controlled descent
+            Keyframe(0.46f, csSeat) +                                         // hips touch the seat
+            via(0.54f, 0.92f, csSeat, csE, csD, csC, csB, csA) +
+            Keyframe(0.92f, csTop),
+    )
+
+    // Single-leg hip thrust: the shoulder line is the pivot, resting just inside the bench's near
+    // edge; the near foot stays planted and the far leg is held in tabletop. Hips swing from just
+    // off the floor up to bench height, where trunk and working thigh are level and the shank plumb.
+    private val htDn = Pose(
+        pelvisX = -0.028f, pelvisY = 0.386f, torso = 55f, neck = -5f,
+        uArmL = -118f, uArmR = -118f, elbowL = 15f, elbowR = 15f,
+        thighR = -124f, kneeR = -99.8f, footR = -155.8f, thighL = -168f, kneeL = -88f, footL = -115f,
+    )
+    private val htA = Pose(
+        pelvisX = -0.048f, pelvisY = 0.353f, torso = 62.8f, neck = -8.3f,
+        uArmL = -133.6f, uArmR = -133.6f, elbowL = 15f, elbowR = 15f,
+        thighR = -117.9f, kneeR = -102.7f, footR = -164.8f, thighL = -169.8f, kneeL = -88f, footL = -115f,
+    )
+    private val htB = Pose(
+        pelvisX = -0.067f, pelvisY = 0.307f, torso = 72.5f, neck = -12.5f,
+        uArmL = -153f, uArmR = -153f, elbowL = 15f, elbowR = 15f,
+        thighR = -107.6f, kneeR = -101.5f, footR = -173.9f, thighL = -172f, kneeL = -88f, footL = -115f,
+    )
+    private val htC = Pose(
+        pelvisX = -0.077f, pelvisY = 0.259f, torso = 82.2f, neck = -16.7f,
+        uArmL = -172.4f, uArmR = -172.4f, elbowL = 15f, elbowR = 15f,
+        thighR = -95.9f, kneeR = -95f, footR = -179.1f, thighL = -174.2f, kneeL = -88f, footL = -115f,
+    )
+    private val htUp = Pose(
+        pelvisX = -0.08f, pelvisY = BENCH_Y, torso = 90f, neck = -20f,
+        uArmL = -188f, uArmR = -188f, elbowL = 15f, elbowR = 15f,
+        thighR = -86.3f, kneeR = -86.3f, footR = -180f, thighL = -176f, kneeL = -88f, footL = -115f,
+    )
+
+    private val flHipThrustSingle = KeyframeAnim(
+        id = "fl_hip_thrust_single", durationMs = 3600, prop = Prop.BENCH_FRONT, muscle = MuscleGroup.GLUTES,
+        pathJoint = PathJoint.PELVIS,
+        keyframes = via(0f, 0.32f, htDn, htA, htB, htC) +
+            Keyframe(0.32f, htUp) +                          // lockout squeeze
+            via(0.56f, 0.94f, htUp, htC, htB, htA) +         // slower lowering
+            Keyframe(0.94f, htDn),
+    )
+
+    /**
+     * Single-leg stance on the step with the toe tip pinned 0.03 inside the step's near edge and
+     * the heel [heel] degrees above (negative: below) the step top. The leg stays straight, so
+     * the whole figure rides the ankle around the toe.
+     */
+    private fun stepHeel(heel: Float): Pose {
+        val ankleX = STEP_X0 + 0.03f - Proportions.FOOT * cosd(heel)
+        val ankleY = STEP_Y - Proportions.FOOT * sind(heel)
+        return standing.copy(
+            pelvisX = ankleX, pelvisY = ankleY - Proportions.THIGH - Proportions.SHANK, footR = -heel,
+            thighL = 10f, kneeL = 80f, footL = -20f,     // far foot hooked behind, clear of everything
+        )
+    }
+
+    /** Step calf raise: heel well above the step, slowly down to a stretch below it, pause, and up. */
+    private val flCalfRaiseStep = KeyframeAnim(
+        id = "fl_calf_raise_step", durationMs = 3400, prop = Prop.STEP, muscle = MuscleGroup.LEGS,
+        keyframes = via(0f, 0.46f, stepHeel(38f), stepHeel(8f)) +     // slow lowering
+            Keyframe(0.46f, stepHeel(-22f)) +                           // pause in the stretch
+            via(0.60f, 0.90f, stepHeel(-22f), stepHeel(8f)) +
+            Keyframe(0.90f, stepHeel(38f)),
+    )
+
+    /**
+     * Tall kneel pivoting on a knee joint at ([kneeX], GY): knee, hip, shoulder and head are one
+     * straight line tipped [lean] degrees from vertical (positive = forward, toward +X) and the
+     * shins lie flat behind. [upper]/[fore] are WORLD angles of the upper arm and forearm.
+     * The far knee rides FAR_HIP_DY under the floor line (re-solving it would stagger the knees by
+     * 6 cm when the thighs are plumb); two extra degrees on its shank put the far ankle back on GY.
+     */
+    private fun kneelLine(
+        kneeX: Float, lean: Float, upper: Float, fore: Float,
+        upperL: Float = upper, foreL: Float = fore,
+    ) = Pose(
+        pelvisX = kneeX + Proportions.THIGH * sind(lean), pelvisY = GY - Proportions.THIGH * cosd(lean),
+        torso = lean,
+        uArmR = upper - lean, elbowR = fore - upper, uArmL = upperL - lean, elbowL = foreL - upperL,
+        thighR = -lean, kneeR = 90f - lean, footR = -90f,
+        thighL = -lean, kneeL = 92f - lean, footL = -88f,
+    )
+
+    // Nordic curl: ankles under the anchor bar (ANCHOR_X is this knee X minus the shank). The
+    // line tips forward in 10-degree steps so the knee pivot never drifts; hands wait in front of
+    // the chest, catch the floor at 60 degrees and the elbows absorb to 68. Both strokes reuse
+    // the same poses; the return covers them in half the time.
+    private const val NORDIC_KNEE_X = -0.20f
+    private val nd0 = kneelLine(NORDIC_KNEE_X, 0f, 15f, 120f)
+    private val nd10 = kneelLine(NORDIC_KNEE_X, 10f, 17f, 117f)
+    private val nd20 = kneelLine(NORDIC_KNEE_X, 20f, 19f, 112f)
+    private val nd30 = kneelLine(NORDIC_KNEE_X, 30f, 20f, 104f)
+    private val nd40 = kneelLine(NORDIC_KNEE_X, 40f, 19f, 90f)
+    private val nd50 = kneelLine(NORDIC_KNEE_X, 50f, 16f, 66f)
+    private val nd60 = kneelLine(NORDIC_KNEE_X, 60f, -23.3f, 34f, -26.7f, 38.1f)     // wrists planted at GY
+    private val nd68 = kneelLine(NORDIC_KNEE_X, 68f, -50.3f, 47.7f, -52.8f, 50.1f)   // same hand spots, elbows bent
+
+    private val flNordic = KeyframeAnim(
+        id = "fl_nordic", durationMs = 5200, prop = Prop.ANCHOR, muscle = MuscleGroup.LEGS,
+        pathJoint = PathJoint.HEAD,
+        keyframes = listOf(
+            // slow eccentric: gentle start, then a steady lean (every join keeps its speed)
+            Keyframe(0f, nd0, Ease.ACCEL),
+            Keyframe(0.139f, nd10, Ease.LINEAR),
+            Keyframe(0.213f, nd20, Ease.LINEAR),
+            Keyframe(0.287f, nd30, Ease.LINEAR),
+            Keyframe(0.361f, nd40, Ease.LINEAR),
+            Keyframe(0.435f, nd50, Ease.LINEAR),
+            Keyframe(0.509f, nd60, Ease.DECEL),      // hands catch
+            Keyframe(0.62f, nd68),                   // elbows absorb; brief rest
+            // faster return: push off the floor, then the hamstrings pull the line upright
+            Keyframe(0.66f, nd68, Ease.ACCEL),
+            Keyframe(0.714f, nd60, Ease.LINEAR),
+            Keyframe(0.75f, nd50, Ease.LINEAR),
+            Keyframe(0.785f, nd40, Ease.LINEAR),
+            Keyframe(0.821f, nd30, Ease.LINEAR),
+            Keyframe(0.857f, nd20, Ease.LINEAR),
+            Keyframe(0.893f, nd10, Ease.DECEL),
+            Keyframe(0.96f, nd0),
+        ),
+    )
+
+    // Reverse Nordic: the same kneeling line leaning BACK over the shins (hips never hinge), arms
+    // long down the front of the thighs. Quads lower it slowly and pull it back up.
+    private fun reverseNordic(lean: Float) = kneelLine(0.12f, lean, 6f - lean, 14f - lean)
+
+    private val flReverseNordic = KeyframeAnim(
+        id = "fl_reverse_nordic", durationMs = 4200, prop = Prop.MAT, muscle = MuscleGroup.LEGS,
+        pathJoint = PathJoint.HEAD,
+        keyframes = via(0f, 0.46f, reverseNordic(0f), reverseNordic(-8.4f), reverseNordic(-19f), reverseNordic(-29.6f)) +
+            Keyframe(0.46f, reverseNordic(-38f)) +           // long-lever dwell
+            via(0.56f, 0.92f, reverseNordic(-38f), reverseNordic(-29.6f), reverseNordic(-19f), reverseNordic(-8.4f)) +
+            Keyframe(0.92f, reverseNordic(0f)),
+    )
+
     // ------------------------------------------------------------------ REFORMER
     // Carriage rides along the rail with pose.prop (0 = home, 1 = fully out). The figure lies
     // head toward +X; the foot bar is at the -X end, strap risers at the +X end.
@@ -921,6 +1615,123 @@ object AnimationRegistry {
         ),
     )
 
+    // Single-leg footwork: the near heel stays on the foot bar and presses the carriage out; the
+    // far leg holds tabletop all loop. End poses are the two-leg footwork values; the waypoints
+    // re-solve the pressing leg onto the bar at 2/9, 1/2 and 7/9 of the carriage travel.
+    private fun footworkSingle(prop: Float, thigh: Float, knee: Float) =
+        supineOnCarriage(prop, thigh, knee, 165f).copy(thighL = -178f, kneeL = -88f, footL = -115f)
+
+    private val fsHome = footworkSingle(0f, -156.4f, -105f)
+    private val fsA = footworkSingle(0.167f, -148.4f, -92.2f)
+    private val fsB = footworkSingle(0.375f, -137.8f, -73.9f)
+    private val fsC = footworkSingle(0.583f, -124.9f, -50.2f)
+    private val fsOut = footworkSingle(0.75f, -106.7f, -14.7f)
+
+    private val rfFootworkSingle = KeyframeAnim(
+        id = "rf_footwork_single", durationMs = 3200, prop = Prop.REFORMER, muscle = MuscleGroup.LEGS,
+        keyframes = via(0f, 0.42f, fsHome, fsA, fsB, fsC) +
+            Keyframe(0.42f, fsOut) +
+            via(0.52f, 0.94f, fsOut, fsC, fsB, fsA) +
+            Keyframe(0.94f, fsHome),
+    )
+
+    /**
+     * One-arm seated strap work: the rf_rowing seat (facing the risers, legs long toward them),
+     * trunk tall and still. The pelvis rides the carriage, so the whole figure travels with it as
+     * the strap shortens. Only the near arm works ([uArm]/[elbow]); the far hand rests on top of
+     * the far thigh, solved once and carried with the trunk.
+     */
+    private fun strapSeat(prop: Float, uArm: Float, elbow: Float) =
+        rowing(prop, 3f, uArm, elbow).copy(
+            pelvisX = carriageX(prop) - 0.02f,
+            uArmL = -10.6f, elbowL = 74f,
+        )
+
+    /** One-arm strap biceps curl: arm long toward the pulley, the elbow folds the hand in; the upper arm holds still. */
+    private val rfBicepsCurl = KeyframeAnim(
+        id = "rf_biceps_curl", durationMs = 3200, prop = Prop.REFORMER_ARM_STRAPS, singleStrap = true, muscle = MuscleGroup.ARMS,
+        pathJoint = PathJoint.WRIST,
+        keyframes = listOf(
+            Keyframe(0f, strapSeat(0.20f, 59f, 8f)),
+            Keyframe(0.40f, strapSeat(0.46f, 61f, 135f)),
+            Keyframe(0.52f, strapSeat(0.46f, 61f, 135f)),   // squeeze
+            Keyframe(0.94f, strapSeat(0.20f, 59f, 8f)),
+        ),
+    )
+
+    /** One-arm strap row: the near elbow drives back past the ribs, hand finishing beside the waist. */
+    private val rfRowSingle = KeyframeAnim(
+        id = "rf_row_single", durationMs = 3200, prop = Prop.REFORMER_ARM_STRAPS, singleStrap = true, muscle = MuscleGroup.BACK,
+        pathJoint = PathJoint.WRIST,
+        keyframes = listOf(
+            Keyframe(0f, strapSeat(0.20f, 55f, 6f)),
+            Keyframe(0.40f, strapSeat(0.44f, -28f, 100f)),
+            Keyframe(0.52f, strapSeat(0.44f, -28f, 100f)),  // hold the squeeze
+            Keyframe(0.94f, strapSeat(0.20f, 55f, 6f)),
+        ),
+    )
+
+    /**
+     * Seated with the BACK to the risers (facing -X, the mirrored chirality: negative knee and
+     * elbow values are the anatomical folds). Knees bent with the soles on the carriage deck, far
+     * hand on the far thigh, trunk still; the pelvis rides the carriage. [upper]/[fore] are the
+     * near arm's world angles.
+     */
+    private fun strapSeatAway(prop: Float, upper: Float, fore: Float) = Pose(
+        pelvisX = carriageX(prop) + 0.06f, pelvisY = CARRIAGE_LIE - 0.02f, torso = -4f, neck = 2f,
+        uArmR = upper + 4f, elbowR = fore - upper, uArmL = 30.2f, elbowL = -90.9f,
+        thighR = -145.8f, kneeR = -128.2f, footR = -176.4f,     // both ankles solved onto the deck
+        thighL = -148.2f, kneeL = -128.4f, footL = -174.2f,
+        prop = prop,
+    )
+
+    /**
+     * One-arm strap triceps press, back to the straps: the hand starts beside the ear with the
+     * elbow leading, and presses forward and up until the arm is straight. The strap runs back
+     * over the shoulder to the pulley, so pressing draws the carriage toward the risers.
+     */
+    private val rfTricepsPress = KeyframeAnim(
+        id = "rf_triceps_press", durationMs = 3200, prop = Prop.REFORMER_ARM_STRAPS, singleStrap = true, muscle = MuscleGroup.ARMS,
+        pathJoint = PathJoint.WRIST,
+        keyframes = listOf(
+            Keyframe(0f, strapSeatAway(0.20f, -138f, -266f)),
+            Keyframe(0.40f, strapSeatAway(0.44f, -128f, -136f)),
+            Keyframe(0.52f, strapSeatAway(0.44f, -128f, -136f)),   // lockout
+            Keyframe(0.94f, strapSeatAway(0.20f, -138f, -266f)),
+        ),
+    )
+
+    /**
+     * Prone on the long box, head toward the risers (+X), shoulders just past the box's front edge
+     * and legs long behind at box height. Extension is NEGATIVE spine for this chirality. [arm] is
+     * the near arm's world angle; the far arm stays along the side whatever the chest does.
+     */
+    private fun onBox(prop: Float, spine: Float, arm: Float, elbow: Float, neck: Float): Pose {
+        val base = 90f + spine
+        return Pose(
+            pelvisX = carriageX(prop) - 0.08f, pelvisY = CARRIAGE_LIE - BOX_H, torso = 90f, spine = spine, neck = neck,
+            uArmR = arm - base, elbowR = elbow, uArmL = -88f - base, elbowL = 4f,
+            thighL = -90f, kneeL = 2f, footL = -90f, thighR = -90f, kneeR = 2f, footR = -90f,
+            prop = prop,
+        )
+    }
+
+    // The carriage starts part-way out: the figure is longer than the drawn reformer, and from
+    // here the toes stay inside the left edge of the view and the head short of the riser.
+    private val bxLong = onBox(0.42f, -2f, 52f, 6f, -13f)     // arm long, forward and down toward the pulley
+    private val bxUnder = onBox(0.54f, -6f, -4f, 24f, -11f)   // hand passing under the shoulder, beside the frame
+    private val bxHip = onBox(0.66f, -9f, -86f, 4f, -8f)      // arm along the side, hand at the hip, chest lifted
+
+    /** Long-box pulling straps, one arm: the near arm sweeps from long-forward back to the hip as the carriage travels. */
+    private val rfBoxPull = KeyframeAnim(
+        id = "rf_box_pull", durationMs = 3400, prop = Prop.REFORMER_BOX_ARM_STRAPS, singleStrap = true, muscle = MuscleGroup.BACK,
+        pathJoint = PathJoint.WRIST,
+        keyframes = via(0f, 0.40f, bxLong, bxUnder) +
+            Keyframe(0.40f, bxHip) +                         // hold the lift
+            via(0.52f, 0.94f, bxHip, bxUnder) +
+            Keyframe(0.94f, bxLong),
+    )
+
     // ------------------------------------------------------------------ BACK (physio mat work)
 
     private val cuStart = Pose(
@@ -1074,9 +1885,15 @@ object AnimationRegistry {
         flMountain, flJack, flHighKnees, flSkater, flBirdDog, flDeadBug, flSuperman, flSquatJump,
         flWallSit, flInchworm, flBearCrawl, flCrunch, flRussian, flMarch, flArmCircles,
         flCatCow, flHamStretch, flQuadStretch, flChild,
+        flSplitSquat, flBridgeSingle, flSingleLegRdl, flCalfRaise, flCalfRaiseSingle,
+        flPikePushup, flKneePushup, flSlideCurl, flProneRaise, flProneRaiseW,
+        flLateralRaise, flBicepsCurl, flTricepsOverhead,
+        flInclinePushup, flDeclinePushup, flRfeSplitSquat, flChairSquatSingle, flHipThrustSingle,
+        flCalfRaiseStep, flNordic, flReverseNordic,
         rfFootworkHeels, rfFootworkToes, rfHundred, rfLegCircles, rfFrog, rfElephant,
         rfKneeStretch, rfLongStretch, rfPike, rfChestExp, rfRowing, rfLunge, rfMermaid,
         rfSideSplit, rfStraps, rfPullStraps, rfPelvicCurl,
+        rfFootworkSingle, rfBicepsCurl, rfTricepsPress, rfRowSingle, rfBoxPull,
         bkCurlUp, bkSideBridge, bkPelvicTilt, bkPressUp, bkHinge, bkClam, bkExtension,
         spSeatedFlat, spWarmup, spRecovery, spFastFlat, spSeatedClimb, spSeatedClimbHeavy,
         spStandingClimb, spStandingRun, spJumps, spSprint,
